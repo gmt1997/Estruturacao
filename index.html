@@ -223,6 +223,91 @@
   @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
   /* ===== KPIs ===== */
+  /* ===== Dashboard Filters ===== */
+  .dash-filters {
+    display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-bottom: 22px;
+    box-shadow: var(--shadow-sm);
+  }
+  .dash-filter-group {
+    display: flex; flex-direction: column; gap: 4px; min-width: 140px; flex: 1;
+  }
+  .dash-filter-group label {
+    font-size: 10px; font-weight: 600; color: var(--text-mute);
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .dash-filter-group select {
+    padding: 8px 10px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit; font-size: 12px;
+    background: var(--surface); color: var(--text); cursor: pointer;
+    transition: all 0.15s;
+  }
+  .dash-filter-group select:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(0,27,92,0.08); }
+  .dash-filter-clear {
+    align-self: flex-end;
+    height: 36px;
+  }
+  .dash-filters.has-active {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 1px var(--orange), var(--shadow-sm);
+  }
+  .filter-summary {
+    font-size: 11px; color: var(--text-mute);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-bottom: 14px; padding: 0 4px;
+  }
+  .filter-summary strong { color: var(--orange-dim); font-weight: 600; }
+
+  /* ===== Chart Tooltip (hover details) ===== */
+  .chart-tooltip {
+    position: fixed;
+    background: var(--navy-deep); color: #fff;
+    padding: 10px 14px; border-radius: 6px;
+    font-size: 12px; box-shadow: var(--shadow-lg);
+    z-index: 1000; pointer-events: none;
+    max-width: 320px; line-height: 1.5;
+    border-left: 3px solid var(--orange);
+  }
+  .chart-tooltip strong {
+    color: var(--orange); display: block;
+    margin-bottom: 4px; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .chart-tooltip .tt-total {
+    font-family: 'Fraunces', serif; font-size: 16px; font-weight: 600;
+    color: #fff; margin-bottom: 6px;
+  }
+  .chart-tooltip .tt-list {
+    list-style: none; padding: 0; margin: 0;
+    border-top: 1px solid rgba(255,255,255,0.15); padding-top: 6px;
+  }
+  .chart-tooltip .tt-list li {
+    display: flex; justify-content: space-between; gap: 8px;
+    padding: 2px 0; font-size: 11px;
+  }
+  .chart-tooltip .tt-list li .tt-name {
+    color: var(--blue-pale);
+    overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; flex: 1;
+  }
+  .chart-tooltip .tt-list li .tt-val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; color: #fff; flex-shrink: 0;
+  }
+  .chart-tooltip .tt-more {
+    font-size: 10px; color: var(--text-soft);
+    font-style: italic; margin-top: 4px;
+  }
+  .hoverable {
+    cursor: pointer; transition: opacity 0.15s, transform 0.15s;
+  }
+  .hoverable:hover { opacity: 0.85; }
+
   .kpi-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -975,6 +1060,37 @@
   <main class="container">
     <!-- VISÃO GERAL -->
     <section class="panel active" id="panel-overview">
+      <div class="dash-filters" id="dashFilters">
+        <div class="dash-filter-group">
+          <label>Período</label>
+          <select id="dfPeriod" onchange="onDashFilterChange()">
+            <option value="ytd" selected>Ano corrente (YTD)</option>
+            <option value="12m">Últimos 12 meses</option>
+            <option value="6m">Últimos 6 meses</option>
+            <option value="3m">Últimos 3 meses</option>
+            <option value="prev_year">Ano anterior</option>
+            <option value="all">Tudo</option>
+          </select>
+        </div>
+        <div class="dash-filter-group">
+          <label>Tipo</label>
+          <select id="dfTipo" onchange="onDashFilterChange()"><option value="">Todos</option></select>
+        </div>
+        <div class="dash-filter-group">
+          <label>Status</label>
+          <select id="dfStatus" onchange="onDashFilterChange()"><option value="">Todos</option></select>
+        </div>
+        <div class="dash-filter-group">
+          <label>Responsável</label>
+          <select id="dfResp" onchange="onDashFilterChange()"><option value="">Todos</option></select>
+        </div>
+        <div class="dash-filter-group">
+          <label>Cliente</label>
+          <select id="dfCliente" onchange="onDashFilterChange()"><option value="">Todos</option></select>
+        </div>
+        <button class="btn btn-secondary dash-filter-clear" onclick="clearDashFilters()">Limpar filtros</button>
+      </div>
+
       <div class="kpi-grid" id="kpiGrid"></div>
 
       <h2 class="section-title">Receita & Volume Mensal</h2>
@@ -1278,7 +1394,8 @@
 
 <div class="toast" id="toast"></div>
 <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
-<div class="gantt-tooltip" id="ganttTooltip" style="display:none;"></div><script>
+<div class="gantt-tooltip" id="ganttTooltip" style="display:none;"></div>
+<div class="chart-tooltip" id="chartTooltip" style="display:none;"></div><script>
 // ============================================
 // 🔧 CONFIGURAÇÃO — preencher após criar projeto Supabase
 // ============================================
@@ -1572,6 +1689,7 @@ function sortBy(field) {
 }
 
 function renderAll() {
+  populateDashFilters();
   renderKPIs();
   renderRevenueMonthlyChart();
   renderVolumeMonthlyChart();
@@ -1586,9 +1704,142 @@ function renderAll() {
   renderLogs();
 }
 </script><script>
+// ===== Dashboard Filters =====
+state.dashFilter = { period: 'ytd', tipo: '', status: '', resp: '', cliente: '' };
+
+function populateDashFilters() {
+  const ops = state.operations;
+  const tipos = [...new Set(ops.map(o => o.tipo).filter(Boolean))].sort();
+  const resps = [...new Set(ops.map(o => o.responsavel).filter(Boolean))].sort();
+  const clientes = [...new Set(ops.map(o => o.cliente).filter(Boolean))].sort();
+
+  const fT = document.getElementById('dfTipo');
+  const fS = document.getElementById('dfStatus');
+  const fR = document.getElementById('dfResp');
+  const fC = document.getElementById('dfCliente');
+  if (!fT) return;
+
+  const cur = { t: fT.value, s: fS.value, r: fR.value, c: fC.value };
+  fT.innerHTML = '<option value="">Todos</option>' + tipos.map(t => `<option value="${escapeAttr(t)}">${escapeHtml(t)}</option>`).join('');
+  fS.innerHTML = '<option value="">Todos</option>' + STATUS_ORDER.map(s => `<option value="${s}">${STATUS_LABELS[s]}</option>`).join('');
+  fR.innerHTML = '<option value="">Todos</option>' + resps.map(r => `<option value="${escapeAttr(r)}">${escapeHtml(r)}</option>`).join('');
+  fC.innerHTML = '<option value="">Todos</option>' + clientes.map(c => `<option value="${escapeAttr(c)}">${escapeHtml(c)}</option>`).join('');
+  fT.value = cur.t; fS.value = cur.s; fR.value = cur.r; fC.value = cur.c;
+}
+
+function getDashPeriodRange() {
+  const period = state.dashFilter.period;
+  const now = new Date();
+  const today = todayStr();
+  if (period === 'all') return { from: null, to: null };
+  if (period === 'ytd') return { from: now.getFullYear() + '-01-01', to: today };
+  if (period === 'prev_year') {
+    const y = now.getFullYear() - 1;
+    return { from: y + '-01-01', to: y + '-12-31' };
+  }
+  const monthsBack = period === '12m' ? 12 : period === '6m' ? 6 : 3;
+  const from = new Date(now.getFullYear(), now.getMonth() - monthsBack + 1, 1).toISOString().slice(0,10);
+  return { from, to: today };
+}
+
+function getFilteredOps() {
+  const f = state.dashFilter;
+  return state.operations.filter(o => {
+    if (f.tipo && o.tipo !== f.tipo) return false;
+    if (f.status && o.status !== f.status) return false;
+    if (f.resp && o.responsavel !== f.resp) return false;
+    if (f.cliente && o.cliente !== f.cliente) return false;
+    return true;
+  });
+}
+
+// Para gráficos mensais: respeita o período. Para KPIs/distribuições estruturais:
+// também respeita os filtros de tipo/status/resp/cliente, mas não pode "esconder"
+// uma operação só porque ela não tem data dentro do período.
+function isOpInPeriod(o, range) {
+  if (!range.from && !range.to) return true;
+  // Para uma operação ser considerada no período, basta ter atividade nele:
+  // criação, atualização, ou liquidação dentro da janela.
+  const dates = [
+    o.data_inicio, o.data_prevista, o.data_liquidacao,
+    (o.criado_em || '').slice(0,10), (o.atualizado_em || '').slice(0,10)
+  ].filter(Boolean);
+  return dates.some(d => (!range.from || d >= range.from) && (!range.to || d <= range.to));
+}
+
+function onDashFilterChange() {
+  state.dashFilter = {
+    period: document.getElementById('dfPeriod').value,
+    tipo: document.getElementById('dfTipo').value,
+    status: document.getElementById('dfStatus').value,
+    resp: document.getElementById('dfResp').value,
+    cliente: document.getElementById('dfCliente').value,
+  };
+  const hasActive = state.dashFilter.tipo || state.dashFilter.status || state.dashFilter.resp || state.dashFilter.cliente || state.dashFilter.period !== 'ytd';
+  document.getElementById('dashFilters').classList.toggle('has-active', !!hasActive);
+  // Re-render apenas da Visão Geral
+  renderKPIs();
+  renderRevenueMonthlyChart();
+  renderVolumeMonthlyChart();
+  renderFunnelChart();
+  renderTipoChart();
+  renderStatusChart();
+  renderTimeByStageChart();
+  renderOpsCards();
+}
+
+function clearDashFilters() {
+  document.getElementById('dfPeriod').value = 'ytd';
+  document.getElementById('dfTipo').value = '';
+  document.getElementById('dfStatus').value = '';
+  document.getElementById('dfResp').value = '';
+  document.getElementById('dfCliente').value = '';
+  onDashFilterChange();
+}
+
+// ===== Chart tooltip (hover) =====
+function chartTooltipShow(e, payload) {
+  const tip = document.getElementById('chartTooltip');
+  let html = '';
+  if (payload.title) html += `<strong>${escapeHtml(payload.title)}</strong>`;
+  if (payload.total !== undefined) html += `<div class="tt-total">${payload.total}</div>`;
+  if (payload.ops && payload.ops.length) {
+    const shown = payload.ops.slice(0, 6);
+    html += `<ul class="tt-list">${shown.map(op => `
+      <li>
+        <span class="tt-name">${escapeHtml(op.nome)}</span>
+        <span class="tt-val">${escapeHtml(op.valTxt)}</span>
+      </li>`).join('')}</ul>`;
+    if (payload.ops.length > shown.length) {
+      html += `<div class="tt-more">+ ${payload.ops.length - shown.length} outras</div>`;
+    }
+  } else if (payload.empty) {
+    html += `<div style="font-size:11px; color:var(--text-soft); font-style:italic;">Nenhuma operação</div>`;
+  }
+  tip.innerHTML = html;
+  tip.style.display = 'block';
+  chartTooltipMove(e);
+}
+function chartTooltipMove(e) {
+  const tip = document.getElementById('chartTooltip');
+  if (tip.style.display === 'none') return;
+  const margin = 14;
+  let x = e.clientX + margin;
+  let y = e.clientY + margin;
+  const rect = tip.getBoundingClientRect();
+  if (x + rect.width > window.innerWidth - 10) x = e.clientX - rect.width - margin;
+  if (y + rect.height > window.innerHeight - 10) y = e.clientY - rect.height - margin;
+  tip.style.left = Math.max(10, x) + 'px';
+  tip.style.top = Math.max(10, y) + 'px';
+}
+function chartTooltipHide() { document.getElementById('chartTooltip').style.display = 'none'; }
+document.addEventListener('mousemove', chartTooltipMove);
+
 // ===== KPIs =====
 function renderKPIs() {
-  const ops = state.operations;
+  const filtered = getFilteredOps();
+  const range = getDashPeriodRange();
+  const ops = filtered;
   const total = ops.length;
   const pipelineAtivo = ops.filter(o => !o.data_liquidacao && o.status !== 'stand');
   const liquidadas = ops.filter(o => !!o.data_liquidacao);
@@ -1596,11 +1847,13 @@ function renderKPIs() {
   const volumePipeline = pipelineAtivo.reduce((s,o) => s + (Number(o.valor)||0), 0);
   const receitaPipeline = pipelineAtivo.reduce((s,o) => s + (Number(o.receita)||0), 0);
 
-  // YTD = ano corrente
-  const yearStart = new Date().getFullYear() + '-01-01';
-  const liquidadasYTD = liquidadas.filter(o => o.data_liquidacao && o.data_liquidacao >= yearStart);
-  const volumeYTD = liquidadasYTD.reduce((s,o) => s + (Number(o.volume_liquidado)||0), 0);
-  const receitaYTD = liquidadasYTD.reduce((s,o) => s + (Number(o.receita_realizada)||Number(o.receita)||0), 0);
+  // Liquidadas dentro do período selecionado
+  const liquidadasNoPeriodo = liquidadas.filter(o => {
+    if (!range.from && !range.to) return true;
+    return o.data_liquidacao && (!range.from || o.data_liquidacao >= range.from) && (!range.to || o.data_liquidacao <= range.to);
+  });
+  const volumePeriodo = liquidadasNoPeriodo.reduce((s,o) => s + (Number(o.volume_liquidado)||0), 0);
+  const receitaPeriodo = liquidadasNoPeriodo.reduce((s,o) => s + (Number(o.receita_realizada)||Number(o.receita)||0), 0);
 
   // Tempo médio (data_inicio → data_liquidacao) das liquidadas
   const tempos = liquidadas
@@ -1618,16 +1871,23 @@ function renderKPIs() {
     return d !== null && d < 0;
   }).length;
 
+  // Label dinâmica para o período
+  const periodLabel = state.dashFilter.period === 'ytd' ? 'YTD' :
+    state.dashFilter.period === 'prev_year' ? (new Date().getFullYear() - 1) :
+    state.dashFilter.period === 'all' ? 'todo período' :
+    state.dashFilter.period === '12m' ? 'últ. 12m' :
+    state.dashFilter.period === '6m' ? 'últ. 6m' : 'últ. 3m';
+
   document.getElementById('kpiGrid').innerHTML = `
     <div class="kpi kpi-revenue">
-      <div class="kpi-label">Receita Realizada YTD</div>
-      <div class="kpi-value">${fmtBRLshort(receitaYTD)}</div>
-      <div class="kpi-meta">${liquidadasYTD.length} operação${liquidadasYTD.length!==1?'ões':''} liquidada${liquidadasYTD.length!==1?'s':''}</div>
+      <div class="kpi-label">Receita Realizada</div>
+      <div class="kpi-value">${fmtBRLshort(receitaPeriodo)}</div>
+      <div class="kpi-meta">${liquidadasNoPeriodo.length} liquidada${liquidadasNoPeriodo.length!==1?'s':''} · ${periodLabel}</div>
     </div>
     <div class="kpi kpi-revenue">
-      <div class="kpi-label">Volume Liquidado YTD</div>
-      <div class="kpi-value">${fmtBRLshort(volumeYTD)}</div>
-      <div class="kpi-meta">${new Date().getFullYear()}</div>
+      <div class="kpi-label">Volume Liquidado</div>
+      <div class="kpi-value">${fmtBRLshort(volumePeriodo)}</div>
+      <div class="kpi-meta">${periodLabel}</div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Receita Pipeline</div>
@@ -1657,59 +1917,76 @@ function renderKPIs() {
     <div class="kpi">
       <div class="kpi-label">Total no Pipeline</div>
       <div class="kpi-value">${total}</div>
-      <div class="kpi-meta">cadastradas</div>
+      <div class="kpi-meta">cadastradas${total !== state.operations.length ? ' (filtradas)' : ''}</div>
     </div>
   `;
 }
 
 // ===== Helper: agrupar por mês YYYY-MM =====
-function getLast12Months() {
-  const months = [];
+function getDashMonthRange() {
+  const period = state.dashFilter ? state.dashFilter.period : 'ytd';
   const now = new Date();
-  for (let i = 11; i >= 0; i--) {
+  let monthsBack;
+  if (period === 'all' || period === 'prev_year' || period === 'ytd') monthsBack = 12;
+  else if (period === '12m') monthsBack = 12;
+  else if (period === '6m') monthsBack = 6;
+  else if (period === '3m') monthsBack = 3;
+  else monthsBack = 12;
+
+  if (period === 'prev_year') {
+    const y = now.getFullYear() - 1;
+    return Array.from({ length: 12 }, (_, i) => `${y}-${String(i+1).padStart(2,'0')}`);
+  }
+  if (period === 'ytd') {
+    monthsBack = now.getMonth() + 1; // só meses já transcorridos no ano
+  }
+  const months = [];
+  for (let i = monthsBack - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     months.push(d.toISOString().slice(0, 7));
   }
   return months;
 }
-function monthLabel(ym) {
-  const d = new Date(ym + '-01T00:00:00');
-  return d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', '');
+function getLast12Months() { return getDashMonthRange(); }
+
+const MONTH_NAMES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+function monthLabelShort(ym) {
+  const [y, m] = ym.split('-');
+  return `${MONTH_NAMES_PT[parseInt(m,10)-1]}/${y.slice(2)}`;
 }
+function monthLabelFull(ym) {
+  const [y, m] = ym.split('-');
+  const FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  return `${FULL[parseInt(m,10)-1]} de ${y}`;
+}
+// Mantém compatibilidade
+function monthLabel(ym) { return monthLabelShort(ym); }
 
 // ===== Time-series SVG chart =====
-function renderTimeSeriesChart(containerId, monthlyData, options) {
+// monthlyData: { 'YYYY-MM': totalValue }
+// monthlyOps:  { 'YYYY-MM': [{ nome, val }] }   (lista de operações de cada mês para tooltip)
+function renderTimeSeriesChart(containerId, monthlyData, monthlyOps, options) {
   const months = getLast12Months();
   const values = months.map(m => monthlyData[m] || 0);
   const max = Math.max(...values, 1);
-  const w = 600, h = 220;
-  const pad = { top: 18, right: 16, bottom: 36, left: 56 };
+  const n = months.length;
+
+  // Largura responsiva: gráficos com mais meses ficam mais largos
+  const w = Math.max(560, n * 70);
+  const h = 240;
+  const pad = { top: 24, right: 18, bottom: 50, left: 60 };
   const innerW = w - pad.left - pad.right;
   const innerH = h - pad.top - pad.bottom;
-  const barW = innerW / months.length;
-  const color = options.color || 'orange';
-  const fmtFn = options.fmt || fmtBRLshort;
+  const slotW = innerW / n;
+  const barW = Math.min(slotW - 10, 56);
+  const color = options && options.color || 'orange';
+  const fmtFn = options && options.fmt || fmtBRLshort;
+  const cls = color === 'orange' ? 'bar-revenue' : 'bar-volume';
 
   // Ticks Y
   const yTicks = [];
   const step = niceStep(max);
   for (let v = 0; v <= max; v += step) yTicks.push(v);
-
-  let bars = '';
-  values.forEach((v, i) => {
-    const barH = max > 0 ? (v / max) * innerH : 0;
-    const x = pad.left + i * barW + 4;
-    const y = pad.top + innerH - barH;
-    const cls = color === 'orange' ? 'bar-revenue' : 'bar-volume';
-    bars += `<rect class="${cls}" x="${x}" y="${y}" width="${barW - 8}" height="${barH}" rx="2">
-      <title>${monthLabel(months[i])}: ${fmtFn(v)}</title>
-    </rect>`;
-    if (v > 0) {
-      const labelY = barH > 22 ? y + 12 : y - 4;
-      const labelFill = barH > 22 ? '#fff' : 'var(--text-mute)';
-      bars += `<text class="data-label" x="${x + (barW - 8)/2}" y="${labelY}" style="fill:${labelFill}; font-weight: 600;">${fmtBRLshort(v).replace('R$ ', '')}</text>`;
-    }
-  });
 
   let yAxis = '';
   yTicks.forEach(v => {
@@ -1718,20 +1995,65 @@ function renderTimeSeriesChart(containerId, monthlyData, options) {
               <text class="axis-label" x="${pad.left - 8}" y="${y + 3}" text-anchor="end">${fmtFn(v).replace('R$ ', '')}</text>`;
   });
 
+  let bars = '';
+  values.forEach((v, i) => {
+    const barH = max > 0 ? (v / max) * innerH : 0;
+    const slotX = pad.left + i * slotW;
+    const x = slotX + (slotW - barW) / 2;
+    const y = pad.top + innerH - barH;
+    // Hit area cobrindo toda a coluna (mesmo que valor seja 0)
+    const ops = (monthlyOps && monthlyOps[months[i]]) || [];
+    const dataOps = ops.map(o => `${o.nome.replace(/\|/g,'/')}|${fmtBRLshort(o.val).replace('R$ ','R$ ')}`).join('§§');
+    bars += `<rect class="hit-area" x="${slotX}" y="${pad.top}" width="${slotW}" height="${innerH}" fill="transparent"
+              data-month="${months[i]}" data-total="${v}" data-ops="${escapeAttr(dataOps)}"
+              onmouseenter="onChartBarHover(event, this)" onmousemove="chartTooltipMove(event)" onmouseleave="chartTooltipHide()"></rect>`;
+    if (barH > 0) {
+      bars += `<rect class="${cls} hoverable" x="${x}" y="${y}" width="${barW}" height="${barH}" rx="3" pointer-events="none"></rect>`;
+    }
+    // Valor escrito acima da barra (não dentro)
+    if (v > 0) {
+      const labelY = y - 6;
+      bars += `<text class="data-label" x="${x + barW/2}" y="${labelY}" style="fill:var(--text-mute); font-weight:600;">${fmtBRLshort(v).replace('R$ ','')}</text>`;
+    }
+  });
+
+  // Eixo X: mostrar todos os labels de forma compacta. Se forem muitos meses, rotaciona 35°.
+  const rotate = n > 7;
   let xAxis = '';
   months.forEach((m, i) => {
-    const x = pad.left + i * barW + barW / 2;
-    xAxis += `<text class="month-label" x="${x}" y="${h - pad.bottom + 18}">${monthLabel(m)}</text>`;
+    const cx = pad.left + i * slotW + slotW / 2;
+    const cy = h - pad.bottom + (rotate ? 14 : 18);
+    if (rotate) {
+      xAxis += `<text class="month-label" x="${cx}" y="${cy}" text-anchor="end" transform="rotate(-35 ${cx} ${cy})">${monthLabelShort(m)}</text>`;
+    } else {
+      xAxis += `<text class="month-label" x="${cx}" y="${cy}">${monthLabelShort(m)}</text>`;
+    }
   });
 
   document.getElementById(containerId).innerHTML = `
-    <svg class="timechart" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet">
+    <svg class="timechart" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" style="height:${h}px;">
       ${yAxis}
-      ${bars}
       <line class="axis-line" x1="${pad.left}" x2="${w - pad.right}" y1="${pad.top + innerH}" y2="${pad.top + innerH}" />
+      ${bars}
       ${xAxis}
     </svg>
   `;
+}
+
+function onChartBarHover(e, el) {
+  const month = el.getAttribute('data-month');
+  const total = Number(el.getAttribute('data-total')) || 0;
+  const opsRaw = el.getAttribute('data-ops') || '';
+  const ops = opsRaw ? opsRaw.split('§§').map(s => {
+    const [nome, valTxt] = s.split('|');
+    return { nome, valTxt };
+  }) : [];
+  chartTooltipShow(e, {
+    title: monthLabelFull(month),
+    total: fmtBRLshort(total),
+    ops,
+    empty: ops.length === 0
+  });
 }
 
 function niceStep(max) {
@@ -1748,45 +2070,58 @@ function niceStep(max) {
 }
 
 function renderRevenueMonthlyChart() {
+  const ops = getFilteredOps();
   const monthly = {};
-  state.operations.forEach(o => {
+  const monthlyOps = {};
+  ops.forEach(o => {
     if (o.data_liquidacao) {
       const m = o.data_liquidacao.slice(0, 7);
       const r = Number(o.receita_realizada) || Number(o.receita) || 0;
       monthly[m] = (monthly[m] || 0) + r;
+      if (!monthlyOps[m]) monthlyOps[m] = [];
+      monthlyOps[m].push({ nome: o.nome, val: r });
     }
   });
-  renderTimeSeriesChart('chartRevenueMonthly', monthly, { color: 'orange' });
+  // ordenar cada lista por valor desc
+  Object.keys(monthlyOps).forEach(k => monthlyOps[k].sort((a,b) => b.val - a.val));
+  renderTimeSeriesChart('chartRevenueMonthly', monthly, monthlyOps, { color: 'orange' });
 }
 
 function renderVolumeMonthlyChart() {
+  const ops = getFilteredOps();
   const monthly = {};
-  state.operations.forEach(o => {
+  const monthlyOps = {};
+  ops.forEach(o => {
     if (o.data_liquidacao) {
       const m = o.data_liquidacao.slice(0, 7);
       const v = Number(o.volume_liquidado) || Number(o.valor) || 0;
       monthly[m] = (monthly[m] || 0) + v;
+      if (!monthlyOps[m]) monthlyOps[m] = [];
+      monthlyOps[m].push({ nome: o.nome, val: v });
     }
   });
-  renderTimeSeriesChart('chartVolumeMonthly', monthly, { color: 'navy' });
+  Object.keys(monthlyOps).forEach(k => monthlyOps[k].sort((a,b) => b.val - a.val));
+  renderTimeSeriesChart('chartVolumeMonthly', monthly, monthlyOps, { color: 'navy' });
 }
 
 // ===== Funil =====
 function renderFunnelChart() {
-  const ops = state.operations.filter(o => o.status !== 'stand');
-  // Funil baseado em maior status atingido por cada operação
-  // Simplificação: status atual (próximo)
+  const allFiltered = getFilteredOps();
+  const ops = allFiltered.filter(o => o.status !== 'stand');
+  // Conta a operação em todos os status até o atual (acumulado)
   const counts = {};
-  STATUS_ORDER.forEach(s => counts[s] = 0);
+  const opsByStage = {};
+  STATUS_ORDER.forEach(s => { counts[s] = 0; opsByStage[s] = []; });
   ops.forEach(o => {
-    // Conta a operação em todos os status até o atual (acumulado)
     const idx = STATUS_ORDER.indexOf(o.status);
     for (let i = 0; i <= idx && i < STATUS_ORDER.length - 1; i++) {
       counts[STATUS_ORDER[i]]++;
+      opsByStage[STATUS_ORDER[i]].push(o);
     }
   });
   // Liquidadas
-  const liquidadas = state.operations.filter(o => !!o.data_liquidacao).length;
+  const liquidadasList = allFiltered.filter(o => !!o.data_liquidacao);
+  const liquidadas = liquidadasList.length;
 
   const stages = [
     { key: 'prospeccao', label: 'Prospecção' },
@@ -1799,12 +2134,21 @@ function renderFunnelChart() {
   ];
   const max = counts['prospeccao'] || 1;
 
+  const buildOpsAttr = (list) => list
+    .sort((a,b) => (Number(b.valor)||0) - (Number(a.valor)||0))
+    .map(o => `${o.nome.replace(/\|/g,'/')}|${fmtBRLshort(Number(o.valor)||0).replace('R$ ','R$ ')}`)
+    .join('§§');
+
   let html = '<div class="funnel-wrap">';
   stages.forEach(s => {
     const c = counts[s.key] || 0;
     const pct = max > 0 ? (c / max) * 100 : 0;
     const conv = max > 0 ? Math.round((c / max) * 100) : 0;
-    html += `<div class="funnel-row">
+    const opsAttr = buildOpsAttr(opsByStage[s.key]);
+    html += `<div class="funnel-row hoverable"
+      data-tt-title="${escapeAttr(s.label)}" data-tt-total="${c} operações"
+      data-tt-ops="${escapeAttr(opsAttr)}"
+      onmouseenter="onFunnelHover(event, this)" onmousemove="chartTooltipMove(event)" onmouseleave="chartTooltipHide()">
       <span class="label">${s.label}</span>
       <div class="funnel-bar-track"><div class="funnel-bar-fill" style="width:${pct}%">${c > 0 ? c : ''}</div></div>
       <span class="value-meta">${conv}%</span>
@@ -1813,7 +2157,11 @@ function renderFunnelChart() {
   // Adiciona linha de liquidadas
   const pctL = max > 0 ? (liquidadas / max) * 100 : 0;
   const convL = max > 0 ? Math.round((liquidadas / max) * 100) : 0;
-  html += `<div class="funnel-row">
+  const opsAttrL = buildOpsAttr(liquidadasList);
+  html += `<div class="funnel-row hoverable"
+    data-tt-title="Liquidadas" data-tt-total="${liquidadas} operações"
+    data-tt-ops="${escapeAttr(opsAttrL)}"
+    onmouseenter="onFunnelHover(event, this)" onmousemove="chartTooltipMove(event)" onmouseleave="chartTooltipHide()">
     <span class="label" style="color:var(--green); font-weight:600;">Liquidadas ✓</span>
     <div class="funnel-bar-track"><div class="funnel-bar-fill" style="width:${pctL}%; background: linear-gradient(90deg, var(--green) 0%, #4FAA7C 100%); color: #fff;">${liquidadas > 0 ? liquidadas : ''}</div></div>
     <span class="value-meta">${convL}%</span>
@@ -1822,21 +2170,40 @@ function renderFunnelChart() {
   document.getElementById('chartFunnel').innerHTML = html;
 }
 
+function onFunnelHover(e, el) {
+  const title = el.getAttribute('data-tt-title');
+  const total = el.getAttribute('data-tt-total');
+  const opsRaw = el.getAttribute('data-tt-ops') || '';
+  const ops = opsRaw ? opsRaw.split('§§').map(s => {
+    const [nome, valTxt] = s.split('|');
+    return { nome, valTxt };
+  }) : [];
+  chartTooltipShow(e, { title, total, ops, empty: ops.length === 0 });
+}
+
 function renderStatusChart() {
-  const ops = state.operations;
+  const ops = getFilteredOps();
   const byStatus = {};
-  STATUS_ORDER.forEach(s => byStatus[s] = { count: 0, valor: 0 });
+  STATUS_ORDER.forEach(s => byStatus[s] = { count: 0, valor: 0, ops: [] });
   ops.forEach(o => {
     if (byStatus[o.status]) {
       byStatus[o.status].count++;
       byStatus[o.status].valor += Number(o.valor)||0;
+      byStatus[o.status].ops.push(o);
     }
   });
   const max = Math.max(...Object.values(byStatus).map(s => s.count), 1);
   document.getElementById('chartStatus').innerHTML = STATUS_ORDER.map(s => {
     const item = byStatus[s];
     const pct = (item.count / max) * 100;
-    return `<div class="bar-row">
+    const opsAttr = item.ops
+      .sort((a,b) => (Number(b.valor)||0) - (Number(a.valor)||0))
+      .map(o => `${o.nome.replace(/\|/g,'/')}|${fmtBRLshort(Number(o.valor)||0).replace('R$ ','R$ ')}`)
+      .join('§§');
+    return `<div class="bar-row hoverable"
+      data-tt-title="${escapeAttr(STATUS_LABELS[s])}" data-tt-total="${item.count} operações · ${fmtBRLshort(item.valor)}"
+      data-tt-ops="${escapeAttr(opsAttr)}"
+      onmouseenter="onFunnelHover(event, this)" onmousemove="chartTooltipMove(event)" onmouseleave="chartTooltipHide()">
       <span class="label">${STATUS_LABELS[s]}</span>
       <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
       <span class="value">${item.count} · ${fmtBRLshort(item.valor)}</span>
@@ -1846,18 +2213,26 @@ function renderStatusChart() {
 
 function renderTipoChart() {
   const byTipo = {};
-  state.operations.forEach(o => {
-    if (!byTipo[o.tipo]) byTipo[o.tipo] = { count: 0, valor: 0, receita: 0 };
+  getFilteredOps().forEach(o => {
+    if (!byTipo[o.tipo]) byTipo[o.tipo] = { count: 0, valor: 0, receita: 0, ops: [] };
     byTipo[o.tipo].count++;
     byTipo[o.tipo].valor += Number(o.valor)||0;
     byTipo[o.tipo].receita += Number(o.receita)||0;
+    byTipo[o.tipo].ops.push(o);
   });
   const tipos = Object.keys(byTipo).sort((a,b) => byTipo[b].valor - byTipo[a].valor);
   const max = Math.max(...Object.values(byTipo).map(s => s.valor), 1);
   document.getElementById('chartTipo').innerHTML = tipos.length ? tipos.map(t => {
     const item = byTipo[t];
     const pct = (item.valor / max) * 100;
-    return `<div class="bar-row">
+    const opsAttr = item.ops
+      .sort((a,b) => (Number(b.valor)||0) - (Number(a.valor)||0))
+      .map(o => `${o.nome.replace(/\|/g,'/')}|${fmtBRLshort(Number(o.valor)||0).replace('R$ ','R$ ')}`)
+      .join('§§');
+    return `<div class="bar-row hoverable"
+      data-tt-title="${escapeAttr(t)}" data-tt-total="${item.count} operações · ${fmtBRLshort(item.valor)}"
+      data-tt-ops="${escapeAttr(opsAttr)}"
+      onmouseenter="onFunnelHover(event, this)" onmousemove="chartTooltipMove(event)" onmouseleave="chartTooltipHide()">
       <span class="label">${t} <span style="color:var(--text-mute); font-weight:400;">(${item.count})</span></span>
       <div class="bar-track"><div class="bar-fill" style="width:${pct}%; background: linear-gradient(90deg, var(--orange) 0%, var(--orange-dim) 100%);"></div></div>
       <span class="value">${fmtBRLshort(item.valor)}</span>
@@ -1868,14 +2243,16 @@ function renderTipoChart() {
 function renderTimeByStageChart() {
   // Calcula tempo médio que operações ficam em cada status, baseado nas fases dos jsonb
   const stageTotals = {};
-  STATUS_ORDER.forEach(s => stageTotals[s] = { total: 0, count: 0 });
-  state.operations.forEach(o => {
+  const stageOps = {};
+  STATUS_ORDER.forEach(s => { stageTotals[s] = { total: 0, count: 0 }; stageOps[s] = []; });
+  getFilteredOps().forEach(o => {
     (o.phases || []).forEach(p => {
       if (p.kind === 'task' && p.start && p.end && stageTotals[p.status]) {
         const days = dateToDays(p.end) - dateToDays(p.start);
         if (days >= 0) {
           stageTotals[p.status].total += days;
           stageTotals[p.status].count++;
+          stageOps[p.status].push({ nome: o.nome, days });
         }
       }
     });
@@ -1896,7 +2273,14 @@ function renderTimeByStageChart() {
     if (s === 'stand') return '';
     const avg = averages[s];
     const pct = (avg / max) * 100;
-    return `<div class="bar-row">
+    const opsAttr = stageOps[s]
+      .sort((a,b) => b.days - a.days)
+      .map(o => `${o.nome.replace(/\|/g,'/')}|${o.days}d`)
+      .join('§§');
+    return `<div class="bar-row hoverable"
+      data-tt-title="${escapeAttr(STATUS_LABELS[s])}" data-tt-total="${avg} dias em média · ${stageTotals[s].count} obs"
+      data-tt-ops="${escapeAttr(opsAttr)}"
+      onmouseenter="onFunnelHover(event, this)" onmousemove="chartTooltipMove(event)" onmouseleave="chartTooltipHide()">
       <span class="label">${STATUS_LABELS[s]}</span>
       <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
       <span class="value">${avg}d ${stageTotals[s].count > 0 ? `· ${stageTotals[s].count} obs` : ''}</span>
@@ -1906,12 +2290,12 @@ function renderTimeByStageChart() {
 
 // ===== Op cards (Visão Geral) =====
 function renderOpsCards() {
-  const ops = [...state.operations].sort((a,b) =>
+  const ops = [...getFilteredOps()].sort((a,b) =>
     (STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status)) || (b.progresso - a.progresso)
   );
   const wrap = document.getElementById('opsCards');
   if (!ops.length) {
-    wrap.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1;"><h3>Nenhuma operação cadastrada</h3><p>Clique em "Nova Operação" para começar</p></div>`;
+    wrap.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1;"><h3>Nenhuma operação ${state.operations.length > 0 ? 'corresponde aos filtros' : 'cadastrada'}</h3><p>${state.operations.length > 0 ? 'Ajuste os filtros acima ou' : 'Clique em "Nova Operação" para começar'}</p></div>`;
     return;
   }
   wrap.innerHTML = ops.map(o => {
