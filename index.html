@@ -150,13 +150,15 @@
     background: linear-gradient(135deg, var(--navy-deep) 0%, var(--navy) 60%, var(--navy-soft) 100%);
     color: #fff; padding: 22px 36px 0;
     box-shadow: var(--shadow-md);
-    position: relative; overflow: hidden;
+    position: relative;
   }
   .header::before {
     content: ''; position: absolute;
     top: -40%; right: -10%; width: 420px; height: 420px;
     background: radial-gradient(circle, rgba(255,150,90,0.18) 0%, transparent 65%);
     pointer-events: none;
+    /* clip path para não vazar mas permitir dropdowns saírem */
+    clip-path: inset(40% 10% -100% 0%);
   }
   .header-top {
     display: flex; justify-content: space-between; align-items: flex-start;
@@ -226,13 +228,15 @@
 
   /* ===== KPIs ===== */
   /* ===== Export Dropdown ===== */
-  .export-dropdown { position: relative; }
+  .export-dropdown { position: relative; z-index: 10; }
   .export-menu {
-    position: absolute; top: 100%; right: 0; margin-top: 6px;
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
     background: var(--surface); border-radius: var(--radius);
     box-shadow: var(--shadow-lg);
     min-width: 280px;
-    z-index: 50;
+    z-index: 1000;
     display: none;
     overflow: hidden;
     border: 1px solid var(--border);
@@ -2041,23 +2045,51 @@ function renderKPIs() {
 function getDashMonthRange() {
   const period = state.dashFilter ? state.dashFilter.period : 'ytd';
   const now = new Date();
-  let monthsBack;
-  if (period === 'all' || period === 'prev_year' || period === 'ytd') monthsBack = 12;
-  else if (period === '12m') monthsBack = 12;
-  else if (period === '6m') monthsBack = 6;
-  else if (period === '3m') monthsBack = 3;
-  else monthsBack = 12;
 
+  // Para 'prev_year' o gráfico mostra exatamente o ano anterior, sem projeção
   if (period === 'prev_year') {
     const y = now.getFullYear() - 1;
     return Array.from({ length: 12 }, (_, i) => `${y}-${String(i+1).padStart(2,'0')}`);
   }
-  if (period === 'ytd') {
-    monthsBack = now.getMonth() + 1; // só meses já transcorridos no ano
-  }
+
+  // Determina meses históricos a mostrar (incluindo o atual)
+  let monthsBack;
+  if (period === 'ytd') monthsBack = now.getMonth() + 1; // jan até mês atual
+  else if (period === '3m') monthsBack = 3;
+  else if (period === '6m') monthsBack = 6;
+  else if (period === 'all' || period === '12m') monthsBack = 12;
+  else monthsBack = 12;
+
+  // Calcula meses à frente baseado em data_prevista das operações em pipeline
+  // Mínimo: 3 meses à frente. Máximo: até o último mês com projeção.
+  const todayYM = now.toISOString().slice(0, 7);
+  let maxFutureYM = todayYM;
+  (state.operations || []).forEach(o => {
+    if (!o.data_liquidacao && o.status !== 'stand' && o.data_prevista) {
+      const m = o.data_prevista.slice(0, 7);
+      if (m > maxFutureYM) maxFutureYM = m;
+    }
+  });
+
+  // Conta meses entre todayYM e maxFutureYM
+  const todayDate = new Date(todayYM + '-01T00:00:00');
+  const maxFutureDate = new Date(maxFutureYM + '-01T00:00:00');
+  let monthsForward = (maxFutureDate.getFullYear() - todayDate.getFullYear()) * 12 +
+                      (maxFutureDate.getMonth() - todayDate.getMonth());
+  // Mínimo 3 meses à frente, máximo 12 (pra não estourar a tela)
+  monthsForward = Math.max(3, Math.min(12, monthsForward));
+
   const months = [];
-  for (let i = monthsBack - 1; i >= 0; i--) {
+  // Histórico: do mês mais antigo até o mês passado
+  for (let i = monthsBack - 1; i >= 1; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push(d.toISOString().slice(0, 7));
+  }
+  // Mês atual
+  months.push(todayYM);
+  // Projeção: do próximo mês até monthsForward
+  for (let i = 1; i <= monthsForward; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
     months.push(d.toISOString().slice(0, 7));
   }
   return months;
@@ -2180,11 +2212,28 @@ function renderTimeSeriesChart(containerId, monthlyData, monthlyOps, monthlyProj
       <span class="legend-item-c"><span class="legend-swatch-c ${clsProj}"></span>Projetado</span>
     </div>` : '';
 
+  // Linha vertical marcando o mês atual (separa realizado de projetado)
+  const todayYM = new Date().toISOString().slice(0, 7);
+  const todayIdx = months.indexOf(todayYM);
+  let todayLine = '';
+  if (todayIdx >= 0 && hasProjection) {
+    // Posiciona no fim do slot do mês atual (transição para o próximo)
+    const lineX = pad.left + (todayIdx + 1) * slotW;
+    todayLine = `
+      <line x1="${lineX}" x2="${lineX}" y1="${pad.top}" y2="${pad.top + innerH}"
+        stroke="var(--orange)" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.5"/>
+      <text x="${lineX}" y="${pad.top - 8}" text-anchor="middle"
+        style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; fill: var(--orange-dim); font-weight: 600;">
+        hoje →
+      </text>`;
+  }
+
   document.getElementById(containerId).innerHTML = `
     ${legend}
     <svg class="timechart" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" style="height:${h}px;">
       ${yAxis}
       <line class="axis-line" x1="${pad.left}" x2="${w - pad.right}" y1="${pad.top + innerH}" y2="${pad.top + innerH}" />
+      ${todayLine}
       ${bars}
       ${xAxis}
     </svg>
@@ -2280,7 +2329,6 @@ function renderRevenueMonthlyChart() {
   const monthlyOps = {};
   const monthlyProjected = {};
   const monthlyProjectedOps = {};
-  const todayMonth = todayStr().slice(0, 7);
   ops.forEach(o => {
     // Realizado: já liquidou
     if (o.data_liquidacao) {
@@ -2292,15 +2340,13 @@ function renderRevenueMonthlyChart() {
         monthlyOps[m].push({ nome: o.nome, val: r });
       }
     } else if (o.status !== 'stand' && o.data_prevista) {
-      // Projetado: pipeline ativo com data prevista no futuro (ou mês corrente)
+      // Projetado: pipeline ativo com data prevista (passada, presente ou futura)
       const m = o.data_prevista.slice(0, 7);
-      if (m >= todayMonth) {
-        const r = Number(o.receita) || 0;
-        if (r > 0) {
-          monthlyProjected[m] = (monthlyProjected[m] || 0) + r;
-          if (!monthlyProjectedOps[m]) monthlyProjectedOps[m] = [];
-          monthlyProjectedOps[m].push({ nome: o.nome, val: r });
-        }
+      const r = Number(o.receita) || 0;
+      if (r > 0) {
+        monthlyProjected[m] = (monthlyProjected[m] || 0) + r;
+        if (!monthlyProjectedOps[m]) monthlyProjectedOps[m] = [];
+        monthlyProjectedOps[m].push({ nome: o.nome, val: r });
       }
     }
   });
@@ -2315,7 +2361,6 @@ function renderVolumeMonthlyChart() {
   const monthlyOps = {};
   const monthlyProjected = {};
   const monthlyProjectedOps = {};
-  const todayMonth = todayStr().slice(0, 7);
   ops.forEach(o => {
     if (o.data_liquidacao) {
       const m = o.data_liquidacao.slice(0, 7);
@@ -2327,13 +2372,11 @@ function renderVolumeMonthlyChart() {
       }
     } else if (o.status !== 'stand' && o.data_prevista) {
       const m = o.data_prevista.slice(0, 7);
-      if (m >= todayMonth) {
-        const v = Number(o.valor) || 0;
-        if (v > 0) {
-          monthlyProjected[m] = (monthlyProjected[m] || 0) + v;
-          if (!monthlyProjectedOps[m]) monthlyProjectedOps[m] = [];
-          monthlyProjectedOps[m].push({ nome: o.nome, val: v });
-        }
+      const v = Number(o.valor) || 0;
+      if (v > 0) {
+        monthlyProjected[m] = (monthlyProjected[m] || 0) + v;
+        if (!monthlyProjectedOps[m]) monthlyProjectedOps[m] = [];
+        monthlyProjectedOps[m].push({ nome: o.nome, val: v });
       }
     }
   });
@@ -3367,19 +3410,28 @@ async function deleteOp() {
 function toggleExportMenu(e) {
   e.stopPropagation();
   const menu = document.getElementById('exportMenu');
-  menu.classList.toggle('show');
-  // Fechar ao clicar fora
-  if (menu.classList.contains('show')) {
-    setTimeout(() => {
-      const closeOnClick = (ev) => {
-        if (!ev.target.closest('.export-dropdown')) {
-          menu.classList.remove('show');
-          document.removeEventListener('click', closeOnClick);
-        }
-      };
-      document.addEventListener('click', closeOnClick);
-    }, 0);
+  const btn = document.getElementById('btnExport');
+  const isOpen = menu.classList.contains('show');
+  if (isOpen) {
+    menu.classList.remove('show');
+    return;
   }
+  // Posiciona o menu abaixo do botão (position: fixed)
+  const rect = btn.getBoundingClientRect();
+  menu.style.top = (rect.bottom + 6) + 'px';
+  menu.style.right = (window.innerWidth - rect.right) + 'px';
+  menu.style.left = 'auto';
+  menu.classList.add('show');
+  // Fechar ao clicar fora
+  setTimeout(() => {
+    const closeOnClick = (ev) => {
+      if (!ev.target.closest('.export-dropdown') && !ev.target.closest('.export-menu')) {
+        menu.classList.remove('show');
+        document.removeEventListener('click', closeOnClick);
+      }
+    };
+    document.addEventListener('click', closeOnClick);
+  }, 0);
 }
 
 // Cores Netz como tuplas RGB para jsPDF
