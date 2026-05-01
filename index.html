@@ -10,6 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root {
     --navy:        #001B5C;
@@ -1039,6 +1040,190 @@
   .phase-row input[type="date"] { font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
   .phase-row select { font-size: 11px; padding: 5px 6px; }
 
+  /* ========= ANEXOS ========= */
+  .file-item {
+    display: grid;
+    grid-template-columns: 32px 1fr auto auto;
+    gap: 10px; align-items: center;
+    padding: 8px 12px; margin-bottom: 6px;
+    background: var(--bg); border-radius: 8px;
+    border: 1px solid var(--border-soft);
+    transition: all 0.15s;
+  }
+  .file-item:hover { background: var(--blue-light); border-color: var(--blue-pale); }
+  .file-icon {
+    width: 32px; height: 32px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px;
+    display: grid; place-items: center;
+    font-size: 11px; font-weight: 700;
+    color: var(--navy);
+    text-transform: uppercase;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .file-icon.pdf { color: var(--red); border-color: #f5c0c0; background: #fef5f5; }
+  .file-icon.doc, .file-icon.docx { color: #1F6088; border-color: #c0d8eb; background: #f4f9fc; }
+  .file-icon.xls, .file-icon.xlsx { color: var(--green); border-color: #b7dcc2; background: #f5fbf7; }
+  .file-icon.img, .file-icon.png, .file-icon.jpg, .file-icon.jpeg { color: #6A4A8C; border-color: #d6c0e0; background: #f9f5fc; }
+  .file-info { min-width: 0; }
+  .file-name {
+    font-size: 13px; font-weight: 500; color: var(--navy);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    cursor: pointer;
+  }
+  .file-name:hover { color: var(--orange-dim); text-decoration: underline; }
+  .file-meta {
+    font-size: 11px; color: var(--text-mute);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .file-actions { display: flex; gap: 4px; }
+  .file-action-btn {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-mute);
+    width: 28px; height: 28px;
+    border-radius: 5px; cursor: pointer;
+    display: grid; place-items: center;
+    transition: all 0.15s;
+  }
+  .file-action-btn:hover { color: var(--navy); border-color: var(--navy); background: var(--blue-light); }
+  .file-action-btn.danger:hover { color: var(--red); border-color: var(--red); background: var(--red-bg); }
+  .file-uploading {
+    display: grid;
+    grid-template-columns: 32px 1fr auto;
+    gap: 10px; align-items: center;
+    padding: 8px 12px; margin-bottom: 6px;
+    background: var(--blue-light); border-radius: 8px;
+  }
+  .file-progress {
+    width: 100%; height: 4px; background: rgba(0,27,92,0.1);
+    border-radius: 2px; overflow: hidden;
+  }
+  .file-progress-fill {
+    height: 100%; background: var(--orange);
+    transition: width 0.2s ease;
+  }
+
+  /* ========= SUMÁRIO IA NO MODAL ========= */
+  .modal-ai-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: linear-gradient(135deg, var(--orange) 0%, var(--orange-dim) 100%);
+    color: var(--navy-deep); border: none;
+    padding: 6px 12px; border-radius: 6px;
+    font-family: inherit; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s;
+    box-shadow: 0 2px 6px rgba(255,150,90,0.3);
+  }
+  .modal-ai-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(255,150,90,0.4); }
+  .modal-ai-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  .ai-summary-card {
+    background: linear-gradient(135deg, #fff8f3 0%, #fff5ed 100%);
+    border: 1px solid var(--orange);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 18px;
+    position: relative;
+    animation: msgFadeIn 0.3s ease;
+  }
+  .ai-summary-card::before {
+    content: ''; position: absolute;
+    top: 0; left: 0; bottom: 0; width: 3px;
+    background: var(--orange); border-radius: 10px 0 0 10px;
+  }
+  .ai-summary-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px;
+  }
+  .ai-summary-title {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700; color: var(--orange-dim);
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .ai-summary-close {
+    background: transparent; border: none; cursor: pointer;
+    color: var(--text-mute); font-size: 18px; line-height: 1;
+    width: 24px; height: 24px; border-radius: 4px;
+    display: grid; place-items: center;
+  }
+  .ai-summary-close:hover { background: rgba(0,0,0,0.05); color: var(--text); }
+  .ai-summary-content {
+    font-size: 13px; line-height: 1.6; color: var(--text);
+  }
+  .ai-summary-content strong { color: var(--navy); font-weight: 600; }
+  .ai-summary-content code {
+    font-family: 'IBM Plex Mono', monospace;
+    background: rgba(255,150,90,0.15); color: var(--orange-dim);
+    padding: 1px 5px; border-radius: 3px; font-size: 11px;
+  }
+  .ai-summary-content ul, .ai-summary-content ol { margin: 6px 0 6px 20px; }
+  .ai-summary-content li { margin-bottom: 3px; }
+  .ai-summary-content p { margin: 0 0 6px 0; }
+  .ai-summary-content p:last-child { margin-bottom: 0; }
+  .ai-summary-loading {
+    display: flex; align-items: center; gap: 10px;
+    color: var(--text-mute); font-size: 12px; font-style: italic;
+  }
+  .ai-summary-loading .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,150,90,0.3);
+    border-top-color: var(--orange);
+    animation: spin 0.7s linear infinite;
+  }
+
+  /* ========= FILTROS SALVOS ========= */
+  .dash-filter-actions {
+    display: flex; gap: 6px; align-self: flex-end;
+    flex-wrap: wrap;
+  }
+  .dash-filter-actions .btn {
+    height: 36px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+  .saved-filters-bar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .saved-filters-label {
+    font-size: 11px; font-weight: 600; color: var(--text-mute);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    flex-shrink: 0;
+  }
+  .saved-filters-list {
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .saved-filter-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--blue-light);
+    color: var(--navy);
+    border: 1px solid var(--blue-pale);
+    border-radius: 16px;
+    padding: 4px 6px 4px 12px;
+    font-size: 12px; font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .saved-filter-chip:hover { background: var(--blue-pale); border-color: var(--navy); }
+  .saved-filter-chip.active {
+    background: var(--navy); color: #fff; border-color: var(--navy);
+  }
+  .saved-filter-chip .filter-remove {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.08);
+    border: none; cursor: pointer;
+    display: grid; place-items: center;
+    color: inherit;
+    margin-left: 4px;
+  }
+  .saved-filter-chip .filter-remove:hover { background: var(--red); color: #fff; }
+  .saved-filter-chip.active .filter-remove { background: rgba(255,255,255,0.2); }
+
   /* ========= CHATBOT ========= */
   .chat-fab {
     position: fixed;
@@ -1467,7 +1652,25 @@
           <label>Cliente</label>
           <select id="dfCliente" onchange="onDashFilterChange()"><option value="">Todos</option></select>
         </div>
-        <button class="btn btn-secondary dash-filter-clear" onclick="clearDashFilters()">Limpar filtros</button>
+        <div class="dash-filter-actions">
+          <button class="btn btn-secondary" onclick="clearDashFilters()" title="Limpar filtros">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            <span>Limpar</span>
+          </button>
+          <button class="btn btn-secondary" onclick="saveCurrentFilter()" title="Salvar essa combinação de filtros">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2zM17 21v-8H7v8M7 3v5h8"/></svg>
+            <span>Salvar filtro</span>
+          </button>
+          <button class="btn btn-secondary" onclick="exportFilteredXLSX()" title="Exportar operações filtradas para Excel">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            <span>Excel</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="saved-filters-bar" id="savedFiltersBar" style="display:none;">
+        <span class="saved-filters-label">Filtros salvos:</span>
+        <div class="saved-filters-list" id="savedFiltersList"></div>
       </div>
 
       <div class="kpi-grid" id="kpiGrid"></div>
@@ -1597,9 +1800,25 @@
   <div class="modal">
     <div class="modal-head">
       <h2 id="modalTitle">Nova Operação</h2>
-      <button class="modal-close" onclick="closeModal()">×</button>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <button class="modal-ai-btn" id="modalAIBtn" onclick="generateOperationSummary()" style="display:none;" title="Gerar sumário inteligente da operação">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2"/></svg>
+          <span>Resumir com IA</span>
+        </button>
+        <button class="modal-close" onclick="closeModal()">×</button>
+      </div>
     </div>
     <div class="modal-body">
+      <div class="ai-summary-card" id="aiSummaryCard" style="display:none;">
+        <div class="ai-summary-header">
+          <div class="ai-summary-title">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2"/></svg>
+            <span>Sumário inteligente</span>
+          </div>
+          <button class="ai-summary-close" onclick="closeAISummary()">×</button>
+        </div>
+        <div class="ai-summary-content" id="aiSummaryContent"></div>
+      </div>
       <input type="hidden" id="opId">
       <div class="form-grid">
         <div class="field full">
@@ -1747,6 +1966,20 @@
           <button class="add-item-btn" onclick="addRisk()">+ adicionar risco</button>
         </div>
         <div id="risksContainer"></div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">
+          <span>Documentos & Anexos</span>
+          <div class="form-section-title-actions">
+            <button class="phase-template-btn" onclick="openFileDialog()">📎 anexar arquivo</button>
+            <input type="file" id="fileInput" multiple style="display:none;" onchange="handleFileUpload(this)">
+          </div>
+        </div>
+        <div id="filesContainer"></div>
+        <div style="font-size: 11px; color: var(--text-mute); margin-top: 6px;">
+          Regulamentos, contratos, atos constitutivos, prospectos. Máx. 50MB por arquivo.
+        </div>
       </div>
 
       <div class="form-section">
@@ -2165,6 +2398,7 @@ function sortBy(field) {
 
 function renderAll() {
   populateDashFilters();
+  renderSavedFilters();
   renderKPIs();
   renderRevenueMonthlyChart();
   renderVolumeMonthlyChart();
@@ -2261,6 +2495,7 @@ function onDashFilterChange() {
   renderStatusChart();
   renderTimeByStageChart();
   renderOpsCards();
+  renderSavedFilters();
 }
 
 function clearDashFilters() {
@@ -3437,14 +3672,16 @@ function openModal(opId) {
   const isEdit = !!opId;
   document.getElementById('modalTitle').textContent = isEdit ? 'Editar Operação' : 'Nova Operação';
   document.getElementById('btnDelete').style.display = isEdit ? 'inline-flex' : 'none';
+  document.getElementById('modalAIBtn').style.display = isEdit ? 'inline-flex' : 'none';
   document.getElementById('opId').value = opId || '';
   document.getElementById('auditStrip').style.display = isEdit ? 'flex' : 'none';
+  closeAISummary();
 
   const op = isEdit ? state.operations.find(o => o.id === opId) : {
     nome: '', tipo: 'FIDC', status: 'prospeccao', cliente: '', responsavel: '',
     valor: '', receita: '', volume_liquidado: '', receita_realizada: '',
     progresso: 0, data_inicio: '', data_prevista: '', data_liquidacao: '',
-    phases: [], checklist: [], steps: [], risks: [], obs: ''
+    phases: [], checklist: [], steps: [], risks: [], obs: '', files: []
   };
 
   document.getElementById('fNome').value = op.nome || '';
@@ -3478,12 +3715,16 @@ function openModal(opId) {
 
   renderSteps(op.steps || []);
   renderRisks(op.risks || []);
+  setFiles(op.files || []);
 
   document.getElementById('modalOverlay').classList.add('active');
   setTimeout(() => document.getElementById('fNome').focus(), 100);
 }
 
-function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); }
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('active');
+  closeAISummary();
+}
 
 // ===== Phases editor =====
 function renderPhases(items) {
@@ -3723,7 +3964,8 @@ async function saveOp() {
     phases: getPhases().filter(p => p.label.trim() && p.start),
     checklist: allChecklist,
     steps: getSteps().filter(s => s.texto.trim()),
-    risks: getRisks().filter(r => r.texto.trim())
+    risks: getRisks().filter(r => r.texto.trim()),
+    files: getFiles()
   };
 
   const btn = document.getElementById('btnSave');
@@ -3751,8 +3993,18 @@ async function deleteOp() {
   const opId = document.getElementById('opId').value;
   const op = state.operations.find(o => o.id === opId);
   if (!op) return;
-  if (!confirm(`Excluir "${op.nome}"?\n\nEsta ação não pode ser desfeita.`)) return;
+  if (!confirm(`Excluir "${op.nome}"?\n\nIsso remove a operação e todos os documentos anexados. Esta ação não pode ser desfeita.`)) return;
   try {
+    // Remove arquivos do storage primeiro (se houver)
+    const files = op.files || [];
+    if (files.length > 0) {
+      const paths = files.map(f => f.path).filter(Boolean);
+      if (paths.length > 0) {
+        const { error: rmError } = await sb.storage.from(STORAGE_BUCKET).remove(paths);
+        if (rmError) console.warn('Erro ao remover arquivos do storage:', rmError);
+      }
+    }
+    // Depois remove a operação
     const { error } = await sb.from('operations').delete().eq('id', opId);
     if (error) throw error;
     closeModal();
@@ -4640,23 +4892,13 @@ ${JSON.stringify(opsCtx, null, 2)}`;
     // Histórico de mensagens (excluindo a system, que vai como parâmetro)
     const messages = chatHistory.map(m => ({ role: m.role, content: m.content }));
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1500,
-        system: systemPrompt,
-        messages
-      })
+    const data = await callClaudeAPI({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1500,
+      system: systemPrompt,
+      messages
     });
 
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error?.message || `HTTP ${response.status}`);
-    }
-
-    const data = await response.json();
     const assistantText = (data.content || [])
       .filter(b => b.type === 'text')
       .map(b => b.text)
@@ -4686,6 +4928,647 @@ ${JSON.stringify(opsCtx, null, 2)}`;
     input.focus();
     document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
   }
+}
+
+// ============================================
+// CLAUDE API (via Supabase Edge Function proxy)
+// ============================================
+
+async function callClaudeAPI(payload) {
+  if (!sb) throw new Error('Supabase não inicializado');
+
+  // Pega o token de autenticação do usuário logado
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) throw new Error('Sessão expirada. Faça login novamente.');
+
+  // Constrói URL da Edge Function
+  const proxyUrl = `${SUPABASE_URL}/functions/v1/claude-proxy`;
+
+  const response = await fetch(proxyUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+      'apikey': SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    const errMsg = errData.error?.message || `HTTP ${response.status}`;
+    if (response.status === 404) {
+      throw new Error('Edge Function "claude-proxy" não encontrada no Supabase. Veja README de setup.');
+    }
+    if (response.status === 401) {
+      throw new Error('Não autorizado. Faça login novamente.');
+    }
+    throw new Error(errMsg);
+  }
+
+  return response.json();
+}
+
+// ============================================
+// ANEXOS DE DOCUMENTOS
+// ============================================
+
+const STORAGE_BUCKET = 'operation-files';
+
+function openFileDialog() {
+  document.getElementById('fileInput').click();
+}
+
+function fileExtension(name) {
+  const m = name.match(/\.([^.]+)$/);
+  return m ? m[1].toLowerCase() : '';
+}
+
+function fmtBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1024*1024) return (b/1024).toFixed(1) + ' KB';
+  return (b/1024/1024).toFixed(1) + ' MB';
+}
+
+function getFileIconClass(name) {
+  const ext = fileExtension(name);
+  if (ext === 'pdf') return 'pdf';
+  if (['doc','docx'].includes(ext)) return 'doc';
+  if (['xls','xlsx','csv'].includes(ext)) return 'xls';
+  if (['png','jpg','jpeg','gif','webp'].includes(ext)) return 'img';
+  return '';
+}
+
+function renderFiles(files) {
+  const wrap = document.getElementById('filesContainer');
+  if (!files || files.length === 0) {
+    wrap.innerHTML = '<div style="font-size:12px; color:var(--text-soft); padding:16px; background:var(--bg); border-radius:6px; text-align:center;">Nenhum documento anexado ainda.</div>';
+    return;
+  }
+  wrap.innerHTML = files.map((f, i) => {
+    const ext = fileExtension(f.name);
+    const iconCls = getFileIconClass(f.name);
+    return `<div class="file-item" data-idx="${i}">
+      <div class="file-icon ${iconCls}">${ext || '?'}</div>
+      <div class="file-info">
+        <div class="file-name" onclick="downloadFile(${i})" title="Baixar ${escapeAttr(f.name)}">${escapeHtml(f.name)}</div>
+        <div class="file-meta">${fmtBytes(f.size)} · enviado por ${escapeHtml(f.uploaded_by || '—')} em ${fmtDateTime(f.uploaded_at)}</div>
+      </div>
+      <div class="file-actions">
+        <button class="file-action-btn" onclick="downloadFile(${i})" title="Baixar">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        </button>
+        <button class="file-action-btn danger" onclick="deleteFile(${i})" title="Excluir">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function getFiles() {
+  // Lista atual está armazenada num data attribute do container
+  const stored = document.getElementById('filesContainer').dataset.files;
+  return stored ? JSON.parse(stored) : [];
+}
+
+function setFiles(files) {
+  document.getElementById('filesContainer').dataset.files = JSON.stringify(files);
+  renderFiles(files);
+}
+
+async function handleFileUpload(input) {
+  const files = Array.from(input.files);
+  input.value = ''; // reset
+  if (!files.length) return;
+
+  const opId = document.getElementById('opId').value;
+  if (!opId) {
+    showToast('Salve a operação antes de anexar arquivos', true);
+    return;
+  }
+
+  const wrap = document.getElementById('filesContainer');
+  // Mostrar item de upload temporário
+  const uploadingEl = document.createElement('div');
+  uploadingEl.className = 'file-uploading';
+  uploadingEl.innerHTML = `
+    <div class="file-icon">⏳</div>
+    <div>
+      <div style="font-size: 12px; color: var(--navy); margin-bottom: 4px;">Enviando ${files.length} arquivo(s)...</div>
+      <div class="file-progress"><div class="file-progress-fill" id="uploadProgress" style="width: 0%"></div></div>
+    </div>
+    <div></div>
+  `;
+  wrap.insertBefore(uploadingEl, wrap.firstChild);
+
+  const currentFiles = getFiles();
+  let success = 0;
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    if (file.size > 50 * 1024 * 1024) {
+      showToast(`"${file.name}" é maior que 50MB`, true);
+      continue;
+    }
+    try {
+      // Sanitiza nome do arquivo (remove acentos e caracteres especiais)
+      const cleanName = file.name
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // remove acentos
+        .replace(/[^a-zA-Z0-9._-]/g, '_');                  // só ascii safe
+      const path = `${opId}/${Date.now()}_${cleanName}`;
+      const { error } = await sb.storage.from(STORAGE_BUCKET).upload(path, file, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: file.type
+      });
+      if (error) throw error;
+
+      currentFiles.push({
+        path,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        uploaded_by: currentUser?.email || '—',
+        uploaded_at: new Date().toISOString()
+      });
+      success++;
+      const pct = Math.round(((i+1)/files.length)*100);
+      document.getElementById('uploadProgress').style.width = pct + '%';
+    } catch (err) {
+      showToast(`Erro em "${file.name}": ${err.message}`, true);
+    }
+  }
+
+  uploadingEl.remove();
+  setFiles(currentFiles);
+
+  if (success > 0) {
+    // Persiste imediatamente o array de files no banco (sem mexer no resto da operação)
+    const { error } = await sb.from('operations').update({ files: currentFiles }).eq('id', opId);
+    if (error) {
+      showToast('Anexos enviados mas erro ao salvar metadados: ' + error.message, true);
+    } else {
+      showToast(`${success} arquivo(s) anexado(s)`);
+      // Atualiza o state local
+      const op = state.operations.find(o => o.id === opId);
+      if (op) op.files = currentFiles;
+    }
+  }
+}
+
+async function downloadFile(idx) {
+  const files = getFiles();
+  const file = files[idx];
+  if (!file) return;
+  try {
+    const { data, error } = await sb.storage.from(STORAGE_BUCKET).createSignedUrl(file.path, 60);
+    if (error) throw error;
+    // Abrir em nova aba
+    window.open(data.signedUrl, '_blank');
+  } catch (err) {
+    showToast('Erro ao gerar link: ' + err.message, true);
+  }
+}
+
+async function deleteFile(idx) {
+  const files = getFiles();
+  const file = files[idx];
+  if (!file) return;
+  if (!confirm(`Excluir "${file.name}"?\n\nEsta ação não pode ser desfeita.`)) return;
+
+  try {
+    // Remove do storage
+    const { error: rmError } = await sb.storage.from(STORAGE_BUCKET).remove([file.path]);
+    if (rmError) throw rmError;
+    // Remove da lista local
+    files.splice(idx, 1);
+    setFiles(files);
+    // Persiste no banco
+    const opId = document.getElementById('opId').value;
+    if (opId) {
+      const { error } = await sb.from('operations').update({ files }).eq('id', opId);
+      if (error) throw error;
+      const op = state.operations.find(o => o.id === opId);
+      if (op) op.files = files;
+    }
+    showToast('Arquivo excluído');
+  } catch (err) {
+    showToast('Erro: ' + err.message, true);
+  }
+}
+
+// ============================================
+// SUMÁRIO INTELIGENTE DA OPERAÇÃO
+// ============================================
+
+function closeAISummary() {
+  document.getElementById('aiSummaryCard').style.display = 'none';
+  document.getElementById('aiSummaryContent').innerHTML = '';
+}
+
+async function generateOperationSummary() {
+  const opId = document.getElementById('opId').value;
+  if (!opId) return;
+  const op = state.operations.find(o => o.id === opId);
+  if (!op) return;
+
+  const card = document.getElementById('aiSummaryCard');
+  const content = document.getElementById('aiSummaryContent');
+  const btn = document.getElementById('modalAIBtn');
+
+  card.style.display = 'block';
+  content.innerHTML = '<div class="ai-summary-loading"><div class="spinner"></div>Analisando operação...</div>';
+  btn.disabled = true;
+
+  // Prepara dados estruturados da operação
+  const checklist = op.checklist || [];
+  const checklistTemplate = checklist.filter(c => c.num);
+  const checklistCustom = checklist.filter(c => !c.num);
+  const ckByStatus = { pendente: 0, andamento: 0, concluido: 0, na: 0 };
+  checklistTemplate.forEach(c => { if (ckByStatus[c.status] !== undefined) ckByStatus[c.status]++; });
+
+  const phases = op.phases || [];
+  const today = todayStr();
+  const phasesAnalysis = phases.map(p => {
+    if (!p.start) return null;
+    const startDays = dateToDays(p.start);
+    const endDays = p.end ? dateToDays(p.end) : startDays;
+    const todayDays = dateToDays(today);
+    const status = endDays < todayDays ? 'concluida'
+      : startDays > todayDays ? 'futura'
+      : 'em_andamento';
+    return {
+      label: p.label,
+      tipo: p.kind,
+      inicio: p.start,
+      fim: p.end || p.start,
+      duracao_dias: endDays - startDays,
+      status_temporal: status
+    };
+  }).filter(Boolean);
+
+  const dias_atraso = (op.data_prevista && !op.data_liquidacao && op.status !== 'stand')
+    ? -daysUntil(op.data_prevista) : null;
+
+  const opCtx = {
+    nome: op.nome,
+    tipo: op.tipo,
+    status_atual: STATUS_LABELS[op.status] || op.status,
+    cliente: op.cliente,
+    responsavel: op.responsavel,
+    valores: {
+      volume_estruturado: Number(op.valor) || 0,
+      receita_prevista: Number(op.receita) || 0,
+      volume_liquidado: Number(op.volume_liquidado) || 0,
+      receita_realizada: Number(op.receita_realizada) || 0
+    },
+    cronograma: {
+      data_inicio: op.data_inicio,
+      data_prevista_conclusao: op.data_prevista,
+      data_liquidacao: op.data_liquidacao,
+      progresso_geral: op.progresso || 0,
+      ja_liquidada: !!op.data_liquidacao,
+      dias_atraso: dias_atraso !== null && dias_atraso > 0 ? dias_atraso : null
+    },
+    fases: phasesAnalysis,
+    checklist_netz: {
+      total: checklistTemplate.length,
+      concluidos: ckByStatus.concluido,
+      em_andamento: ckByStatus.andamento,
+      pendentes: ckByStatus.pendente,
+      nao_aplicaveis: ckByStatus.na,
+      itens_em_andamento: checklistTemplate.filter(c => c.status === 'andamento').map(c => `${c.num} ${c.texto}`),
+      itens_pendentes_amostra: checklistTemplate.filter(c => c.status === 'pendente').slice(0, 8).map(c => `${c.num} ${c.texto}`)
+    },
+    checklist_customizado: checklistCustom.map(c => ({ texto: c.texto, concluido: !!c.done })),
+    proximos_passos: (op.steps || []).filter(s => s.texto).map(s => s.texto),
+    riscos: (op.risks || []).filter(r => r.texto).map(r => ({ nivel: r.nivel, texto: r.texto })),
+    observacoes: op.obs || null,
+    documentos_anexados: (op.files || []).length,
+    auditoria: {
+      criado_em: op.criado_em,
+      atualizado_em: op.atualizado_em,
+      atualizado_por: op.atualizado_por_email
+    }
+  };
+
+  const systemPrompt = `Você é um analista sênior da Netz Solution especializado em estruturação de crédito. Analise a operação fornecida e produza um sumário executivo direto, em português brasileiro.
+
+ESTRUTURA DA RESPOSTA (use exatamente essas seções, sem #):
+
+**Estado atual**
+Em 1-2 frases, situação geral da operação (status, fase, % de progresso, atraso se houver).
+
+**Saúde do cronograma**
+Fases concluídas vs. pendentes. Atrasos críticos. Próximas fases que vencem.
+
+**Saúde do checklist**
+Como está o avanço do checklist Netz. Itens em andamento. Quais itens pendentes são prioritários (foque nos com numeração baixa, fundamentais, como Regulamento, Cessão, etc).
+
+**Riscos & atenções**
+Riscos cadastrados e pontos de atenção. Se não houver, diga "sem riscos formalmente registrados".
+
+**Recomendação**
+2-3 ações concretas que o time deve priorizar agora.
+
+REGRAS:
+- Use **negrito** para destacar informações chave (números, status, datas).
+- Seja conciso. Cada seção: 1-3 frases.
+- Use formato R$ X mi / R$ X mil / R$ X (escolha o melhor pra cada valor).
+- Datas em dd/mm/yyyy.
+- Se um campo está vazio, NÃO mencione (ex: se não há riscos, mantém a frase padrão; se não há próximos passos, omita).
+- NÃO invente dados que não estão no JSON.
+
+DATA DE HOJE: ${today}
+
+DADOS DA OPERAÇÃO:
+${JSON.stringify(opCtx, null, 2)}`;
+
+  try {
+    const data = await callClaudeAPI({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1200,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: 'Gere o sumário executivo dessa operação seguindo a estrutura definida.' }]
+    });
+    const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
+    if (!text) throw new Error('Resposta vazia');
+    content.innerHTML = renderChatMarkdown(text);
+  } catch (err) {
+    content.innerHTML = `<div style="color:var(--red); font-size:13px;">⚠️ Não consegui gerar o sumário: ${escapeHtml(err.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ============================================
+// FILTROS SALVOS (localStorage)
+// ============================================
+
+const SAVED_FILTERS_KEY = 'netz_pipeline_saved_filters';
+
+function getSavedFilters() {
+  try {
+    return JSON.parse(localStorage.getItem(SAVED_FILTERS_KEY) || '[]');
+  } catch { return []; }
+}
+
+function persistSavedFilters(filters) {
+  try {
+    localStorage.setItem(SAVED_FILTERS_KEY, JSON.stringify(filters));
+  } catch (e) {
+    showToast('Não foi possível salvar (storage cheio)', true);
+  }
+}
+
+function describeFilter(f) {
+  const parts = [];
+  const periodLabels = { ytd: 'YTD', '12m': '12m', '6m': '6m', '3m': '3m', prev_year: 'Ano ant.', all: 'Tudo' };
+  if (f.period && f.period !== 'ytd') parts.push(periodLabels[f.period] || f.period);
+  if (f.tipo) parts.push(f.tipo);
+  if (f.status) parts.push(STATUS_LABELS[f.status] || f.status);
+  if (f.resp) parts.push('@' + f.resp.split(' ')[0]);
+  if (f.cliente) parts.push(f.cliente);
+  return parts.length ? parts.join(' · ') : 'sem filtros';
+}
+
+function isCurrentFilterMatch(saved) {
+  const cur = state.dashFilter;
+  return saved.period === cur.period && saved.tipo === cur.tipo &&
+         saved.status === cur.status && saved.resp === cur.resp && saved.cliente === cur.cliente;
+}
+
+function saveCurrentFilter() {
+  const cur = state.dashFilter;
+  if (!cur.tipo && !cur.status && !cur.resp && !cur.cliente && cur.period === 'ytd') {
+    showToast('Aplique pelo menos um filtro antes de salvar', true);
+    return;
+  }
+  const desc = describeFilter(cur);
+  const name = prompt(`Salvar combinação de filtros como:\n\n${desc}\n\nNome do filtro:`, desc);
+  if (!name) return;
+
+  const saved = getSavedFilters();
+  // Evita duplicar
+  if (saved.some(s => s.name === name)) {
+    if (!confirm('Já existe um filtro com esse nome. Sobrescrever?')) return;
+    const idx = saved.findIndex(s => s.name === name);
+    saved.splice(idx, 1);
+  }
+  saved.push({ name, ...cur, created_at: new Date().toISOString() });
+  persistSavedFilters(saved);
+  renderSavedFilters();
+  showToast('Filtro salvo');
+}
+
+function applySavedFilter(name) {
+  const saved = getSavedFilters();
+  const f = saved.find(s => s.name === name);
+  if (!f) return;
+  document.getElementById('dfPeriod').value = f.period || 'ytd';
+  document.getElementById('dfTipo').value = f.tipo || '';
+  document.getElementById('dfStatus').value = f.status || '';
+  document.getElementById('dfResp').value = f.resp || '';
+  document.getElementById('dfCliente').value = f.cliente || '';
+  onDashFilterChange();
+  renderSavedFilters();
+}
+
+function deleteSavedFilter(name, e) {
+  if (e) e.stopPropagation();
+  if (!confirm(`Excluir filtro "${name}"?`)) return;
+  const saved = getSavedFilters().filter(s => s.name !== name);
+  persistSavedFilters(saved);
+  renderSavedFilters();
+}
+
+function renderSavedFilters() {
+  const saved = getSavedFilters();
+  const bar = document.getElementById('savedFiltersBar');
+  const list = document.getElementById('savedFiltersList');
+  if (!saved.length) {
+    bar.style.display = 'none';
+    return;
+  }
+  bar.style.display = 'flex';
+  list.innerHTML = saved.map(f => {
+    const isActive = isCurrentFilterMatch(f);
+    return `<button class="saved-filter-chip ${isActive ? 'active' : ''}" onclick="applySavedFilter(${JSON.stringify(f.name).replace(/"/g, '&quot;')})">
+      <span>${escapeHtml(f.name)}</span>
+      <button class="filter-remove" onclick="deleteSavedFilter(${JSON.stringify(f.name).replace(/"/g, '&quot;')}, event)" title="Excluir filtro">
+        <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M6 18L18 6"/></svg>
+      </button>
+    </button>`;
+  }).join('');
+}
+
+// ============================================
+// EXPORT EXCEL
+// ============================================
+
+function exportFilteredXLSX() {
+  if (!window.XLSX) {
+    showToast('Biblioteca Excel ainda carregando, tente em 2s', true);
+    return;
+  }
+  const ops = getFilteredOps();
+  if (ops.length === 0) {
+    showToast('Nenhuma operação para exportar', true);
+    return;
+  }
+
+  const wb = XLSX.utils.book_new();
+
+  // ===== Aba 1: Operações (resumo) =====
+  const opsRows = ops.map(o => {
+    const ck = o.checklist || [];
+    const ckTotal = ck.length;
+    const ckDone = ck.filter(c => c.status === 'concluido' || c.done).length;
+    const dias = (o.data_prevista && !o.data_liquidacao && o.status !== 'stand')
+      ? -daysUntil(o.data_prevista) : null;
+    return {
+      'Nome da Operação': o.nome,
+      'Tipo': o.tipo,
+      'Status': STATUS_LABELS[o.status] || o.status,
+      'Cliente': o.cliente || '',
+      'Responsável': o.responsavel || '',
+      'Volume Estruturado': Number(o.valor) || 0,
+      'Receita Prevista': Number(o.receita) || 0,
+      'Volume Liquidado': Number(o.volume_liquidado) || 0,
+      'Receita Realizada': Number(o.receita_realizada) || 0,
+      'Progresso %': o.progresso || 0,
+      'Data Início': o.data_inicio || '',
+      'Data Prevista Conclusão': o.data_prevista || '',
+      'Data Liquidação': o.data_liquidacao || '',
+      'Dias Atraso': (dias !== null && dias > 0) ? dias : '',
+      'Liquidada': o.data_liquidacao ? 'Sim' : 'Não',
+      'Checklist Concluído': ckTotal > 0 ? `${ckDone}/${ckTotal}` : '',
+      '# Riscos': (o.risks || []).filter(r => r.texto).length,
+      '# Próximos Passos': (o.steps || []).filter(s => s.texto).length,
+      '# Documentos': (o.files || []).length,
+      'Observações': o.obs || '',
+      'Criada em': o.criado_em ? new Date(o.criado_em).toLocaleString('pt-BR') : '',
+      'Última atualização': o.atualizado_em ? new Date(o.atualizado_em).toLocaleString('pt-BR') : '',
+      'Atualizada por': o.atualizado_por_email || ''
+    };
+  });
+  const ws1 = XLSX.utils.json_to_sheet(opsRows);
+  // Larguras automáticas
+  ws1['!cols'] = [
+    { wch: 32 }, { wch: 10 }, { wch: 16 }, { wch: 20 }, { wch: 18 },
+    { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 9 },
+    { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 9 },
+    { wch: 14 }, { wch: 9 }, { wch: 9 }, { wch: 9 }, { wch: 40 },
+    { wch: 18 }, { wch: 18 }, { wch: 24 }
+  ];
+  // Formato de moeda nas colunas de valor
+  const moneyCols = ['F', 'G', 'H', 'I'];  // Volume Estruturado, Receita Prevista, Volume Liquidado, Receita Realizada
+  for (let r = 2; r <= opsRows.length + 1; r++) {
+    moneyCols.forEach(col => {
+      const cellRef = `${col}${r}`;
+      if (ws1[cellRef]) {
+        ws1[cellRef].t = 'n';
+        ws1[cellRef].z = '"R$" #,##0';
+      }
+    });
+  }
+  XLSX.utils.book_append_sheet(wb, ws1, 'Operações');
+
+  // ===== Aba 2: Checklists detalhados =====
+  const ckRows = [];
+  ops.forEach(o => {
+    (o.checklist || []).forEach(c => {
+      ckRows.push({
+        'Operação': o.nome,
+        'Tipo Op.': o.tipo,
+        'Item Nº': c.num || '(custom)',
+        'Categoria': c.categoria || '',
+        'Descrição': c.texto || '',
+        'Área': c.area || '',
+        'Responsável': c.responsavel || '',
+        'Status': c.status === 'concluido' ? 'Concluído'
+                : c.status === 'andamento' ? 'Em andamento'
+                : c.status === 'na' ? 'N/A'
+                : c.done ? 'Concluído'
+                : 'Pendente'
+      });
+    });
+  });
+  if (ckRows.length > 0) {
+    const ws2 = XLSX.utils.json_to_sheet(ckRows);
+    ws2['!cols'] = [
+      { wch: 28 }, { wch: 10 }, { wch: 9 }, { wch: 35 },
+      { wch: 50 }, { wch: 14 }, { wch: 18 }, { wch: 14 }
+    ];
+    XLSX.utils.book_append_sheet(wb, ws2, 'Checklists');
+  }
+
+  // ===== Aba 3: Fases (Gantt) =====
+  const phaseRows = [];
+  ops.forEach(o => {
+    (o.phases || []).forEach(p => {
+      phaseRows.push({
+        'Operação': o.nome,
+        'Tipo Op.': o.tipo,
+        'Status Op.': STATUS_LABELS[o.status] || o.status,
+        'Fase / Marco': p.label,
+        'Tipo': p.kind === 'milestone' ? 'Marco' : 'Tarefa',
+        'Início': p.start || '',
+        'Fim': p.end || '',
+        'Duração (dias)': (p.kind === 'task' && p.start && p.end) ? (dateToDays(p.end) - dateToDays(p.start)) : '',
+        'Status': p.status || ''
+      });
+    });
+  });
+  if (phaseRows.length > 0) {
+    const ws3 = XLSX.utils.json_to_sheet(phaseRows);
+    ws3['!cols'] = [
+      { wch: 28 }, { wch: 10 }, { wch: 16 }, { wch: 30 },
+      { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 14 }
+    ];
+    XLSX.utils.book_append_sheet(wb, ws3, 'Fases');
+  }
+
+  // ===== Aba 4: Riscos =====
+  const riskRows = [];
+  ops.forEach(o => {
+    (o.risks || []).filter(r => r.texto).forEach(r => {
+      riskRows.push({
+        'Operação': o.nome,
+        'Status Op.': STATUS_LABELS[o.status] || o.status,
+        'Nível': (r.nivel || 'media').charAt(0).toUpperCase() + (r.nivel || 'media').slice(1),
+        'Risco / Pendência': r.texto
+      });
+    });
+  });
+  if (riskRows.length > 0) {
+    const ws4 = XLSX.utils.json_to_sheet(riskRows);
+    ws4['!cols'] = [{ wch: 28 }, { wch: 16 }, { wch: 8 }, { wch: 60 }];
+    XLSX.utils.book_append_sheet(wb, ws4, 'Riscos');
+  }
+
+  // ===== Aba 5: Próximos Passos =====
+  const stepRows = [];
+  ops.forEach(o => {
+    (o.steps || []).filter(s => s.texto).forEach(s => {
+      stepRows.push({
+        'Operação': o.nome,
+        'Status': STATUS_LABELS[o.status] || o.status,
+        'Responsável': o.responsavel || '',
+        'Próximo Passo': s.texto
+      });
+    });
+  });
+  if (stepRows.length > 0) {
+    const ws5 = XLSX.utils.json_to_sheet(stepRows);
+    ws5['!cols'] = [{ wch: 28 }, { wch: 16 }, { wch: 18 }, { wch: 60 }];
+    XLSX.utils.book_append_sheet(wb, ws5, 'Próximos Passos');
+  }
+
+  const filename = `Pipeline-Netz-${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, filename);
+  showToast(`Excel gerado · ${ops.length} operação${ops.length!==1?'ões':''}`);
 }
 
 // ===== Init =====
