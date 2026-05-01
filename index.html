@@ -1039,6 +1039,284 @@
   .phase-row input[type="date"] { font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
   .phase-row select { font-size: 11px; padding: 5px 6px; }
 
+  /* ========= CHATBOT ========= */
+  .chat-fab {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    width: 60px; height: 60px;
+    background: linear-gradient(135deg, var(--orange) 0%, var(--orange-dim) 100%);
+    color: var(--navy-deep);
+    border: none; border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(255,150,90,0.45), 0 4px 8px rgba(0,27,92,0.15);
+    display: grid; place-items: center;
+    z-index: 9000;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .chat-fab:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 12px 32px rgba(255,150,90,0.55), 0 6px 12px rgba(0,27,92,0.2);
+  }
+  .chat-fab.hidden { transform: scale(0); pointer-events: none; }
+  .chat-fab-pulse {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid var(--orange);
+    opacity: 0;
+    animation: fabPulse 2.5s ease-out infinite;
+  }
+  @keyframes fabPulse {
+    0% { opacity: 0.7; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.5); }
+  }
+
+  .chat-window {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    width: 420px;
+    height: min(640px, calc(100vh - 48px));
+    background: var(--surface);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,27,92,0.25), 0 8px 16px rgba(0,27,92,0.1);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 9001;
+    animation: chatSlideIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .chat-window.show { display: flex; }
+  @keyframes chatSlideIn {
+    from { transform: translateY(20px) scale(0.95); opacity: 0; }
+    to   { transform: translateY(0) scale(1); opacity: 1; }
+  }
+
+  .chat-header {
+    background: linear-gradient(135deg, var(--navy-deep) 0%, var(--navy) 60%, var(--navy-soft) 100%);
+    color: #fff;
+    padding: 14px 16px;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-shrink: 0;
+  }
+  .chat-header-left { display: flex; align-items: center; gap: 10px; }
+  .chat-avatar {
+    width: 36px; height: 24px;
+    display: grid; place-items: center;
+    flex-shrink: 0;
+  }
+  .chat-avatar svg { width: 100%; height: 100%; }
+  .chat-title { font-family: 'Fraunces', serif; font-size: 15px; font-weight: 600; }
+  .chat-subtitle {
+    font-size: 11px; color: var(--blue-pale);
+    display: flex; align-items: center; gap: 5px;
+  }
+  .chat-status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #4FAA7C;
+    box-shadow: 0 0 8px rgba(79,170,124,0.7);
+    animation: pulse 2s infinite;
+  }
+  .chat-status-dot.thinking { background: var(--orange); }
+  .chat-header-actions { display: flex; gap: 4px; }
+  .chat-icon-btn {
+    background: rgba(255,255,255,0.1);
+    border: none; color: #fff;
+    width: 30px; height: 30px;
+    border-radius: 6px; cursor: pointer;
+    display: grid; place-items: center;
+    transition: background 0.15s;
+  }
+  .chat-icon-btn:hover { background: rgba(255,255,255,0.2); }
+
+  .chat-messages {
+    flex: 1; overflow-y: auto;
+    padding: 16px;
+    display: flex; flex-direction: column; gap: 12px;
+    background: var(--bg);
+  }
+  .chat-messages::-webkit-scrollbar { width: 6px; }
+  .chat-messages::-webkit-scrollbar-track { background: transparent; }
+  .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .chat-welcome {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 18px;
+    border: 1px solid var(--border);
+  }
+  .chat-welcome-title {
+    font-family: 'Fraunces', serif; font-size: 16px; font-weight: 600;
+    color: var(--navy); margin-bottom: 4px;
+  }
+  .chat-welcome-text {
+    font-size: 13px; color: var(--text-mute);
+    margin-bottom: 12px;
+  }
+  .chat-suggestions {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .chat-suggestion {
+    background: var(--blue-light);
+    border: 1px solid var(--blue-pale);
+    color: var(--navy);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-family: inherit; font-size: 12px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+  }
+  .chat-suggestion:hover {
+    background: var(--blue-pale);
+    transform: translateX(2px);
+  }
+
+  .chat-msg {
+    display: flex; gap: 8px;
+    max-width: 90%;
+    animation: msgFadeIn 0.2s ease;
+  }
+  @keyframes msgFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .chat-msg.user { align-self: flex-end; flex-direction: row-reverse; }
+  .chat-msg.assistant { align-self: flex-start; }
+
+  .chat-msg-avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: grid; place-items: center;
+    font-size: 11px; font-weight: 600;
+  }
+  .chat-msg.user .chat-msg-avatar {
+    background: var(--orange); color: var(--navy-deep);
+  }
+  .chat-msg.assistant .chat-msg-avatar {
+    background: var(--navy); color: #fff;
+    padding: 6px;
+  }
+  .chat-msg.assistant .chat-msg-avatar svg {
+    width: 100%; height: 100%; display: block;
+  }
+
+  .chat-msg-bubble {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text);
+    box-shadow: 0 1px 2px rgba(0,27,92,0.04);
+    word-wrap: break-word;
+  }
+  .chat-msg.user .chat-msg-bubble {
+    background: var(--navy);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+  .chat-msg.assistant .chat-msg-bubble {
+    border-bottom-left-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  /* Markdown-ish formatting in answers */
+  .chat-msg-bubble strong { color: var(--navy); font-weight: 600; }
+  .chat-msg.user .chat-msg-bubble strong { color: var(--orange); }
+  .chat-msg-bubble code {
+    font-family: 'IBM Plex Mono', monospace;
+    background: var(--blue-light); color: var(--navy);
+    padding: 1px 5px; border-radius: 3px; font-size: 11px;
+  }
+  .chat-msg-bubble ul, .chat-msg-bubble ol {
+    margin: 6px 0 6px 20px; padding: 0;
+  }
+  .chat-msg-bubble li { margin-bottom: 3px; }
+  .chat-msg-bubble p { margin: 0 0 6px 0; }
+  .chat-msg-bubble p:last-child { margin-bottom: 0; }
+
+  .chat-typing {
+    display: inline-flex; gap: 4px;
+    padding: 4px 0;
+  }
+  .chat-typing span {
+    width: 6px; height: 6px;
+    background: var(--text-mute);
+    border-radius: 50%;
+    animation: typingDot 1.4s infinite;
+  }
+  .chat-typing span:nth-child(2) { animation-delay: 0.2s; }
+  .chat-typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typingDot {
+    0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
+    30% { opacity: 1; transform: scale(1); }
+  }
+
+  .chat-input-area {
+    padding: 12px 14px 6px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex; gap: 8px; align-items: flex-end;
+    flex-shrink: 0;
+  }
+  .chat-input {
+    flex: 1;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 9px 12px;
+    font-family: inherit; font-size: 13px;
+    color: var(--text); background: var(--bg);
+    resize: none;
+    max-height: 120px;
+    line-height: 1.4;
+    transition: border-color 0.15s;
+  }
+  .chat-input:focus {
+    outline: none; border-color: var(--navy);
+    box-shadow: 0 0 0 3px rgba(0,27,92,0.08);
+  }
+  .chat-send {
+    background: var(--orange); color: var(--navy-deep);
+    border: none; border-radius: 10px;
+    width: 38px; height: 38px;
+    display: grid; place-items: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .chat-send:hover { background: var(--orange-dim); transform: translateY(-1px); }
+  .chat-send:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .chat-footer {
+    padding: 0 14px 8px;
+    font-size: 10px; color: var(--text-soft);
+    text-align: center;
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .chat-footer strong { color: var(--text-mute); font-weight: 600; }
+
+  .chat-error {
+    background: var(--red-bg); color: var(--red);
+    padding: 10px 12px; border-radius: 8px;
+    font-size: 12px; margin: 8px 0;
+    border-left: 3px solid var(--red);
+  }
+
+  /* Mobile */
+  @media (max-width: 600px) {
+    .chat-window {
+      width: calc(100vw - 16px);
+      right: 8px; bottom: 8px;
+      height: calc(100vh - 16px);
+    }
+    .chat-fab {
+      bottom: 16px; right: 16px;
+      width: 52px; height: 52px;
+    }
+  }
+
   @media (max-width: 768px) {
     .header { padding: 16px 18px 0; }
     .container { padding: 18px 16px 40px; }
@@ -1496,7 +1774,63 @@
 <div class="toast" id="toast"></div>
 <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
 <div class="gantt-tooltip" id="ganttTooltip" style="display:none;"></div>
-<div class="chart-tooltip" id="chartTooltip" style="display:none;"></div><script>
+<div class="chart-tooltip" id="chartTooltip" style="display:none;"></div>
+
+<!-- ========= CHATBOT FLUTUANTE ========= -->
+<button class="chat-fab" id="chatFab" onclick="toggleChat()" title="Pergunte à Netz AI">
+  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+  </svg>
+  <span class="chat-fab-pulse"></span>
+</button>
+
+<div class="chat-window" id="chatWindow">
+  <div class="chat-header">
+    <div class="chat-header-left">
+      <div class="chat-avatar">
+        <svg viewBox="389 389 444 296" xmlns="http://www.w3.org/2000/svg" aria-label="Netz">
+          <rect fill="#FF965A" x="558.88" y="485.08" width="104.37" height="104.37" transform="translate(663.26 1349.26) rotate(-135)"/>
+          <polygon fill="#FFFFFF" points="684.87 684.87 832.48 537.27 832.48 389.66 684.87 537.27 684.87 684.87"/>
+          <polygon fill="#FFFFFF" points="389.66 684.87 537.27 537.27 537.27 389.66 389.66 537.27 389.66 684.87"/>
+        </svg>
+      </div>
+      <div>
+        <div class="chat-title">Netz AI</div>
+        <div class="chat-subtitle"><span class="chat-status-dot"></span>Pronto para consultar</div>
+      </div>
+    </div>
+    <div class="chat-header-actions">
+      <button class="chat-icon-btn" onclick="clearChat()" title="Limpar conversa">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+      </button>
+      <button class="chat-icon-btn" onclick="toggleChat()" title="Fechar">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M6 18L18 6"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="chat-messages" id="chatMessages">
+    <div class="chat-welcome">
+      <div class="chat-welcome-title">Olá! 👋 Sou a Netz AI.</div>
+      <div class="chat-welcome-text">Posso responder perguntas sobre suas operações. Experimente:</div>
+      <div class="chat-suggestions">
+        <button class="chat-suggestion" onclick="sendSuggestion(this)">Qual a receita projetada pros próximos meses?</button>
+        <button class="chat-suggestion" onclick="sendSuggestion(this)">Quais operações estão em jurídico?</button>
+        <button class="chat-suggestion" onclick="sendSuggestion(this)">Quem é o responsável com mais operações no pipeline?</button>
+        <button class="chat-suggestion" onclick="sendSuggestion(this)">Tem alguma operação atrasada?</button>
+        <button class="chat-suggestion" onclick="sendSuggestion(this)">Quanto já liquidamos esse ano?</button>
+      </div>
+    </div>
+  </div>
+  <div class="chat-input-area">
+    <textarea class="chat-input" id="chatInput" rows="1" placeholder="Pergunte sobre suas operações..." onkeydown="onChatKeydown(event)" oninput="autoResize(this)"></textarea>
+    <button class="chat-send" id="chatSend" onclick="sendChatMessage()" title="Enviar (Enter)">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+    </button>
+  </div>
+  <div class="chat-footer">
+    <span>Powered by <strong>Claude</strong> · Respostas baseadas nas suas operações cadastradas</span>
+  </div>
+</div><script>
 // ============================================
 // 🔧 CONFIGURAÇÃO — preencher após criar projeto Supabase
 // ============================================
@@ -4050,6 +4384,307 @@ async function exportPDFDetalhado() {
     showToast('Erro ao gerar PDF: ' + err.message, true);
   } finally {
     showLoading(false);
+  }
+}
+
+// ============================================
+// CHATBOT (Netz AI)
+// ============================================
+
+let chatHistory = [];      // mensagens user/assistant
+let chatIsThinking = false;
+let chatHasMessages = false;
+
+function toggleChat() {
+  const win = document.getElementById('chatWindow');
+  const fab = document.getElementById('chatFab');
+  const wasOpen = win.classList.contains('show');
+  if (wasOpen) {
+    win.classList.remove('show');
+    fab.classList.remove('hidden');
+  } else {
+    win.classList.add('show');
+    fab.classList.add('hidden');
+    setTimeout(() => document.getElementById('chatInput').focus(), 250);
+  }
+}
+
+function clearChat() {
+  if (!confirm('Limpar toda a conversa?')) return;
+  chatHistory = [];
+  chatHasMessages = false;
+  document.getElementById('chatMessages').innerHTML = `
+    <div class="chat-welcome">
+      <div class="chat-welcome-title">Olá! 👋 Sou a Netz AI.</div>
+      <div class="chat-welcome-text">Posso responder perguntas sobre suas operações. Experimente:</div>
+      <div class="chat-suggestions">
+        <button class="chat-suggestion" onclick="sendSuggestion(this)">Qual a receita projetada pros próximos meses?</button>
+        <button class="chat-suggestion" onclick="sendSuggestion(this)">Quais operações estão em jurídico?</button>
+        <button class="chat-suggestion" onclick="sendSuggestion(this)">Quem é o responsável com mais operações no pipeline?</button>
+        <button class="chat-suggestion" onclick="sendSuggestion(this)">Tem alguma operação atrasada?</button>
+        <button class="chat-suggestion" onclick="sendSuggestion(this)">Quanto já liquidamos esse ano?</button>
+      </div>
+    </div>`;
+}
+
+function sendSuggestion(el) {
+  document.getElementById('chatInput').value = el.textContent;
+  sendChatMessage();
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(120, el.scrollHeight) + 'px';
+}
+
+function onChatKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendChatMessage();
+  }
+}
+
+// Renderiza markdown básico → HTML (sem libs externas)
+function renderChatMarkdown(text) {
+  // Escapa HTML primeiro
+  let html = escapeHtml(text);
+  // **bold**
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // *italic* (cuidado pra não pegar **)
+  html = html.replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, '$1<em>$2</em>');
+  // `code`
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  // Listas: linhas começando com - ou *
+  const lines = html.split('\n');
+  const out = [];
+  let inList = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const m = line.match(/^[-*]\s+(.+)/);
+    if (m) {
+      if (!inList) { out.push('<ul>'); inList = true; }
+      out.push('<li>' + m[1] + '</li>');
+    } else {
+      if (inList) { out.push('</ul>'); inList = false; }
+      // linhas em branco viram quebra de parágrafo
+      if (line.trim() === '') {
+        out.push('');
+      } else {
+        out.push(line);
+      }
+    }
+  }
+  if (inList) out.push('</ul>');
+  // Junta com <br> dentro de parágrafos
+  let joined = out.join('\n');
+  // Múltiplas quebras = parágrafo
+  joined = joined.split(/\n\n+/).map(p => {
+    if (p.trim().startsWith('<ul>') || p.trim() === '') return p;
+    return '<p>' + p.replace(/\n/g, '<br>') + '</p>';
+  }).join('');
+  return joined;
+}
+
+function appendChatMessage(role, content, isStreaming) {
+  const wrap = document.getElementById('chatMessages');
+  // Remover welcome se ainda estiver
+  if (!chatHasMessages) {
+    const welcome = wrap.querySelector('.chat-welcome');
+    if (welcome) welcome.remove();
+    chatHasMessages = true;
+  }
+  const msgEl = document.createElement('div');
+  msgEl.className = 'chat-msg ' + role;
+  const avatarHtml = role === 'user'
+    ? `<div class="chat-msg-avatar">${escapeHtml((currentUser?.email || 'U')[0].toUpperCase())}</div>`
+    : `<div class="chat-msg-avatar"><svg viewBox="389 389 444 296" xmlns="http://www.w3.org/2000/svg">
+        <rect fill="#FF965A" x="558.88" y="485.08" width="104.37" height="104.37" transform="translate(663.26 1349.26) rotate(-135)"/>
+        <polygon fill="#FFFFFF" points="684.87 684.87 832.48 537.27 832.48 389.66 684.87 537.27 684.87 684.87"/>
+        <polygon fill="#FFFFFF" points="389.66 684.87 537.27 537.27 537.27 389.66 389.66 537.27 389.66 684.87"/>
+      </svg></div>`;
+  const bubbleHtml = isStreaming
+    ? '<div class="chat-typing"><span></span><span></span><span></span></div>'
+    : renderChatMarkdown(content);
+  msgEl.innerHTML = `${avatarHtml}<div class="chat-msg-bubble">${bubbleHtml}</div>`;
+  wrap.appendChild(msgEl);
+  wrap.scrollTop = wrap.scrollHeight;
+  return msgEl;
+}
+
+// Constrói o "snapshot" das operações para enviar como contexto ao Claude
+function buildOperationsContext() {
+  const ops = state.operations || [];
+  const today = todayStr();
+
+  // Agrega métricas que o chatbot pode precisar
+  const totalOps = ops.length;
+  const liquidadas = ops.filter(o => !!o.data_liquidacao);
+  const pipelineAtivo = ops.filter(o => !o.data_liquidacao && o.status !== 'stand');
+  const standby = ops.filter(o => o.status === 'stand');
+
+  const yearStart = new Date().getFullYear() + '-01-01';
+  const liquidadasYTD = liquidadas.filter(o => o.data_liquidacao >= yearStart);
+  const receitaYTD = liquidadasYTD.reduce((s,o) => s + (Number(o.receita_realizada)||Number(o.receita)||0), 0);
+  const volumeYTD = liquidadasYTD.reduce((s,o) => s + (Number(o.volume_liquidado)||0), 0);
+  const receitaPipeline = pipelineAtivo.reduce((s,o) => s + (Number(o.receita)||0), 0);
+  const volumePipeline = pipelineAtivo.reduce((s,o) => s + (Number(o.valor)||0), 0);
+
+  // Detalhe de cada operação (resumido pra não estourar o contexto)
+  const opsDetail = ops.map(o => {
+    const ck = o.checklist || [];
+    const ckTotal = ck.length;
+    const ckDone = ck.filter(c => c.status === 'concluido' || c.done).length;
+    const dias_atraso = (o.data_prevista && !o.data_liquidacao && o.status !== 'stand')
+      ? -daysUntil(o.data_prevista) : null;
+    const obj = {
+      nome: o.nome,
+      tipo: o.tipo,
+      status: STATUS_LABELS[o.status] || o.status,
+      cliente: o.cliente || null,
+      responsavel: o.responsavel || null,
+      volume_estruturado: Number(o.valor) || 0,
+      receita_prevista: Number(o.receita) || 0,
+      volume_liquidado: Number(o.volume_liquidado) || 0,
+      receita_realizada: Number(o.receita_realizada) || 0,
+      progresso: o.progresso || 0,
+      data_inicio: o.data_inicio || null,
+      data_prevista_conclusao: o.data_prevista || null,
+      data_liquidacao: o.data_liquidacao || null,
+      ja_liquidada: !!o.data_liquidacao,
+      dias_atraso: dias_atraso !== null && dias_atraso > 0 ? dias_atraso : null,
+      checklist: ckTotal > 0 ? `${ckDone}/${ckTotal} concluído` : null,
+      observacoes: o.obs ? (o.obs.length > 200 ? o.obs.slice(0,200)+'…' : o.obs) : null,
+      riscos: (o.risks || []).filter(r => r.texto).map(r => `[${r.nivel}] ${r.texto}`),
+      proximos_passos: (o.steps || []).filter(s => s.texto).map(s => s.texto)
+    };
+    // Remove campos null para reduzir tokens
+    Object.keys(obj).forEach(k => {
+      if (obj[k] === null || obj[k] === 0 || (Array.isArray(obj[k]) && obj[k].length === 0)) {
+        delete obj[k];
+      }
+    });
+    return obj;
+  });
+
+  return {
+    contexto_geral: {
+      data_hoje: today,
+      total_operacoes: totalOps,
+      operacoes_em_pipeline: pipelineAtivo.length,
+      operacoes_liquidadas: liquidadas.length,
+      operacoes_em_standby: standby.length,
+      receita_realizada_ytd: receitaYTD,
+      volume_liquidado_ytd: volumeYTD,
+      receita_em_pipeline: receitaPipeline,
+      volume_em_pipeline: volumePipeline,
+    },
+    operacoes: opsDetail
+  };
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById('chatInput');
+  const sendBtn = document.getElementById('chatSend');
+  const userText = input.value.trim();
+  if (!userText || chatIsThinking) return;
+
+  // UI: mensagem do usuário
+  appendChatMessage('user', userText);
+  chatHistory.push({ role: 'user', content: userText });
+  input.value = '';
+  input.style.height = 'auto';
+  sendBtn.disabled = true;
+  chatIsThinking = true;
+  document.querySelector('.chat-status-dot').classList.add('thinking');
+  document.querySelector('.chat-subtitle').lastChild.textContent = 'Pensando...';
+
+  // UI: bolha do assistant em "typing"
+  const assistantMsgEl = appendChatMessage('assistant', '', true);
+  const bubbleEl = assistantMsgEl.querySelector('.chat-msg-bubble');
+
+  try {
+    // Monta contexto das operações
+    const opsCtx = buildOperationsContext();
+
+    const systemPrompt = `Você é "Netz AI", assistente especialista em crédito estruturado e dados internos da Netz Solution Asset Management. Sua função é responder perguntas sobre o pipeline de estruturação da gestora baseando-se ESTRITAMENTE nos dados fornecidos abaixo.
+
+REGRAS DE COMPORTAMENTO:
+- Responda em português brasileiro, em tom profissional mas direto.
+- Use APENAS os dados fornecidos. NUNCA invente operações, valores ou datas.
+- Se o usuário perguntar algo que não está nos dados, diga claramente "essa informação não está cadastrada".
+- Para valores monetários, sempre use o formato brasileiro: R$ 1.500.000 ou R$ 1,5 mi.
+- Para datas, use formato dd/mm/yyyy.
+- Quando listar operações, mostre dados relevantes (nome, status, valor, responsável) — não despeje todos os campos.
+- Use markdown leve: **negrito** para destacar, listas com - para enumerar. Não use headings (# ou ##).
+- Seja conciso. Respostas longas só quando a pergunta exige análise comparativa.
+- Quando fizer cálculos (somas, médias, projeções), explique brevemente como chegou no número.
+- Ao falar de "próximos meses", considere data_prevista_conclusao das operações que ainda não liquidaram.
+- "Em pipeline" = não liquidadas e não em stand-by.
+- "Atrasada" = data_prevista_conclusao no passado, ainda não liquidada.
+
+GLOSSÁRIO:
+- FIDC: Fundo de Investimento em Direitos Creditórios
+- CR: Certificado de Recebíveis
+- CRI: Certificado de Recebíveis Imobiliários
+- CRA: Certificado de Recebíveis do Agronegócio
+- NC: Nota Comercial
+- Volume estruturado = volume target da emissão
+- Receita prevista = taxa de estruturação esperada
+- Volume liquidado / Receita realizada = valor efetivo após emissão
+
+DATA DE HOJE: ${opsCtx.contexto_geral.data_hoje}
+
+DADOS COMPLETOS DO PIPELINE (em JSON):
+${JSON.stringify(opsCtx, null, 2)}`;
+
+    // Histórico de mensagens (excluindo a system, que vai como parâmetro)
+    const messages = chatHistory.map(m => ({ role: m.role, content: m.content }));
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        system: systemPrompt,
+        messages
+      })
+    });
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error?.message || `HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    const assistantText = (data.content || [])
+      .filter(b => b.type === 'text')
+      .map(b => b.text)
+      .join('\n');
+
+    if (!assistantText) {
+      throw new Error('Resposta vazia do modelo');
+    }
+
+    // Atualiza a bolha com a resposta renderizada
+    bubbleEl.innerHTML = renderChatMarkdown(assistantText);
+    chatHistory.push({ role: 'assistant', content: assistantText });
+
+    // Limita o histórico (últimas 12 trocas pra não estourar contexto)
+    if (chatHistory.length > 24) {
+      chatHistory = chatHistory.slice(-24);
+    }
+
+  } catch (err) {
+    console.error('Erro chat:', err);
+    bubbleEl.innerHTML = `<div class="chat-error">⚠️ Não consegui responder agora.<br><small style="opacity:0.8;">${escapeHtml(err.message || 'Erro desconhecido')}</small></div>`;
+  } finally {
+    chatIsThinking = false;
+    sendBtn.disabled = false;
+    document.querySelector('.chat-status-dot').classList.remove('thinking');
+    document.querySelector('.chat-subtitle').lastChild.textContent = 'Pronto para consultar';
+    input.focus();
+    document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
   }
 }
 
