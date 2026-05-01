@@ -78,13 +78,15 @@
     box-shadow: var(--shadow-lg);
     position: relative; z-index: 1;
   }
-  .auth-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+  .auth-brand { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
   .auth-brand .brand-mark {
-    width: 44px; height: 44px;
-    background: var(--navy); border-radius: 8px;
+    width: 56px; height: 38px;
+    background: transparent;
     display: grid; place-items: center;
-    font-family: 'Fraunces', serif; font-weight: 700; font-size: 24px;
-    color: var(--orange);
+    flex-shrink: 0;
+  }
+  .auth-brand .brand-mark svg {
+    width: 100%; height: 100%; display: block;
   }
   .auth-brand h1 {
     font-family: 'Fraunces', serif; font-size: 22px; font-weight: 600;
@@ -166,12 +168,14 @@
   }
   .brand { display: flex; align-items: center; gap: 14px; }
   .brand-mark {
-    width: 38px; height: 38px;
-    background: var(--orange); border-radius: 8px;
+    width: 54px; height: 36px;
+    background: transparent;
     display: grid; place-items: center;
-    font-family: 'Fraunces', serif; font-weight: 700; font-size: 22px;
-    color: var(--navy-deep);
-    box-shadow: 0 4px 12px rgba(255,150,90,0.4);
+    flex-shrink: 0;
+  }
+  .brand-mark svg {
+    width: 100%; height: 100%; display: block;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
   }
   .brand-text h1 { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
   .brand-text .subtitle {
@@ -1046,7 +1050,13 @@
 <div class="auth-screen" id="authScreen">
   <div class="auth-card">
     <div class="auth-brand">
-      <div class="brand-mark">N</div>
+      <div class="brand-mark">
+        <svg viewBox="389 389 444 296" xmlns="http://www.w3.org/2000/svg" aria-label="Netz">
+          <rect fill="#FF965A" x="558.88" y="485.08" width="104.37" height="104.37" transform="translate(663.26 1349.26) rotate(-135)"/>
+          <polygon fill="#001B5C" points="684.87 684.87 832.48 537.27 832.48 389.66 684.87 537.27 684.87 684.87"/>
+          <polygon fill="#001B5C" points="389.66 684.87 537.27 537.27 537.27 389.66 389.66 537.27 389.66 684.87"/>
+        </svg>
+      </div>
       <div>
         <h1>Pipeline Netz</h1>
         <div class="sub">Estruturação · Acesso restrito</div>
@@ -1097,7 +1107,13 @@
   <header class="header">
     <div class="header-top">
       <div class="brand">
-        <div class="brand-mark">N</div>
+        <div class="brand-mark">
+          <svg viewBox="389 389 444 296" xmlns="http://www.w3.org/2000/svg" aria-label="Netz">
+            <rect fill="#FF965A" x="558.88" y="485.08" width="104.37" height="104.37" transform="translate(663.26 1349.26) rotate(-135)"/>
+            <polygon fill="#FFFFFF" points="684.87 684.87 832.48 537.27 832.48 389.66 684.87 537.27 684.87 684.87"/>
+            <polygon fill="#FFFFFF" points="389.66 684.87 537.27 537.27 537.27 389.66 389.66 537.27 389.66 684.87"/>
+          </svg>
+        </div>
         <div class="brand-text">
           <h1>Pipeline de Estruturação</h1>
           <div class="subtitle">Netz Solution · Controle Gerencial</div>
@@ -3446,6 +3462,10 @@ function toggleExportMenu(e) {
 }
 
 // Cores Netz como tuplas RGB para jsPDF
+// ===== Logo Netz como data URL para uso em PDF =====
+const NETZ_LOGO_POS = 'data:image/png;base64,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';
+const NETZ_LOGO_NEG = 'data:image/png;base64,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';
+
 const NETZ_COLORS = {
   navy: [0, 27, 92],
   navyDeep: [0, 15, 56],
@@ -3470,22 +3490,21 @@ function addPdfHeader(doc, pageW) {
   // Faixa laranja
   doc.setFillColor(...NETZ_COLORS.orange);
   doc.rect(0, 28, pageW, 2, 'F');
-  // Logo "N" (caixa laranja com N branco)
-  doc.setFillColor(...NETZ_COLORS.orange);
-  doc.roundedRect(margin, 8, 14, 14, 2, 2, 'F');
-  doc.setTextColor(...NETZ_COLORS.navyDeep);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.text('N', margin + 7, 18, { align: 'center' });
+  // Logo símbolo Netz (PNG branco)
+  // Aspect ratio do símbolo: 600/400 = 1.5
+  // Altura desejada: 14mm → largura: 21mm
+  try {
+    doc.addImage(NETZ_LOGO_NEG, 'PNG', margin, 7, 21, 14);
+  } catch(e) { console.warn('Logo não carregou:', e); }
   // Título
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
-  doc.text('NETZ SOLUTION', margin + 20, 14);
+  doc.text('NETZ SOLUTION', margin + 26, 14);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(177, 198, 229);
-  doc.text('PIPELINE DE ESTRUTURAÇÃO', margin + 20, 19);
+  doc.text('PIPELINE DE ESTRUTURAÇÃO', margin + 26, 19);
   // Data à direita
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(8);
