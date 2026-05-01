@@ -1756,9 +1756,15 @@ const daysUntil = (d) => {
   const now = new Date(); now.setHours(0,0,0,0);
   return Math.ceil((target - now) / (1000*60*60*24));
 };
-const todayStr = () => { const t = new Date(); t.setHours(0,0,0,0); return t.toISOString().slice(0,10); };
+const todayStr = () => {
+  const t = new Date();
+  return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+};
 const dateToDays = (d) => Math.floor(new Date(d + 'T00:00:00').getTime() / 86400000);
-const daysToDate = (n) => new Date(n * 86400000).toISOString().slice(0, 10);
+const daysToDate = (n) => {
+  const d = new Date(n * 86400000);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+};
 const cryptoId = () => 'p_' + Math.random().toString(36).slice(2, 10);
 
 // ===== Tabs =====
@@ -2042,6 +2048,13 @@ function renderKPIs() {
 }
 
 // ===== Helper: agrupar por mês YYYY-MM =====
+// IMPORTANTE: sempre usar valores locais (getFullYear/getMonth), nunca toISOString()
+// porque toISOString() converte para UTC e pode pular um mês em fusos negativos
+// no final do mês.
+function dateToYM(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
 function getDashMonthRange() {
   const period = state.dashFilter ? state.dashFilter.period : 'ytd';
   const now = new Date();
@@ -2061,8 +2074,7 @@ function getDashMonthRange() {
   else monthsBack = 12;
 
   // Calcula meses à frente baseado em data_prevista das operações em pipeline
-  // Mínimo: 3 meses à frente. Máximo: até o último mês com projeção.
-  const todayYM = now.toISOString().slice(0, 7);
+  const todayYM = dateToYM(now);
   let maxFutureYM = todayYM;
   (state.operations || []).forEach(o => {
     if (!o.data_liquidacao && o.status !== 'stand' && o.data_prevista) {
@@ -2072,10 +2084,9 @@ function getDashMonthRange() {
   });
 
   // Conta meses entre todayYM e maxFutureYM
-  const todayDate = new Date(todayYM + '-01T00:00:00');
-  const maxFutureDate = new Date(maxFutureYM + '-01T00:00:00');
-  let monthsForward = (maxFutureDate.getFullYear() - todayDate.getFullYear()) * 12 +
-                      (maxFutureDate.getMonth() - todayDate.getMonth());
+  const [todayY, todayM] = todayYM.split('-').map(Number);
+  const [maxY, maxM] = maxFutureYM.split('-').map(Number);
+  let monthsForward = (maxY - todayY) * 12 + (maxM - todayM);
   // Mínimo 3 meses à frente, máximo 12 (pra não estourar a tela)
   monthsForward = Math.max(3, Math.min(12, monthsForward));
 
@@ -2083,14 +2094,14 @@ function getDashMonthRange() {
   // Histórico: do mês mais antigo até o mês passado
   for (let i = monthsBack - 1; i >= 1; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    months.push(d.toISOString().slice(0, 7));
+    months.push(dateToYM(d));
   }
   // Mês atual
   months.push(todayYM);
   // Projeção: do próximo mês até monthsForward
   for (let i = 1; i <= monthsForward; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-    months.push(d.toISOString().slice(0, 7));
+    months.push(dateToYM(d));
   }
   return months;
 }
@@ -2213,7 +2224,7 @@ function renderTimeSeriesChart(containerId, monthlyData, monthlyOps, monthlyProj
     </div>` : '';
 
   // Linha vertical marcando o mês atual (separa realizado de projetado)
-  const todayYM = new Date().toISOString().slice(0, 7);
+  const todayYM = dateToYM(new Date());
   const todayIdx = months.indexOf(todayYM);
   let todayLine = '';
   if (todayIdx >= 0 && hasProjection) {
