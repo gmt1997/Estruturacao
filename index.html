@@ -8,6 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:wght@500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
   :root {
     --navy:        #001B5C;
@@ -223,6 +225,34 @@
   @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
   /* ===== KPIs ===== */
+  /* ===== Export Dropdown ===== */
+  .export-dropdown { position: relative; }
+  .export-menu {
+    position: absolute; top: 100%; right: 0; margin-top: 6px;
+    background: var(--surface); border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    min-width: 280px;
+    z-index: 50;
+    display: none;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    animation: fadeIn 0.15s ease;
+  }
+  .export-menu.show { display: block; }
+  .export-item {
+    width: 100%; padding: 12px 16px;
+    background: transparent; border: none;
+    display: flex; align-items: center; gap: 12px;
+    cursor: pointer; transition: background 0.15s;
+    text-align: left; font-family: inherit;
+  }
+  .export-item:hover { background: var(--blue-light); }
+  .export-item + .export-item { border-top: 1px solid var(--border-soft); }
+  .export-item-icon { font-size: 24px; flex-shrink: 0; }
+  .export-item-content { flex: 1; }
+  .export-item-title { font-size: 13px; font-weight: 600; color: var(--navy); }
+  .export-item-desc { font-size: 11px; color: var(--text-mute); margin-top: 2px; }
+
   /* ===== Dashboard Filters ===== */
   .dash-filters {
     display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end;
@@ -383,8 +413,21 @@
   }
   .timechart .bar-revenue { fill: var(--orange); }
   .timechart .bar-revenue:hover { fill: var(--orange-dim); }
+  .timechart .bar-revenue-proj { fill: var(--orange); fill-opacity: 0.35; stroke: var(--orange); stroke-width: 1; stroke-dasharray: 3,2; }
   .timechart .bar-volume { fill: var(--navy); }
   .timechart .bar-volume:hover { fill: var(--navy-soft); }
+  .timechart .bar-volume-proj { fill: var(--navy); fill-opacity: 0.25; stroke: var(--navy); stroke-width: 1; stroke-dasharray: 3,2; }
+  .chart-legend {
+    display: flex; gap: 18px; align-items: center;
+    font-size: 11px; color: var(--text-mute);
+    margin-bottom: 10px; padding: 0 4px;
+  }
+  .legend-item-c { display: flex; align-items: center; gap: 6px; }
+  .legend-swatch-c { width: 14px; height: 8px; border-radius: 2px; }
+  .legend-swatch-c.bar-revenue { background: var(--orange); }
+  .legend-swatch-c.bar-revenue-proj { background: var(--orange); opacity: 0.35; border: 1px dashed var(--orange); }
+  .legend-swatch-c.bar-volume { background: var(--navy); }
+  .legend-swatch-c.bar-volume-proj { background: var(--navy); opacity: 0.25; border: 1px dashed var(--navy); }
   .timechart .line-stroke { fill: none; stroke: var(--orange); stroke-width: 2.5; }
   .timechart .area-fill { fill: var(--orange); opacity: 0.15; }
   .timechart .data-label {
@@ -1023,8 +1066,25 @@
         <input type="password" id="authPassword" required autocomplete="current-password" minlength="6">
       </div>
       <button type="submit" id="authSubmit">Entrar</button>
+      <div style="text-align: center; margin-top: 10px; font-size: 12px;">
+        <button type="button" class="btn btn-ghost" style="padding: 4px 8px; height: auto; width: auto;" onclick="showResetPasswordForm()">Esqueci minha senha</button>
+      </div>
       <div class="auth-msg" id="authMsg"></div>
     </form>
+    
+    <div id="resetPasswordForm" style="display:none;">
+      <div style="margin-bottom: 16px; padding: 12px; background: var(--blue-light); border-radius: 6px; font-size: 12px; color: var(--navy);">
+        Enviamos um link de reset para seu email. Verifique sua caixa de entrada (e spam).
+      </div>
+      <form onsubmit="submitResetPassword(event)">
+        <div class="field">
+          <label>Email corporativo</label>
+          <input type="email" id="resetEmail" required autocomplete="email">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Enviar link de reset</button>
+        <button type="button" class="btn btn-secondary" style="width: 100%; margin-top: 8px;" onclick="hideResetPasswordForm()">Voltar</button>
+      </form>
+    </div>
   </div>
 </div>
 
@@ -1045,6 +1105,27 @@
           <span id="userEmail">—</span>
         </div>
         <button class="btn btn-ghost" onclick="signOut()">Sair</button>
+        <div class="export-dropdown">
+          <button class="btn btn-ghost" onclick="toggleExportMenu(event)" id="btnExport">
+            📄 Relatório
+          </button>
+          <div class="export-menu" id="exportMenu">
+            <button class="export-item" onclick="exportPDFExecutivo()">
+              <span class="export-item-icon">📊</span>
+              <div class="export-item-content">
+                <div class="export-item-title">PDF Executivo</div>
+                <div class="export-item-desc">Dashboard com KPIs e resumo</div>
+              </div>
+            </button>
+            <button class="export-item" onclick="exportPDFDetalhado()">
+              <span class="export-item-icon">📋</span>
+              <div class="export-item-content">
+                <div class="export-item-title">PDF Detalhado</div>
+                <div class="export-item-desc">Uma página por operação</div>
+              </div>
+            </button>
+          </div>
+        </div>
         <button class="btn btn-primary" onclick="openModal()">+ Nova Operação</button>
       </div>
     </div>
@@ -1096,11 +1177,11 @@
       <h2 class="section-title">Receita & Volume Mensal</h2>
       <div class="charts-grid">
         <div class="chart-card">
-          <h3>Receita Realizada (últimos 12 meses)</h3>
+          <h3>Receita · Realizado vs. Projetado</h3>
           <div id="chartRevenueMonthly"></div>
         </div>
         <div class="chart-card">
-          <h3>Volume Liquidado (últimos 12 meses)</h3>
+          <h3>Volume · Realizado vs. Projetado</h3>
           <div id="chartVolumeMonthly"></div>
         </div>
       </div>
@@ -1581,6 +1662,40 @@ function setAuthMsg(msg, type) {
 
 async function signOut() { await sb.auth.signOut(); }
 
+// ===== Reset Senha =====
+function showResetPasswordForm() {
+  document.getElementById('authForm').style.display = 'none';
+  document.getElementById('resetPasswordForm').style.display = 'block';
+  document.getElementById('resetEmail').focus();
+}
+
+function hideResetPasswordForm() {
+  document.getElementById('authForm').style.display = 'block';
+  document.getElementById('resetPasswordForm').style.display = 'none';
+  setAuthMsg('', '');
+}
+
+async function submitResetPassword(e) {
+  e.preventDefault();
+  if (!sb) return;
+  const email = document.getElementById('resetEmail').value.trim();
+  if (!email) {
+    setAuthMsg('Digite o email corporativo', 'error');
+    return;
+  }
+  try {
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname + '?reset=true'
+    });
+    if (error) throw error;
+    setAuthMsg('Link de reset enviado. Verifique seu email (e pasta de spam).', 'success');
+    document.getElementById('resetEmail').value = '';
+    setTimeout(() => hideResetPasswordForm(), 2000);
+  } catch (err) {
+    setAuthMsg('Erro: ' + err.message, 'error');
+  }
+}
+
 // ===== Data =====
 async function loadAll() {
   showLoading(true);
@@ -1963,25 +2078,33 @@ function monthLabelFull(ym) {
 function monthLabel(ym) { return monthLabelShort(ym); }
 
 // ===== Time-series SVG chart =====
-// monthlyData: { 'YYYY-MM': totalValue }
-// monthlyOps:  { 'YYYY-MM': [{ nome, val }] }   (lista de operações de cada mês para tooltip)
-function renderTimeSeriesChart(containerId, monthlyData, monthlyOps, options) {
+// monthlyData: { 'YYYY-MM': realizadoValue }
+// monthlyOps:  { 'YYYY-MM': [{ nome, val }] }   (operações realizadas)
+// monthlyProjected: { 'YYYY-MM': projetadoValue }
+// monthlyProjectedOps: { 'YYYY-MM': [{ nome, val }] }  (operações projetadas)
+function renderTimeSeriesChart(containerId, monthlyData, monthlyOps, monthlyProjected, monthlyProjectedOps, options) {
   const months = getLast12Months();
-  const values = months.map(m => monthlyData[m] || 0);
-  const max = Math.max(...values, 1);
+  const realValues = months.map(m => monthlyData[m] || 0);
+  const projValues = months.map(m => (monthlyProjected && monthlyProjected[m]) || 0);
+  // Para o eixo Y, considerar o máximo entre realizado e projetado
+  const max = Math.max(...realValues, ...projValues, 1);
   const n = months.length;
 
   // Largura responsiva: gráficos com mais meses ficam mais largos
-  const w = Math.max(560, n * 70);
+  const w = Math.max(560, n * 90);
   const h = 240;
   const pad = { top: 24, right: 18, bottom: 50, left: 60 };
   const innerW = w - pad.left - pad.right;
   const innerH = h - pad.top - pad.bottom;
   const slotW = innerW / n;
-  const barW = Math.min(slotW - 10, 56);
+  // Duas barras por mês: realizada e projetada lado a lado
+  const hasProjection = projValues.some(v => v > 0);
+  const barGroup = Math.min(slotW - 16, 64);
+  const barW = hasProjection ? Math.max(8, barGroup / 2 - 2) : Math.min(slotW - 10, 56);
   const color = options && options.color || 'orange';
   const fmtFn = options && options.fmt || fmtBRLshort;
-  const cls = color === 'orange' ? 'bar-revenue' : 'bar-volume';
+  const clsReal = color === 'orange' ? 'bar-revenue' : 'bar-volume';
+  const clsProj = color === 'orange' ? 'bar-revenue-proj' : 'bar-volume-proj';
 
   // Ticks Y
   const yTicks = [];
@@ -1996,24 +2119,44 @@ function renderTimeSeriesChart(containerId, monthlyData, monthlyOps, options) {
   });
 
   let bars = '';
-  values.forEach((v, i) => {
-    const barH = max > 0 ? (v / max) * innerH : 0;
+  realValues.forEach((vReal, i) => {
+    const vProj = projValues[i];
     const slotX = pad.left + i * slotW;
-    const x = slotX + (slotW - barW) / 2;
-    const y = pad.top + innerH - barH;
+    // Posições das barras
+    const groupX = slotX + (slotW - (hasProjection ? barGroup : barW)) / 2;
+    const xReal = hasProjection ? groupX : groupX;
+    const xProj = hasProjection ? groupX + barW + 4 : groupX;
+
+    const barHReal = max > 0 ? (vReal / max) * innerH : 0;
+    const barHProj = max > 0 ? (vProj / max) * innerH : 0;
+    const yReal = pad.top + innerH - barHReal;
+    const yProj = pad.top + innerH - barHProj;
+
     // Hit area cobrindo toda a coluna (mesmo que valor seja 0)
-    const ops = (monthlyOps && monthlyOps[months[i]]) || [];
-    const dataOps = ops.map(o => `${o.nome.replace(/\|/g,'/')}|${fmtBRLshort(o.val).replace('R$ ','R$ ')}`).join('§§');
+    const opsReal = (monthlyOps && monthlyOps[months[i]]) || [];
+    const opsProj = (monthlyProjectedOps && monthlyProjectedOps[months[i]]) || [];
+    const dataOpsReal = opsReal.map(o => `${o.nome.replace(/\|/g,'/')}|${fmtBRLshort(o.val).replace('R$ ','R$ ')}`).join('§§');
+    const dataOpsProj = opsProj.map(o => `${o.nome.replace(/\|/g,'/')}|${fmtBRLshort(o.val).replace('R$ ','R$ ')}`).join('§§');
+
     bars += `<rect class="hit-area" x="${slotX}" y="${pad.top}" width="${slotW}" height="${innerH}" fill="transparent"
-              data-month="${months[i]}" data-total="${v}" data-ops="${escapeAttr(dataOps)}"
+              data-month="${months[i]}" data-real="${vReal}" data-proj="${vProj}"
+              data-ops-real="${escapeAttr(dataOpsReal)}" data-ops-proj="${escapeAttr(dataOpsProj)}"
               onmouseenter="onChartBarHover(event, this)" onmousemove="chartTooltipMove(event)" onmouseleave="chartTooltipHide()"></rect>`;
-    if (barH > 0) {
-      bars += `<rect class="${cls} hoverable" x="${x}" y="${y}" width="${barW}" height="${barH}" rx="3" pointer-events="none"></rect>`;
+    if (barHReal > 0) {
+      bars += `<rect class="${clsReal}" x="${xReal}" y="${yReal}" width="${barW}" height="${barHReal}" rx="3" pointer-events="none"></rect>`;
+    }
+    if (barHProj > 0 && hasProjection) {
+      bars += `<rect class="${clsProj}" x="${xProj}" y="${yProj}" width="${barW}" height="${barHProj}" rx="3" pointer-events="none"></rect>`;
     }
     // Valor escrito acima da barra (não dentro)
-    if (v > 0) {
-      const labelY = y - 6;
-      bars += `<text class="data-label" x="${x + barW/2}" y="${labelY}" style="fill:var(--text-mute); font-weight:600;">${fmtBRLshort(v).replace('R$ ','')}</text>`;
+    if (vReal > 0) {
+      const labelY = yReal - 6;
+      const labelX = hasProjection ? xReal + barW/2 : xReal + barW/2;
+      bars += `<text class="data-label" x="${labelX}" y="${labelY}" style="fill:var(--text-mute); font-weight:600;">${fmtBRLshort(vReal).replace('R$ ','')}</text>`;
+    }
+    if (vProj > 0 && hasProjection) {
+      const labelY = yProj - 6;
+      bars += `<text class="data-label" x="${xProj + barW/2}" y="${labelY}" style="fill:var(--text-soft); font-weight:500;">${fmtBRLshort(vProj).replace('R$ ','')}</text>`;
     }
   });
 
@@ -2030,7 +2173,15 @@ function renderTimeSeriesChart(containerId, monthlyData, monthlyOps, options) {
     }
   });
 
+  // Legenda
+  const legend = hasProjection ? `
+    <div class="chart-legend">
+      <span class="legend-item-c"><span class="legend-swatch-c ${clsReal}"></span>Realizado</span>
+      <span class="legend-item-c"><span class="legend-swatch-c ${clsProj}"></span>Projetado</span>
+    </div>` : '';
+
   document.getElementById(containerId).innerHTML = `
+    ${legend}
     <svg class="timechart" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" style="height:${h}px;">
       ${yAxis}
       <line class="axis-line" x1="${pad.left}" x2="${w - pad.right}" y1="${pad.top + innerH}" y2="${pad.top + innerH}" />
@@ -2042,18 +2193,72 @@ function renderTimeSeriesChart(containerId, monthlyData, monthlyOps, options) {
 
 function onChartBarHover(e, el) {
   const month = el.getAttribute('data-month');
-  const total = Number(el.getAttribute('data-total')) || 0;
-  const opsRaw = el.getAttribute('data-ops') || '';
-  const ops = opsRaw ? opsRaw.split('§§').map(s => {
+  const real = Number(el.getAttribute('data-real')) || 0;
+  const proj = Number(el.getAttribute('data-proj')) || 0;
+  const opsRealRaw = el.getAttribute('data-ops-real') || '';
+  const opsProjRaw = el.getAttribute('data-ops-proj') || '';
+  const opsReal = opsRealRaw ? opsRealRaw.split('§§').map(s => {
     const [nome, valTxt] = s.split('|');
     return { nome, valTxt };
   }) : [];
-  chartTooltipShow(e, {
+  const opsProj = opsProjRaw ? opsProjRaw.split('§§').map(s => {
+    const [nome, valTxt] = s.split('|');
+    return { nome, valTxt };
+  }) : [];
+
+  // Tooltip composto: realizado + projetado
+  const sections = [];
+  if (real > 0 || opsReal.length > 0) {
+    sections.push({
+      label: 'REALIZADO',
+      total: fmtBRLshort(real),
+      ops: opsReal,
+      color: 'var(--orange)'
+    });
+  }
+  if (proj > 0 || opsProj.length > 0) {
+    sections.push({
+      label: 'PROJETADO',
+      total: fmtBRLshort(proj),
+      ops: opsProj,
+      color: 'var(--blue-pale)'
+    });
+  }
+
+  chartTooltipShowMulti(e, {
     title: monthLabelFull(month),
-    total: fmtBRLshort(total),
-    ops,
-    empty: ops.length === 0
+    sections
   });
+}
+
+// Tooltip com múltiplas seções (realizado + projetado)
+function chartTooltipShowMulti(e, payload) {
+  const tip = document.getElementById('chartTooltip');
+  let html = '';
+  if (payload.title) html += `<strong>${escapeHtml(payload.title)}</strong>`;
+  if (!payload.sections || payload.sections.length === 0) {
+    html += `<div style="font-size:11px; color:var(--text-soft); font-style:italic;">Nenhuma operação</div>`;
+  } else {
+    payload.sections.forEach((sec, idx) => {
+      if (idx > 0) html += `<div style="height:1px; background:rgba(255,255,255,0.15); margin:8px 0;"></div>`;
+      html += `<div style="font-size:10px; font-weight:600; color:${sec.color}; letter-spacing:0.06em; margin-bottom:2px;">${sec.label}</div>`;
+      html += `<div class="tt-total" style="font-size:14px;">${sec.total}</div>`;
+      if (sec.ops && sec.ops.length) {
+        const shown = sec.ops.slice(0, 5);
+        html += `<ul class="tt-list">${shown.map(op => `
+          <li>
+            <span class="tt-name">${escapeHtml(op.nome)}</span>
+            <span class="tt-val">${escapeHtml(op.valTxt)}</span>
+          </li>`).join('')}</ul>`;
+        if (sec.ops.length > shown.length) {
+          html += `<div class="tt-more">+ ${sec.ops.length - shown.length} outras</div>`;
+        }
+      }
+    });
+  }
+  tip.innerHTML = html;
+  tip.style.display = 'block';
+  chartTooltipMove(e);
 }
 
 function niceStep(max) {
@@ -2073,35 +2278,68 @@ function renderRevenueMonthlyChart() {
   const ops = getFilteredOps();
   const monthly = {};
   const monthlyOps = {};
+  const monthlyProjected = {};
+  const monthlyProjectedOps = {};
+  const todayMonth = todayStr().slice(0, 7);
   ops.forEach(o => {
+    // Realizado: já liquidou
     if (o.data_liquidacao) {
       const m = o.data_liquidacao.slice(0, 7);
       const r = Number(o.receita_realizada) || Number(o.receita) || 0;
-      monthly[m] = (monthly[m] || 0) + r;
-      if (!monthlyOps[m]) monthlyOps[m] = [];
-      monthlyOps[m].push({ nome: o.nome, val: r });
+      if (r > 0) {
+        monthly[m] = (monthly[m] || 0) + r;
+        if (!monthlyOps[m]) monthlyOps[m] = [];
+        monthlyOps[m].push({ nome: o.nome, val: r });
+      }
+    } else if (o.status !== 'stand' && o.data_prevista) {
+      // Projetado: pipeline ativo com data prevista no futuro (ou mês corrente)
+      const m = o.data_prevista.slice(0, 7);
+      if (m >= todayMonth) {
+        const r = Number(o.receita) || 0;
+        if (r > 0) {
+          monthlyProjected[m] = (monthlyProjected[m] || 0) + r;
+          if (!monthlyProjectedOps[m]) monthlyProjectedOps[m] = [];
+          monthlyProjectedOps[m].push({ nome: o.nome, val: r });
+        }
+      }
     }
   });
-  // ordenar cada lista por valor desc
   Object.keys(monthlyOps).forEach(k => monthlyOps[k].sort((a,b) => b.val - a.val));
-  renderTimeSeriesChart('chartRevenueMonthly', monthly, monthlyOps, { color: 'orange' });
+  Object.keys(monthlyProjectedOps).forEach(k => monthlyProjectedOps[k].sort((a,b) => b.val - a.val));
+  renderTimeSeriesChart('chartRevenueMonthly', monthly, monthlyOps, monthlyProjected, monthlyProjectedOps, { color: 'orange' });
 }
 
 function renderVolumeMonthlyChart() {
   const ops = getFilteredOps();
   const monthly = {};
   const monthlyOps = {};
+  const monthlyProjected = {};
+  const monthlyProjectedOps = {};
+  const todayMonth = todayStr().slice(0, 7);
   ops.forEach(o => {
     if (o.data_liquidacao) {
       const m = o.data_liquidacao.slice(0, 7);
       const v = Number(o.volume_liquidado) || Number(o.valor) || 0;
-      monthly[m] = (monthly[m] || 0) + v;
-      if (!monthlyOps[m]) monthlyOps[m] = [];
-      monthlyOps[m].push({ nome: o.nome, val: v });
+      if (v > 0) {
+        monthly[m] = (monthly[m] || 0) + v;
+        if (!monthlyOps[m]) monthlyOps[m] = [];
+        monthlyOps[m].push({ nome: o.nome, val: v });
+      }
+    } else if (o.status !== 'stand' && o.data_prevista) {
+      const m = o.data_prevista.slice(0, 7);
+      if (m >= todayMonth) {
+        const v = Number(o.valor) || 0;
+        if (v > 0) {
+          monthlyProjected[m] = (monthlyProjected[m] || 0) + v;
+          if (!monthlyProjectedOps[m]) monthlyProjectedOps[m] = [];
+          monthlyProjectedOps[m].push({ nome: o.nome, val: v });
+        }
+      }
     }
   });
   Object.keys(monthlyOps).forEach(k => monthlyOps[k].sort((a,b) => b.val - a.val));
-  renderTimeSeriesChart('chartVolumeMonthly', monthly, monthlyOps, { color: 'navy' });
+  Object.keys(monthlyProjectedOps).forEach(k => monthlyProjectedOps[k].sort((a,b) => b.val - a.val));
+  renderTimeSeriesChart('chartVolumeMonthly', monthly, monthlyOps, monthlyProjected, monthlyProjectedOps, { color: 'navy' });
 }
 
 // ===== Funil =====
@@ -3118,6 +3356,618 @@ async function deleteOp() {
     showToast('Operação excluída');
   } catch (err) {
     showToast('Erro: ' + err.message, true);
+  }
+}
+
+// ============================================
+// PDF EXPORT
+// ============================================
+
+// Toggle do menu dropdown
+function toggleExportMenu(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('exportMenu');
+  menu.classList.toggle('show');
+  // Fechar ao clicar fora
+  if (menu.classList.contains('show')) {
+    setTimeout(() => {
+      const closeOnClick = (ev) => {
+        if (!ev.target.closest('.export-dropdown')) {
+          menu.classList.remove('show');
+          document.removeEventListener('click', closeOnClick);
+        }
+      };
+      document.addEventListener('click', closeOnClick);
+    }, 0);
+  }
+}
+
+// Cores Netz como tuplas RGB para jsPDF
+const NETZ_COLORS = {
+  navy: [0, 27, 92],
+  navyDeep: [0, 15, 56],
+  orange: [255, 150, 90],
+  orangeDim: [224, 122, 64],
+  blueLight: [228, 243, 255],
+  bluePale: [177, 198, 229],
+  text: [14, 27, 61],
+  textMute: [90, 103, 133],
+  green: [46, 125, 91],
+  red: [201, 59, 59],
+  amber: [176, 119, 0],
+  border: [220, 227, 238],
+};
+
+// ====== Cabeçalho/Rodapé padrão ======
+function addPdfHeader(doc, pageW) {
+  const margin = 15;
+  // Faixa navy no topo
+  doc.setFillColor(...NETZ_COLORS.navy);
+  doc.rect(0, 0, pageW, 28, 'F');
+  // Faixa laranja
+  doc.setFillColor(...NETZ_COLORS.orange);
+  doc.rect(0, 28, pageW, 2, 'F');
+  // Logo "N" (caixa laranja com N branco)
+  doc.setFillColor(...NETZ_COLORS.orange);
+  doc.roundedRect(margin, 8, 14, 14, 2, 2, 'F');
+  doc.setTextColor(...NETZ_COLORS.navyDeep);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.text('N', margin + 7, 18, { align: 'center' });
+  // Título
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.text('NETZ SOLUTION', margin + 20, 14);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(177, 198, 229);
+  doc.text('PIPELINE DE ESTRUTURAÇÃO', margin + 20, 19);
+  // Data à direita
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(8);
+  const today = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+  doc.text(today, pageW - margin, 14, { align: 'right' });
+  doc.setTextColor(177, 198, 229);
+  doc.text(`Gerado por ${currentUser ? currentUser.email : '—'}`, pageW - margin, 19, { align: 'right' });
+}
+
+function addPdfFooter(doc, pageW, pageH, pageNum, pageTotal) {
+  doc.setDrawColor(...NETZ_COLORS.border);
+  doc.setLineWidth(0.3);
+  doc.line(15, pageH - 12, pageW - 15, pageH - 12);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(...NETZ_COLORS.textMute);
+  doc.text('Confidencial · Uso interno Netz Solution', 15, pageH - 7);
+  doc.text(`Página ${pageNum}${pageTotal ? ' de ' + pageTotal : ''}`, pageW - 15, pageH - 7, { align: 'right' });
+}
+
+// Trunca texto pra caber em N caracteres com "..."
+function truncate(s, n) {
+  if (!s) return '';
+  s = String(s);
+  return s.length > n ? s.substring(0, n - 1) + '…' : s;
+}
+
+// ============================================
+// PDF EXECUTIVO
+// ============================================
+async function exportPDFExecutivo() {
+  document.getElementById('exportMenu').classList.remove('show');
+  if (!window.jspdf) {
+    showToast('Carregando bibliotecas... tente novamente em 2s', true);
+    return;
+  }
+  showLoading(true);
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    let y = 38;
+
+    addPdfHeader(doc, pageW);
+
+    // Título do relatório
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.setTextColor(...NETZ_COLORS.navy);
+    doc.text('Relatório Executivo', margin, y);
+    y += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(...NETZ_COLORS.textMute);
+    doc.text('Snapshot do pipeline de estruturação · Visão consolidada', margin, y);
+    y += 10;
+
+    // ===== KPIs =====
+    const ops = state.operations;
+    const pipelineAtivo = ops.filter(o => !o.data_liquidacao && o.status !== 'stand');
+    const liquidadas = ops.filter(o => !!o.data_liquidacao);
+    const yearStart = new Date().getFullYear() + '-01-01';
+    const liquidadasYTD = liquidadas.filter(o => o.data_liquidacao >= yearStart);
+    const volumeYTD = liquidadasYTD.reduce((s, o) => s + (Number(o.volume_liquidado) || 0), 0);
+    const receitaYTD = liquidadasYTD.reduce((s, o) => s + (Number(o.receita_realizada) || Number(o.receita) || 0), 0);
+    const volumePipeline = pipelineAtivo.reduce((s, o) => s + (Number(o.valor) || 0), 0);
+    const receitaPipeline = pipelineAtivo.reduce((s, o) => s + (Number(o.receita) || 0), 0);
+    const atrasados = pipelineAtivo.filter(o => {
+      const d = daysUntil(o.data_prevista);
+      return d !== null && d < 0;
+    }).length;
+    const totalConvertivel = ops.filter(o => o.status !== 'stand').length;
+    const conversao = totalConvertivel ? Math.round((liquidadas.length / totalConvertivel) * 100) : 0;
+
+    // Grid de 4 KPIs (2x2)
+    const kpis = [
+      { label: 'RECEITA YTD', value: fmtBRLshort(receitaYTD), sub: `${liquidadasYTD.length} liquidadas`, color: NETZ_COLORS.green },
+      { label: 'VOLUME YTD', value: fmtBRLshort(volumeYTD), sub: `${new Date().getFullYear()}`, color: NETZ_COLORS.green },
+      { label: 'RECEITA PIPELINE', value: fmtBRLshort(receitaPipeline), sub: `${pipelineAtivo.length} em estruturação`, color: NETZ_COLORS.orange },
+      { label: 'VOLUME PIPELINE', value: fmtBRLshort(volumePipeline), sub: 'a estruturar', color: NETZ_COLORS.orange },
+      { label: 'TAXA CONVERSÃO', value: conversao + '%', sub: `${liquidadas.length}/${totalConvertivel}`, color: NETZ_COLORS.navy },
+      { label: 'ATRASADAS', value: String(atrasados), sub: 'vs. previsão', color: atrasados > 0 ? NETZ_COLORS.red : NETZ_COLORS.navy },
+    ];
+    const kpiW = (pageW - margin * 2 - 8) / 3;
+    const kpiH = 22;
+    kpis.forEach((kpi, i) => {
+      const col = i % 3;
+      const row = Math.floor(i / 3);
+      const x = margin + col * (kpiW + 4);
+      const yPos = y + row * (kpiH + 4);
+      // box
+      doc.setFillColor(255, 255, 255);
+      doc.setDrawColor(...NETZ_COLORS.border);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(x, yPos, kpiW, kpiH, 2, 2, 'FD');
+      // barra colorida na esquerda
+      doc.setFillColor(...kpi.color);
+      doc.rect(x, yPos, 1.5, kpiH, 'F');
+      // label
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.setTextColor(...NETZ_COLORS.textMute);
+      doc.text(kpi.label, x + 4, yPos + 5);
+      // value
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.setTextColor(...NETZ_COLORS.navy);
+      doc.text(kpi.value, x + 4, yPos + 12);
+      // sub
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(...NETZ_COLORS.textMute);
+      doc.text(kpi.sub, x + 4, yPos + 18);
+    });
+    y += 2 * (kpiH + 4) + 6;
+
+    // ===== Operações por Status (todas, agrupadas) =====
+    const grouped = {};
+    STATUS_ORDER.forEach(s => grouped[s] = []);
+    ops.forEach(o => {
+      if (grouped[o.status]) grouped[o.status].push(o);
+    });
+
+    STATUS_ORDER.forEach(status => {
+      const list = grouped[status];
+      if (!list || !list.length) return;
+      // Quebra de página se faltar espaço
+      if (y > pageH - 50) {
+        addPdfFooter(doc, pageW, pageH, doc.internal.getNumberOfPages());
+        doc.addPage();
+        addPdfHeader(doc, pageW);
+        y = 38;
+      }
+      // Header do grupo
+      doc.setFillColor(...NETZ_COLORS.navy);
+      doc.rect(margin, y, pageW - margin * 2, 7, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(255, 255, 255);
+      doc.text(STATUS_LABELS[status].toUpperCase(), margin + 3, y + 5);
+      const totalGrupo = list.reduce((s, o) => s + (Number(o.valor) || 0), 0);
+      doc.text(`${list.length} operações · ${fmtBRLshort(totalGrupo)}`, pageW - margin - 3, y + 5, { align: 'right' });
+      y += 8;
+
+      // Tabela
+      const head = [['Operação', 'Cliente', 'Resp.', 'Tipo', 'Volume', 'Receita', 'Prog.', 'Prev.']];
+      const body = list.map(o => [
+        truncate(o.nome, 32),
+        truncate(o.cliente || '—', 22),
+        truncate(o.responsavel || '—', 14),
+        o.tipo,
+        fmtBRLshort(o.valor),
+        fmtBRLshort(o.receita),
+        (o.progresso || 0) + '%',
+        o.data_prevista ? fmtDate(o.data_prevista) : '—',
+      ]);
+      doc.autoTable({
+        startY: y,
+        head, body,
+        styles: { fontSize: 8, cellPadding: 1.8, lineColor: NETZ_COLORS.border, lineWidth: 0.1, textColor: NETZ_COLORS.text },
+        headStyles: { fillColor: NETZ_COLORS.blueLight, textColor: NETZ_COLORS.navy, fontStyle: 'bold', fontSize: 7 },
+        alternateRowStyles: { fillColor: [248, 250, 253] },
+        columnStyles: {
+          4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' },
+        },
+        margin: { left: margin, right: margin },
+        didDrawPage: (data) => { addPdfHeader(doc, pageW); }
+      });
+      y = doc.lastAutoTable.finalY + 6;
+    });
+
+    // ===== Rodapé final =====
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      addPdfFooter(doc, pageW, pageH, i, pageCount);
+    }
+
+    const filename = `Pipeline-Netz-Executivo-${new Date().toISOString().slice(0,10)}.pdf`;
+    doc.save(filename);
+    showToast('PDF Executivo gerado');
+  } catch (err) {
+    console.error(err);
+    showToast('Erro ao gerar PDF: ' + err.message, true);
+  } finally {
+    showLoading(false);
+  }
+}
+
+// ============================================
+// PDF DETALHADO (1 página por operação)
+// ============================================
+async function exportPDFDetalhado() {
+  document.getElementById('exportMenu').classList.remove('show');
+  if (!window.jspdf) {
+    showToast('Carregando bibliotecas... tente novamente em 2s', true);
+    return;
+  }
+  showLoading(true);
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 15;
+
+    // Agrupar todas as operações por status
+    const grouped = {};
+    STATUS_ORDER.forEach(s => grouped[s] = []);
+    state.operations.forEach(o => {
+      if (grouped[o.status]) grouped[o.status].push(o);
+    });
+
+    // Achatar mantendo ordem por status
+    const sortedOps = [];
+    STATUS_ORDER.forEach(s => {
+      grouped[s].forEach(o => sortedOps.push(o));
+    });
+
+    if (sortedOps.length === 0) {
+      addPdfHeader(doc, pageW);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(...NETZ_COLORS.navy);
+      doc.text('Nenhuma operação cadastrada', margin, 60);
+      addPdfFooter(doc, pageW, pageH, 1, 1);
+      doc.save(`Pipeline-Netz-Detalhado-${new Date().toISOString().slice(0,10)}.pdf`);
+      showLoading(false);
+      return;
+    }
+
+    // ===== Capa: índice =====
+    addPdfHeader(doc, pageW);
+    let y = 38;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.setTextColor(...NETZ_COLORS.navy);
+    doc.text('Relatório Detalhado', margin, y);
+    y += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(...NETZ_COLORS.textMute);
+    doc.text(`${sortedOps.length} operações no pipeline · separadas por status`, margin, y);
+    y += 12;
+
+    // Índice
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(...NETZ_COLORS.navy);
+    doc.text('Índice', margin, y);
+    y += 5;
+
+    let pageCounter = 2; // a próxima página será 2 (capa = 1)
+    STATUS_ORDER.forEach(status => {
+      const list = grouped[status];
+      if (!list || !list.length) return;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...NETZ_COLORS.orangeDim);
+      if (y > pageH - 20) {
+        doc.addPage(); addPdfHeader(doc, pageW); y = 38;
+      }
+      doc.text(STATUS_LABELS[status].toUpperCase() + `  (${list.length})`, margin, y);
+      y += 5;
+      list.forEach((o) => {
+        if (y > pageH - 15) {
+          doc.addPage(); addPdfHeader(doc, pageW); y = 38;
+        }
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(...NETZ_COLORS.text);
+        doc.text(`• ${truncate(o.nome, 50)}`, margin + 4, y);
+        doc.setTextColor(...NETZ_COLORS.textMute);
+        doc.text(`p. ${pageCounter}`, pageW - margin, y, { align: 'right' });
+        // Linha pontilhada
+        doc.setDrawColor(...NETZ_COLORS.border);
+        doc.setLineDashPattern([1, 1], 0);
+        const textW = doc.getTextWidth(`• ${truncate(o.nome, 50)}`);
+        doc.line(margin + 4 + textW + 2, y - 1, pageW - margin - 10, y - 1);
+        doc.setLineDashPattern([], 0);
+        y += 4.5;
+        pageCounter++;
+      });
+      y += 3;
+    });
+
+    // ===== Páginas individuais por operação =====
+    sortedOps.forEach((op) => {
+      doc.addPage();
+      addPdfHeader(doc, pageW);
+      y = 38;
+
+      // Faixa de status
+      const statusKey = op.status;
+      const statusColor = statusKey === 'emissao' ? NETZ_COLORS.green :
+                         statusKey === 'stand' ? NETZ_COLORS.red :
+                         statusKey === 'aprovacao' || statusKey === 'pre' ? NETZ_COLORS.orange :
+                         NETZ_COLORS.navy;
+      // Header da operação
+      doc.setFillColor(...NETZ_COLORS.bluePale);
+      doc.rect(margin, y, pageW - margin * 2, 16, 'F');
+      doc.setFillColor(...statusColor);
+      doc.rect(margin, y, 3, 16, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.setTextColor(...NETZ_COLORS.navy);
+      doc.text(truncate(op.nome, 60), margin + 6, y + 7);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(...NETZ_COLORS.text);
+      const subInfo = [op.tipo, STATUS_LABELS[op.status], op.cliente ? 'Cliente: ' + op.cliente : null, op.responsavel ? 'Resp.: ' + op.responsavel : null].filter(Boolean).join('  ·  ');
+      doc.text(truncate(subInfo, 100), margin + 6, y + 13);
+      y += 20;
+
+      // ===== Bloco financeiro =====
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...NETZ_COLORS.orangeDim);
+      doc.text('VALORES & DATAS', margin, y);
+      y += 4;
+
+      const finRows = [
+        ['Volume Estruturado', fmtBRL(op.valor), 'Volume Liquidado', fmtBRL(op.volume_liquidado)],
+        ['Receita Prevista', fmtBRL(op.receita), 'Receita Realizada', fmtBRL(op.receita_realizada)],
+        ['Início', fmtDate(op.data_inicio), 'Conclusão Prev.', fmtDate(op.data_prevista)],
+        ['Liquidação', fmtDate(op.data_liquidacao), 'Progresso', (op.progresso || 0) + '%'],
+      ];
+      doc.autoTable({
+        startY: y,
+        body: finRows,
+        styles: { fontSize: 8, cellPadding: 1.5, lineColor: NETZ_COLORS.border, lineWidth: 0.1 },
+        columnStyles: {
+          0: { fontStyle: 'bold', textColor: NETZ_COLORS.textMute, cellWidth: 38 },
+          1: { textColor: NETZ_COLORS.text },
+          2: { fontStyle: 'bold', textColor: NETZ_COLORS.textMute, cellWidth: 38 },
+          3: { textColor: NETZ_COLORS.text },
+        },
+        margin: { left: margin, right: margin },
+      });
+      y = doc.lastAutoTable.finalY + 5;
+
+      // ===== Fases =====
+      const phases = op.phases || [];
+      if (phases.length > 0 && y < pageH - 30) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(...NETZ_COLORS.orangeDim);
+        doc.text('FASES & MARCOS', margin, y);
+        y += 4;
+        const phaseRows = phases.map(p => [
+          p.kind === 'milestone' ? '◆' : '▸',
+          truncate(p.label, 40),
+          p.start ? fmtDate(p.start) : '—',
+          p.kind === 'task' && p.end ? fmtDate(p.end) : '—',
+          p.kind === 'task' && p.start && p.end ? (dateToDays(p.end) - dateToDays(p.start)) + 'd' : '—',
+          PHASE_STATUS_LABELS[p.status] || p.status,
+        ]);
+        doc.autoTable({
+          startY: y,
+          head: [['', 'Fase', 'Início', 'Fim', 'Dur.', 'Status']],
+          body: phaseRows,
+          styles: { fontSize: 7.5, cellPadding: 1.2, lineColor: NETZ_COLORS.border, lineWidth: 0.1 },
+          headStyles: { fillColor: NETZ_COLORS.blueLight, textColor: NETZ_COLORS.navy, fontStyle: 'bold' },
+          columnStyles: {
+            0: { cellWidth: 5, halign: 'center' },
+            4: { halign: 'right' },
+          },
+          margin: { left: margin, right: margin },
+        });
+        y = doc.lastAutoTable.finalY + 5;
+      }
+
+      // ===== Checklist =====
+      const allCk = op.checklist || [];
+      const templateCk = allCk.filter(c => c.num);
+      const customCk = allCk.filter(c => !c.num);
+
+      if (templateCk.length > 0 && y < pageH - 30) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(...NETZ_COLORS.orangeDim);
+        const done = templateCk.filter(c => c.status === 'concluido').length;
+        doc.text(`CHECKLIST NETZ  (${done}/${templateCk.length})`, margin, y);
+        y += 4;
+
+        // Agrupar por categoria
+        const byCat = {};
+        templateCk.forEach(it => {
+          const cat = it.categoria || `Categoria ${(it.num || '').split('.')[0]}`;
+          if (!byCat[cat]) byCat[cat] = [];
+          byCat[cat].push(it);
+        });
+
+        const ckRows = [];
+        Object.keys(byCat).forEach(cat => {
+          // Linha de categoria (faz papel de subheader)
+          ckRows.push([{ content: cat.toUpperCase(), colSpan: 5, styles: { fillColor: NETZ_COLORS.navy, textColor: [255,255,255], fontStyle: 'bold', fontSize: 7 } }]);
+          byCat[cat].forEach(it => {
+            const statusTxt = it.status === 'concluido' ? '✓ Concluído' :
+                             it.status === 'andamento' ? '● Em andamento' :
+                             it.status === 'na' ? '— N/A' : '○ Pendente';
+            ckRows.push([
+              it.num,
+              truncate(it.texto, 80),
+              it.area || '—',
+              it.responsavel || '—',
+              statusTxt,
+            ]);
+          });
+        });
+
+        doc.autoTable({
+          startY: y,
+          head: [['Item', 'Descrição', 'Área', 'Resp.', 'Status']],
+          body: ckRows,
+          styles: { fontSize: 7, cellPadding: 1.2, lineColor: NETZ_COLORS.border, lineWidth: 0.1 },
+          headStyles: { fillColor: NETZ_COLORS.blueLight, textColor: NETZ_COLORS.navy, fontStyle: 'bold' },
+          columnStyles: {
+            0: { cellWidth: 12, fontStyle: 'bold', halign: 'center' },
+            2: { cellWidth: 18 },
+            3: { cellWidth: 22 },
+            4: { cellWidth: 28 },
+          },
+          margin: { left: margin, right: margin },
+          didParseCell: (data) => {
+            // Formatação por status
+            if (data.column.index === 4 && data.section === 'body') {
+              const txt = data.cell.raw;
+              if (typeof txt === 'string') {
+                if (txt.startsWith('✓')) data.cell.styles.textColor = NETZ_COLORS.green;
+                else if (txt.startsWith('●')) data.cell.styles.textColor = NETZ_COLORS.amber;
+                else if (txt.startsWith('—')) data.cell.styles.textColor = NETZ_COLORS.textMute;
+                else data.cell.styles.textColor = NETZ_COLORS.textMute;
+              }
+            }
+          }
+        });
+        y = doc.lastAutoTable.finalY + 5;
+      }
+
+      // ===== Checklist customizado =====
+      if (customCk.length > 0 && y < pageH - 25) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(...NETZ_COLORS.orangeDim);
+        doc.text('CHECKLIST ADICIONAL', margin, y);
+        y += 4;
+        const rows = customCk.map(c => [c.done ? '✓' : '○', truncate(c.texto, 100)]);
+        doc.autoTable({
+          startY: y, body: rows,
+          styles: { fontSize: 8, cellPadding: 1.2, lineColor: NETZ_COLORS.border, lineWidth: 0.1 },
+          columnStyles: { 0: { cellWidth: 6, halign: 'center' } },
+          margin: { left: margin, right: margin },
+        });
+        y = doc.lastAutoTable.finalY + 5;
+      }
+
+      // ===== Próximos passos =====
+      const steps = op.steps || [];
+      if (steps.length > 0 && y < pageH - 25) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(...NETZ_COLORS.orangeDim);
+        doc.text('PRÓXIMOS PASSOS', margin, y);
+        y += 4;
+        const rows = steps.map(s => ['→', truncate(s.texto, 110)]);
+        doc.autoTable({
+          startY: y, body: rows,
+          styles: { fontSize: 8, cellPadding: 1.2, lineColor: NETZ_COLORS.border, lineWidth: 0.1 },
+          columnStyles: { 0: { cellWidth: 6, halign: 'center', textColor: NETZ_COLORS.orange, fontStyle: 'bold' } },
+          margin: { left: margin, right: margin },
+        });
+        y = doc.lastAutoTable.finalY + 5;
+      }
+
+      // ===== Riscos =====
+      const risks = op.risks || [];
+      if (risks.length > 0 && y < pageH - 25) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(...NETZ_COLORS.orangeDim);
+        doc.text('RISCOS & PENDÊNCIAS', margin, y);
+        y += 4;
+        const rows = risks.map(r => [
+          (r.nivel || 'media').toUpperCase(),
+          truncate(r.texto, 100),
+        ]);
+        doc.autoTable({
+          startY: y, body: rows,
+          styles: { fontSize: 8, cellPadding: 1.2, lineColor: NETZ_COLORS.border, lineWidth: 0.1 },
+          columnStyles: { 0: { cellWidth: 18, fontStyle: 'bold', halign: 'center' } },
+          margin: { left: margin, right: margin },
+          didParseCell: (data) => {
+            if (data.column.index === 0 && data.section === 'body') {
+              const v = String(data.cell.raw).toLowerCase();
+              if (v === 'alta') { data.cell.styles.textColor = NETZ_COLORS.red; data.cell.styles.fillColor = [251, 234, 234]; }
+              else if (v === 'media') { data.cell.styles.textColor = NETZ_COLORS.amber; data.cell.styles.fillColor = [255, 244, 220]; }
+              else if (v === 'baixa') { data.cell.styles.textColor = NETZ_COLORS.green; data.cell.styles.fillColor = [230, 244, 236]; }
+            }
+          }
+        });
+        y = doc.lastAutoTable.finalY + 5;
+      }
+
+      // ===== Observações =====
+      if (op.obs && y < pageH - 25) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(...NETZ_COLORS.orangeDim);
+        doc.text('OBSERVAÇÕES', margin, y);
+        y += 4;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(...NETZ_COLORS.text);
+        const lines = doc.splitTextToSize(op.obs, pageW - margin * 2);
+        // Não estoura página
+        const maxLines = Math.floor((pageH - y - 18) / 4);
+        const safe = lines.slice(0, maxLines);
+        doc.text(safe, margin, y);
+        if (lines.length > maxLines) {
+          y += (maxLines + 0.5) * 4;
+          doc.setTextColor(...NETZ_COLORS.textMute);
+          doc.setFontSize(7);
+          doc.text(`(... ${lines.length - maxLines} linhas adicionais omitidas)`, margin, y);
+        }
+      }
+    });
+
+    // Rodapés
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      addPdfFooter(doc, pageW, pageH, i, pageCount);
+    }
+
+    const filename = `Pipeline-Netz-Detalhado-${new Date().toISOString().slice(0,10)}.pdf`;
+    doc.save(filename);
+    showToast('PDF Detalhado gerado · ' + sortedOps.length + ' operações');
+  } catch (err) {
+    console.error(err);
+    showToast('Erro ao gerar PDF: ' + err.message, true);
+  } finally {
+    showLoading(false);
   }
 }
 
