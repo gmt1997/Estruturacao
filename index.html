@@ -4893,7 +4893,7 @@ ${JSON.stringify(opsCtx, null, 2)}`;
     const messages = chatHistory.map(m => ({ role: m.role, content: m.content }));
 
     const data = await callClaudeAPI({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5',
       max_tokens: 1500,
       system: systemPrompt,
       messages
@@ -5287,7 +5287,7 @@ ${JSON.stringify(opCtx, null, 2)}`;
 
   try {
     const data = await callClaudeAPI({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5',
       max_tokens: 1200,
       system: systemPrompt,
       messages: [{ role: 'user', content: 'Gere o sumário executivo dessa operação seguindo a estrutura definida.' }]
