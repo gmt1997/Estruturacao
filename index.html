@@ -2407,6 +2407,23 @@ const daysToDate = (n) => {
 };
 const cryptoId = () => 'p_' + Math.random().toString(36).slice(2, 10);
 
+// Operação considerada concluída: já liquidou, está em handover, ou está 100% e em fase final
+const isOperationConcluida = (o) =>
+  !!o.data_liquidacao ||
+  o.status === 'handover' ||
+  (Number(o.progresso) >= 100 && (o.status === 'liquidacao' || o.status === 'handover'));
+
+// Operação está no pipeline ativo (não em standby nem concluída)
+const isOperationAtiva = (o) => !isOperationConcluida(o) && o.status !== 'stand';
+
+// Operação está atrasada apenas se está ativa E passou da data prevista
+const isOperationAtrasada = (o) => {
+  if (!isOperationAtiva(o)) return false;
+  if (!o.data_prevista) return false;
+  const d = daysUntil(o.data_prevista);
+  return d !== null && d < 0;
+};
+
 // ===== Tabs =====
 document.querySelectorAll('.tab').forEach(t => {
   t.addEventListener('click', () => {
@@ -2608,7 +2625,8 @@ function renderKPIs() {
   const range = getDashPeriodRange();
   const ops = filtered;
   const total = ops.length;
-  const pipelineAtivo = ops.filter(o => !o.data_liquidacao && o.status !== 'stand');
+  // Pipeline ativo = não liquidada, não em handover (concluída), não em stand-by
+  const pipelineAtivo = ops.filter(o => isOperationAtiva(o));
   const liquidadas = ops.filter(o => !!o.data_liquidacao);
 
   const volumePipeline = pipelineAtivo.reduce((s,o) => s + (Number(o.valor)||0), 0);
@@ -2632,11 +2650,8 @@ function renderKPIs() {
   const totalConvertivel = ops.filter(o => o.status !== 'stand').length;
   const conversao = totalConvertivel ? Math.round((liquidadas.length / totalConvertivel) * 100) : 0;
 
-  // Atrasados
-  const atrasados = pipelineAtivo.filter(o => {
-    const d = daysUntil(o.data_prevista);
-    return d !== null && d < 0;
-  }).length;
+  // Atrasados — apenas operações ativas que passaram da data prevista
+  const atrasados = ops.filter(isOperationAtrasada).length;
 
   // Label dinâmica para o período
   const periodLabel = state.dashFilter.period === 'ytd' ? 'YTD' :
@@ -3233,11 +3248,22 @@ function renderOpsCards() {
     return;
   }
   wrap.innerHTML = ops.map(o => {
+    const concluida = isOperationConcluida(o);
     const dias = daysUntil(o.data_prevista);
-    const diasTxt = dias === null ? '—' :
-      dias < 0 ? `<span style="color:var(--red);">${Math.abs(dias)}d atrasado</span>` :
-      dias === 0 ? '<span style="color:var(--orange-dim);">hoje</span>' :
-      `${dias}d restantes`;
+    let diasTxt;
+    if (concluida) {
+      diasTxt = o.data_liquidacao ? `liquidada em ${fmtDate(o.data_liquidacao)}` : 'concluída';
+    } else if (o.status === 'stand') {
+      diasTxt = 'stand-by';
+    } else if (dias === null) {
+      diasTxt = '—';
+    } else if (dias < 0) {
+      diasTxt = `<span style="color:var(--red);">${Math.abs(dias)}d atrasado</span>`;
+    } else if (dias === 0) {
+      diasTxt = '<span style="color:var(--orange-dim);">hoje</span>';
+    } else {
+      diasTxt = `${dias}d restantes`;
+    }
     const receitaTxt = Number(o.receita) > 0 ? `Receita prev: ${fmtBRLshort(o.receita)}` : '';
     return `<div class="op-card" onclick="openModal('${o.id}')">
       <div class="op-card-head">
@@ -3364,7 +3390,7 @@ function renderTable() {
   tb.innerHTML = rows.map(o => {
     const dias = daysUntil(o.data_prevista);
     let dataCell = fmtDate(o.data_prevista);
-    if (dias !== null && dias < 0 && !o.data_liquidacao && o.status !== 'stand') {
+    if (isOperationAtrasada(o)) {
       dataCell = `<span style="color:var(--red); font-weight:500;">${dataCell} (${Math.abs(dias)}d atraso)</span>`;
     }
     return `<tr onclick="openModal('${o.id}')">
@@ -3457,11 +3483,10 @@ function renderGantt() {
       if (!blob.includes(search)) return false;
     }
     if (filter === 'active') {
-      if (o.data_liquidacao || o.status === 'stand') return false;
+      if (!isOperationAtiva(o)) return false;
     }
     if (filter === 'late') {
-      const d = daysUntil(o.data_prevista);
-      if (!(d !== null && d < 0 && !o.data_liquidacao && o.status !== 'stand')) return false;
+      if (!isOperationAtrasada(o)) return false;
     }
     return true;
   });
@@ -4209,7 +4234,7 @@ async function exportPDFExecutivo() {
 
     // ===== KPIs =====
     const ops = state.operations;
-    const pipelineAtivo = ops.filter(o => !o.data_liquidacao && o.status !== 'stand');
+    const pipelineAtivo = ops.filter(o => isOperationAtiva(o));
     const liquidadas = ops.filter(o => !!o.data_liquidacao);
     const yearStart = new Date().getFullYear() + '-01-01';
     const liquidadasYTD = liquidadas.filter(o => o.data_liquidacao >= yearStart);
@@ -4217,10 +4242,7 @@ async function exportPDFExecutivo() {
     const receitaYTD = liquidadasYTD.reduce((s, o) => s + (Number(o.receita_realizada) || Number(o.receita) || 0), 0);
     const volumePipeline = pipelineAtivo.reduce((s, o) => s + (Number(o.valor) || 0), 0);
     const receitaPipeline = pipelineAtivo.reduce((s, o) => s + (Number(o.receita) || 0), 0);
-    const atrasados = pipelineAtivo.filter(o => {
-      const d = daysUntil(o.data_prevista);
-      return d !== null && d < 0;
-    }).length;
+    const atrasados = ops.filter(isOperationAtrasada).length;
     const totalConvertivel = ops.filter(o => o.status !== 'stand').length;
     const conversao = totalConvertivel ? Math.round((liquidadas.length / totalConvertivel) * 100) : 0;
 
@@ -4843,7 +4865,7 @@ function buildOperationsContext() {
     const ck = o.checklist || [];
     const ckTotal = ck.length;
     const ckDone = ck.filter(c => c.status === 'concluido' || c.done).length;
-    const dias_atraso = (o.data_prevista && !o.data_liquidacao && o.status !== 'stand')
+    const dias_atraso = (o.data_prevista && isOperationAtiva(o))
       ? -daysUntil(o.data_prevista) : null;
     const obj = {
       nome: o.nome,
@@ -5265,7 +5287,7 @@ async function generateOperationSummary() {
     };
   }).filter(Boolean);
 
-  const dias_atraso = (op.data_prevista && !op.data_liquidacao && op.status !== 'stand')
+  const dias_atraso = (op.data_prevista && isOperationAtiva(op))
     ? -daysUntil(op.data_prevista) : null;
 
   const opCtx = {
@@ -5482,7 +5504,7 @@ function exportFilteredXLSX() {
     const ck = o.checklist || [];
     const ckTotal = ck.length;
     const ckDone = ck.filter(c => c.status === 'concluido' || c.done).length;
-    const dias = (o.data_prevista && !o.data_liquidacao && o.status !== 'stand')
+    const dias = (o.data_prevista && isOperationAtiva(o))
       ? -daysUntil(o.data_prevista) : null;
     return {
       'Nome da Operação': o.nome,
