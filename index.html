@@ -510,14 +510,14 @@
     text-transform: uppercase; letter-spacing: 0.06em;
     font-family: 'IBM Plex Mono', monospace;
   }
-  .status-prospeccao { background: #EEF2F8; color: #4A5878; }
-  .status-modelagem  { background: #FFF4DC; color: var(--amber); }
-  .status-due       { background: var(--blue-light); color: var(--navy); }
-  .status-juridico  { background: #F0E8F8; color: #6A4A8C; }
-  .status-aprovacao { background: #FFE8D9; color: var(--orange-dim); }
-  .status-pre       { background: #DCEEF7; color: #1F6088; }
-  .status-emissao   { background: var(--green-bg); color: var(--green); }
-  .status-stand     { background: var(--red-bg); color: var(--red); }
+  .status-mandatado    { background: #EEF2F8; color: #4A5878; }
+  .status-kickoff      { background: #FFF4DC; color: var(--amber); }
+  .status-estruturacao { background: var(--blue-light); color: var(--navy); }
+  .status-signoff      { background: #F0E8F8; color: #6A4A8C; }
+  .status-distribuicao { background: #FFE8D9; color: var(--orange-dim); }
+  .status-liquidacao   { background: #DCEEF7; color: #1F6088; }
+  .status-handover     { background: var(--green-bg); color: var(--green); }
+  .status-stand        { background: var(--red-bg); color: var(--red); }
 
   /* ===== Kanban ===== */
   .kanban-toolbar { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
@@ -1840,13 +1840,13 @@
         <div class="field">
           <label>Status</label>
           <select id="fStatus">
-            <option value="prospeccao">Prospecção</option>
-            <option value="modelagem">Modelagem</option>
-            <option value="due">Due Diligence</option>
-            <option value="juridico">Estruturação Jurídica</option>
-            <option value="aprovacao">Aprovação Comitê</option>
-            <option value="pre">Pré-emissão</option>
-            <option value="emissao">Emissão</option>
+            <option value="mandatado">Mandatado</option>
+            <option value="kickoff">Kick-Off</option>
+            <option value="estruturacao">Estruturação</option>
+            <option value="signoff">Sign-Off</option>
+            <option value="distribuicao">Distribuição</option>
+            <option value="liquidacao">Em liquidação</option>
+            <option value="handover">Handover</option>
             <option value="stand">Stand-by</option>
           </select>
         </div>
@@ -2072,15 +2072,37 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // ============================================
 
 const STATUS_LABELS = {
-  prospeccao: 'Prospecção', modelagem: 'Modelagem', due: 'Due Diligence',
-  juridico: 'Jurídico', aprovacao: 'Aprovação', pre: 'Pré-emissão',
-  emissao: 'Emissão', stand: 'Stand-by'
+  mandatado: 'Mandatado',
+  kickoff: 'Kick-Off',
+  estruturacao: 'Estruturação',
+  signoff: 'Sign-Off',
+  distribuicao: 'Distribuição',
+  liquidacao: 'Em liquidação',
+  handover: 'Handover',
+  stand: 'Stand-by'
 };
-const STATUS_ORDER = ['prospeccao','modelagem','due','juridico','aprovacao','pre','emissao','stand'];
+const STATUS_ORDER = ['mandatado','kickoff','estruturacao','signoff','distribuicao','liquidacao','handover','stand'];
 const PHASE_STATUS_LABELS = {
-  prospeccao: 'Prospecção', modelagem: 'Modelagem', due: 'Due Diligence',
-  juridico: 'Jurídico', aprovacao: 'Aprovação', pre: 'Pré-emissão',
-  emissao: 'Emissão', custom: 'Outro'
+  mandatado: 'Mandatado',
+  kickoff: 'Kick-Off',
+  estruturacao: 'Estruturação',
+  signoff: 'Sign-Off',
+  distribuicao: 'Distribuição',
+  liquidacao: 'Em liquidação',
+  handover: 'Handover',
+  custom: 'Outro'
+};
+
+// Mapa de migração: status antigos → novos (transparente, só usado quando carrega do banco)
+const STATUS_LEGACY_MAP = {
+  prospeccao: 'mandatado',
+  modelagem: 'kickoff',
+  due: 'estruturacao',
+  juridico: 'estruturacao',
+  aprovacao: 'signoff',
+  pre: 'distribuicao',
+  emissao: 'liquidacao'
+  // 'stand' continua igual
 };
 
 // ============================================
@@ -2301,6 +2323,41 @@ async function loadOperations() {
   const { data, error } = await sb.from('operations').select('*').order('atualizado_em', { ascending: false });
   if (error) throw error;
   state.operations = data || [];
+
+  // Migração transparente: operações com status antigo → atualiza no banco
+  // Roda apenas uma vez (depois que migrar, o banco já fica atualizado)
+  const toMigrate = state.operations.filter(o => STATUS_LEGACY_MAP[o.status]);
+  if (toMigrate.length > 0) {
+    console.log(`Migrando ${toMigrate.length} operação(ões) de status antigo para novo...`);
+    for (const op of toMigrate) {
+      const newStatus = STATUS_LEGACY_MAP[op.status];
+      const { error: upErr } = await sb.from('operations').update({ status: newStatus }).eq('id', op.id);
+      if (!upErr) {
+        op.status = newStatus;  // atualiza no state local também
+      } else {
+        console.warn(`Erro migrando "${op.nome}":`, upErr);
+      }
+    }
+    showToast(`${toMigrate.length} operação(ões) atualizadas para os novos status`);
+  }
+
+  // Migrar status das fases (phases jsonb) também
+  for (const op of state.operations) {
+    if (Array.isArray(op.phases) && op.phases.length > 0) {
+      let mudou = false;
+      const novasPhases = op.phases.map(p => {
+        if (p.status && STATUS_LEGACY_MAP[p.status]) {
+          mudou = true;
+          return { ...p, status: STATUS_LEGACY_MAP[p.status] };
+        }
+        return p;
+      });
+      if (mudou) {
+        await sb.from('operations').update({ phases: novasPhases }).eq('id', op.id);
+        op.phases = novasPhases;
+      }
+    }
+  }
 }
 
 async function loadLogs() {
@@ -3001,15 +3058,15 @@ function renderFunnelChart() {
   const liquidadas = liquidadasList.length;
 
   const stages = [
-    { key: 'prospeccao', label: 'Prospecção' },
-    { key: 'modelagem', label: 'Modelagem' },
-    { key: 'due', label: 'Due Diligence' },
-    { key: 'juridico', label: 'Jurídico' },
-    { key: 'aprovacao', label: 'Aprovação' },
-    { key: 'pre', label: 'Pré-emissão' },
-    { key: 'emissao', label: 'Emissão' },
+    { key: 'mandatado', label: 'Mandatado' },
+    { key: 'kickoff', label: 'Kick-Off' },
+    { key: 'estruturacao', label: 'Estruturação' },
+    { key: 'signoff', label: 'Sign-Off' },
+    { key: 'distribuicao', label: 'Distribuição' },
+    { key: 'liquidacao', label: 'Em liquidação' },
+    { key: 'handover', label: 'Handover' },
   ];
-  const max = counts['prospeccao'] || 1;
+  const max = counts['mandatado'] || 1;
 
   const buildOpsAttr = (list) => list
     .sort((a,b) => (Number(b.valor)||0) - (Number(a.valor)||0))
@@ -3364,13 +3421,13 @@ function defaultPhaseTemplate(startDate) {
   let cursor = start.toISOString().slice(0, 10);
   const phases = [];
   const recipe = [
-    { kind: 'task', label: 'Prospecção', status: 'prospeccao', days: 7 },
-    { kind: 'task', label: 'Modelagem', status: 'modelagem', days: 14 },
-    { kind: 'task', label: 'Due Diligence', status: 'due', days: 21 },
-    { kind: 'task', label: 'Estruturação Jurídica', status: 'juridico', days: 21 },
-    { kind: 'milestone', label: 'Aprovação Comitê', status: 'aprovacao' },
-    { kind: 'task', label: 'Pré-emissão', status: 'pre', days: 14 },
-    { kind: 'milestone', label: 'Emissão', status: 'emissao' },
+    { kind: 'milestone', label: 'Mandato firmado', status: 'mandatado' },
+    { kind: 'task', label: 'Kick-Off', status: 'kickoff', days: 7 },
+    { kind: 'task', label: 'Estruturação', status: 'estruturacao', days: 35 },
+    { kind: 'milestone', label: 'Sign-Off', status: 'signoff' },
+    { kind: 'task', label: 'Distribuição', status: 'distribuicao', days: 21 },
+    { kind: 'task', label: 'Em liquidação', status: 'liquidacao', days: 7 },
+    { kind: 'milestone', label: 'Handover', status: 'handover' },
   ];
   recipe.forEach(r => {
     if (r.kind === 'milestone') {
@@ -3510,7 +3567,7 @@ function renderGantt() {
       const left = (startDays - minDays) * dayWidth;
 
       if (p.kind === 'milestone') {
-        const isDone = endDays < todayDays && (op.status === 'emissao' || isPhaseAfter(op.status, p.status));
+        const isDone = endDays < todayDays && (op.status === 'handover' || op.status === 'liquidacao' || isPhaseAfter(op.status, p.status));
         phaseBars += `<div class="gantt-milestone ${isDone ? 'done' : ''}"
             style="left:${left}px;"
             data-op-id="${op.id}" data-phase-id="${p.id}"
@@ -3678,7 +3735,7 @@ function openModal(opId) {
   closeAISummary();
 
   const op = isEdit ? state.operations.find(o => o.id === opId) : {
-    nome: '', tipo: 'FIDC', status: 'prospeccao', cliente: '', responsavel: '',
+    nome: '', tipo: 'FIDC', status: 'mandatado', cliente: '', responsavel: '',
     valor: '', receita: '', volume_liquidado: '', receita_realizada: '',
     progresso: 0, data_inicio: '', data_prevista: '', data_liquidacao: '',
     phases: [], checklist: [], steps: [], risks: [], obs: '', files: []
@@ -3686,7 +3743,7 @@ function openModal(opId) {
 
   document.getElementById('fNome').value = op.nome || '';
   document.getElementById('fTipo').value = op.tipo || 'FIDC';
-  document.getElementById('fStatus').value = op.status || 'prospeccao';
+  document.getElementById('fStatus').value = op.status || 'mandatado';
   document.getElementById('fCliente').value = op.cliente || '';
   document.getElementById('fResp').value = op.responsavel || '';
   document.getElementById('fValor').value = op.valor || '';
@@ -4387,9 +4444,9 @@ async function exportPDFDetalhado() {
 
       // Faixa de status
       const statusKey = op.status;
-      const statusColor = statusKey === 'emissao' ? NETZ_COLORS.green :
+      const statusColor = (statusKey === 'handover' || statusKey === 'liquidacao') ? NETZ_COLORS.green :
                          statusKey === 'stand' ? NETZ_COLORS.red :
-                         statusKey === 'aprovacao' || statusKey === 'pre' ? NETZ_COLORS.orange :
+                         (statusKey === 'signoff' || statusKey === 'distribuicao') ? NETZ_COLORS.orange :
                          NETZ_COLORS.navy;
       // Header da operação
       doc.setFillColor(...NETZ_COLORS.bluePale);
