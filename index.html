@@ -657,11 +657,20 @@
     background: var(--blue-light);
     border-radius: 4px;
     overflow: hidden;
+    position: relative;
   }
   .receita-summary-bar-fill {
     height: 100%;
     border-radius: 4px;
     transition: width 0.3s ease;
+  }
+  .receita-bar-recebido {
+    position: absolute; top: 0; left: 0;
+    border-radius: 4px 0 0 4px;
+  }
+  .receita-bar-areceber {
+    position: absolute; top: 0;
+    border-radius: 0 4px 4px 0;
   }
   .receita-summary-value {
     text-align: right;
@@ -691,6 +700,53 @@
   .receita-summary-total strong {
     font-family: 'Fraunces', serif;
     font-size: 17px; color: var(--navy); font-weight: 600;
+  }
+
+  /* Toggle de filtro de receita (Pipeline / Liquidadas / Tudo) */
+  .revenue-filter-toggle {
+    display: inline-flex;
+    background: var(--blue-light);
+    border-radius: 6px;
+    padding: 3px;
+    gap: 2px;
+    margin-bottom: 12px;
+  }
+  .rev-filter-btn {
+    background: transparent;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-mute);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .rev-filter-btn:hover {
+    color: var(--navy);
+  }
+  .rev-filter-btn.active {
+    background: var(--navy);
+    color: #fff;
+    box-shadow: 0 1px 3px rgba(0,27,92,0.15);
+  }
+
+  /* Legenda da decomposição (recebido vs a receber) */
+  .receita-decomp-legend {
+    display: flex; gap: 16px;
+    margin-bottom: 8px;
+    font-size: 10px; color: var(--text-mute);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .receita-decomp-legend .legend-swatch {
+    display: inline-block;
+    width: 12px; height: 8px;
+    border-radius: 2px;
+    margin-right: 5px;
+    vertical-align: middle;
   }
 
   /* Receita Breakdown Grid */
@@ -1278,7 +1334,7 @@
   }
   .checklist-template-item {
     display: grid;
-    grid-template-columns: 18px 32px 1fr 90px 110px 110px 28px;
+    grid-template-columns: 18px 32px 1fr 80px 100px 110px 110px 28px;
     gap: 6px; align-items: center;
     padding: 8px; margin-bottom: 4px;
     background: var(--bg); border-radius: var(--radius-sm);
@@ -1295,7 +1351,9 @@
     cursor: text;
   }
   .checklist-template-item.done .item-text { text-decoration: line-through; color: var(--text-soft); }
-  .checklist-template-item input[type="text"], .checklist-template-item select {
+  .checklist-template-item input[type="text"],
+  .checklist-template-item input[type="date"],
+  .checklist-template-item select {
     border: 1px solid var(--border); background: #fff;
     padding: 4px 6px; border-radius: 3px;
     font-size: 11px; font-family: inherit;
@@ -3079,6 +3137,7 @@ function populateRespList() {
 </script><script>
 // ===== Dashboard Filters =====
 state.dashFilter = { period: 'ytd', tipo: '', status: '', resp: '', cliente: '' };
+state.revenueFilter = 'all'; // 'pipeline' (apenas em estruturação), 'liquidated' (apenas liquidadas), 'all' (tudo)
 
 function populateDashFilters() {
   const ops = state.operations;
@@ -3715,10 +3774,10 @@ function renderFunnelChart() {
   const convL = max > 0 ? Math.round((liquidadas / max) * 100) : 0;
   const opsAttrL = buildOpsAttr(liquidadasList);
   html += `<div class="funnel-row hoverable"
-    data-tt-title="Liquidadas" data-tt-total="${liquidadas} operações"
+    data-tt-title="Liquidado" data-tt-total="${liquidadas} operações"
     data-tt-ops="${escapeAttr(opsAttrL)}"
     onmouseenter="onFunnelHover(event, this)" onmousemove="chartTooltipMove(event)" onmouseleave="chartTooltipHide()">
-    <span class="label" style="color:var(--green); font-weight:600;">Liquidadas ✓</span>
+    <span class="label" style="color:var(--green); font-weight:600;">Liquidado ✓</span>
     <div class="funnel-bar-track"><div class="funnel-bar-fill" style="width:${pctL}%; background: linear-gradient(90deg, var(--green) 0%, #4FAA7C 100%); color: #fff;">${liquidadas > 0 ? liquidadas : ''}</div></div>
     <span class="value-meta">${convL}%</span>
   </div>`;
@@ -3917,58 +3976,129 @@ function renderTipoChart() {
 }
 
 // Pizza por tipo de receita (estruturação, consultoria, gestão, legal, tech)
+function setRevenueFilter(mode) {
+  state.revenueFilter = mode;
+  renderRevenueTypeChart();
+}
+
 function renderRevenueTypeChart() {
-  const ops = getFilteredOps();
+  const allFiltered = getFilteredOps();
+  const filterMode = state.revenueFilter || 'all';
+
+  // Aplica o filtro de pipeline / liquidado
+  let ops;
+  if (filterMode === 'pipeline') {
+    ops = allFiltered.filter(o => !o.data_liquidacao && o.status !== 'stand');
+  } else if (filterMode === 'liquidated') {
+    ops = allFiltered.filter(o => !!o.data_liquidacao);
+  } else {
+    ops = allFiltered;
+  }
+
+  // Decompõe a receita por tipo (recebido + a receber)
   const totalsByType = {};
-  RECEITA_TYPES.forEach(t => totalsByType[t.key] = { valor: 0, count: 0, ops: [] });
+  RECEITA_TYPES.forEach(t => totalsByType[t.key] = {
+    recebido: 0, aReceber: 0, total: 0,
+    count: 0, ops: []
+  });
 
   ops.forEach(o => {
     const breakdown = o.receita_breakdown || {};
+    const volume = Number(o.valor) || 0;
     RECEITA_TYPES.forEach(t => {
       const item = breakdown[t.key];
       if (!item) return;
-      const valor = calcReceitaItem(item, t, Number(o.valor) || 0);
-      if (valor > 0) {
-        totalsByType[t.key].valor += valor;
+      const dec = decomposeReceitaItem(item, t, volume, o.data_liquidacao);
+      if (dec.total > 0) {
+        totalsByType[t.key].recebido += dec.recebido;
+        totalsByType[t.key].aReceber += dec.aReceber;
+        totalsByType[t.key].total += dec.total;
         totalsByType[t.key].count++;
-        totalsByType[t.key].ops.push({
-          nome: o.nome,
-          valTxt: fmtBRLshort(valor) + (item.recorrente ? ' (rec)' : '')
-        });
+        // Texto descritivo no tooltip
+        let valTxt = fmtBRLshort(dec.total);
+        if (item.recorrente) valTxt += ' (rec)';
+        if (o.data_liquidacao && dec.recebido > 0 && dec.aReceber > 0) {
+          valTxt += ` · ${fmtBRLshort(dec.recebido)} recebido`;
+        }
+        totalsByType[t.key].ops.push({ nome: o.nome, valTxt });
       }
     });
   });
 
-  // Ver se existe algum dado de receita por tipo
-  const totalGeral = Object.values(totalsByType).reduce((s, x) => s + x.valor, 0);
+  // Renderiza o toggle de filtro
+  const filterButtons = `
+    <div class="revenue-filter-toggle">
+      <button class="rev-filter-btn ${filterMode === 'pipeline' ? 'active' : ''}" onclick="setRevenueFilter('pipeline')">Pipeline</button>
+      <button class="rev-filter-btn ${filterMode === 'liquidated' ? 'active' : ''}" onclick="setRevenueFilter('liquidated')">Liquidadas</button>
+      <button class="rev-filter-btn ${filterMode === 'all' ? 'active' : ''}" onclick="setRevenueFilter('all')">Tudo</button>
+    </div>
+  `;
+
+  const totalGeral = Object.values(totalsByType).reduce((s, x) => s + x.total, 0);
+  const recebidoGeral = Object.values(totalsByType).reduce((s, x) => s + x.recebido, 0);
+  const aReceberGeral = Object.values(totalsByType).reduce((s, x) => s + x.aReceber, 0);
 
   if (totalGeral === 0) {
-    document.getElementById('chartReceitaTipo').innerHTML =
-      '<div class="empty-state" style="padding:30px;"><h3>Sem detalhamento de receita</h3><p style="font-size:12px;">Detalhe a receita por tipo nas operações para ver esse gráfico.</p></div>';
+    const emptyMsg = filterMode === 'pipeline'
+      ? 'Nenhuma operação em pipeline com receita detalhada.'
+      : filterMode === 'liquidated'
+      ? 'Nenhuma operação liquidada com receita detalhada.'
+      : 'Detalhe a receita por tipo nas operações para ver esse gráfico.';
+
+    document.getElementById('chartReceitaTipo').innerHTML = `
+      ${filterButtons}
+      <div class="empty-state" style="padding:30px;"><h3>Sem dados nesse filtro</h3><p style="font-size:12px;">${emptyMsg}</p></div>
+    `;
     document.getElementById('chartReceitaSummary').innerHTML =
       '<div class="empty-state" style="padding:30px;"><p style="font-size:12px; color: var(--text-mute);">Edite uma operação e preencha o "Detalhamento de Receita".</p></div>';
     return;
   }
 
-  // Monta segmentos pra pizza (só tipos com valor > 0)
+  // Monta segmentos pra pizza
   const segments = RECEITA_TYPES
-    .filter(t => totalsByType[t.key].valor > 0)
+    .filter(t => totalsByType[t.key].total > 0)
     .map(t => ({
       key: t.key,
       label: t.label,
-      value: totalsByType[t.key].valor,
+      value: totalsByType[t.key].total,
       count: totalsByType[t.key].count,
       color: t.color,
       ops: totalsByType[t.key].ops
     }));
 
-  renderPieChart('chartReceitaTipo', segments, { valueMode: 'value' });
+  // Renderiza pizza com toggle de filtro acima
+  const tipoContainer = document.getElementById('chartReceitaTipo');
+  tipoContainer.innerHTML = filterButtons + '<div id="chartReceitaTipoInner"></div>';
+  renderPieChart('chartReceitaTipoInner', segments, { valueMode: 'value' });
 
-  // Card resumo: lista vertical com os tipos, valor e %
+  // Card resumo: lista vertical com os tipos, recebido + a receber
   const summaryHtml = RECEITA_TYPES.map(t => {
     const data = totalsByType[t.key];
-    const pct = totalGeral > 0 ? (data.valor / totalGeral) * 100 : 0;
+    const pct = totalGeral > 0 ? (data.total / totalGeral) * 100 : 0;
     const recurringHint = t.recurring ? ' <span style="font-size:10px; color: var(--text-mute);">(recorrente)</span>' : '';
+
+    // Se tem recebido E a receber, mostra barra dividida
+    const hasBoth = data.recebido > 0 && data.aReceber > 0;
+    const recPct = data.total > 0 ? (data.recebido / data.total) * 100 : 0;
+
+    let valueHtml;
+    if (hasBoth) {
+      valueHtml = `
+        <strong>${fmtBRLshort(data.total)}</strong>
+        <span class="receita-summary-pct">${fmtBRLshort(data.recebido)} recebido</span>
+      `;
+    } else if (data.recebido > 0) {
+      valueHtml = `
+        <strong>${fmtBRLshort(data.total)}</strong>
+        <span class="receita-summary-pct" style="color: var(--green);">recebido</span>
+      `;
+    } else {
+      valueHtml = `
+        <strong>${fmtBRLshort(data.total)}</strong>
+        <span class="receita-summary-pct">${pct.toFixed(1)}%</span>
+      `;
+    }
+
     return `
       <div class="receita-summary-row">
         <div class="receita-summary-label">
@@ -3976,33 +4106,57 @@ function renderRevenueTypeChart() {
           <span>${t.label}${recurringHint}</span>
         </div>
         <div class="receita-summary-bar-track">
-          <div class="receita-summary-bar-fill" style="width: ${pct}%; background: ${t.color};"></div>
+          ${hasBoth
+            ? `<div class="receita-summary-bar-fill receita-bar-recebido" style="width: ${recPct}%; background: ${t.color};"></div>
+               <div class="receita-summary-bar-fill receita-bar-areceber" style="left: ${recPct}%; width: ${100 - recPct}%; background: ${t.color}; opacity: 0.35;"></div>`
+            : `<div class="receita-summary-bar-fill" style="width: ${pct}%; background: ${t.color}; ${data.recebido === 0 && data.aReceber > 0 ? 'opacity: 0.35;' : ''}"></div>`
+          }
         </div>
-        <div class="receita-summary-value">
-          <strong>${fmtBRLshort(data.valor)}</strong>
-          <span class="receita-summary-pct">${pct.toFixed(1)}%</span>
-        </div>
+        <div class="receita-summary-value">${valueHtml}</div>
       </div>
     `;
   }).join('');
 
-  // Soma total + receita mensal recorrente (se houver)
+  // Receita mensal recorrente (apenas das operações no filtro)
   const receitaMensalRec = ops.reduce((sum, o) => sum + calcReceitaMensalRecorrente(o.receita_breakdown, Number(o.valor) || 0), 0);
 
-  document.getElementById('chartReceitaSummary').innerHTML = `
-    <div class="receita-summary-list">${summaryHtml}</div>
-    <div class="receita-summary-total">
-      <div>
-        <span class="receita-summary-total-label">Total agregado</span>
-        <strong>${fmtBRL(totalGeral)}</strong>
-      </div>
-      ${receitaMensalRec > 0 ? `
-        <div>
-          <span class="receita-summary-total-label">Receita mensal recorrente</span>
-          <strong style="color: var(--orange-dim);">${fmtBRL(receitaMensalRec)}/mês</strong>
-        </div>
-      ` : ''}
+  // Bloco de totais com recebido / a receber se aplicável
+  const hasDecomp = recebidoGeral > 0 && aReceberGeral > 0;
+  const totalBlocks = `
+    <div>
+      <span class="receita-summary-total-label">Total agregado</span>
+      <strong>${fmtBRL(totalGeral)}</strong>
     </div>
+    ${hasDecomp ? `
+      <div>
+        <span class="receita-summary-total-label">Recebido até hoje</span>
+        <strong style="color: var(--green);">${fmtBRL(recebidoGeral)}</strong>
+      </div>
+      <div>
+        <span class="receita-summary-total-label">A receber</span>
+        <strong style="color: var(--text-mute);">${fmtBRL(aReceberGeral)}</strong>
+      </div>
+    ` : ''}
+    ${receitaMensalRec > 0 ? `
+      <div>
+        <span class="receita-summary-total-label">Receita mensal recorrente</span>
+        <strong style="color: var(--orange-dim);">${fmtBRL(receitaMensalRec)}/mês</strong>
+      </div>
+    ` : ''}
+  `;
+
+  // Mini-legenda explicando as barras quando tem decomposição
+  const legendDecomp = hasDecomp ? `
+    <div class="receita-decomp-legend">
+      <span><span class="legend-swatch" style="background: var(--text); opacity: 1;"></span>Recebido</span>
+      <span><span class="legend-swatch" style="background: var(--text); opacity: 0.35;"></span>A receber</span>
+    </div>
+  ` : '';
+
+  document.getElementById('chartReceitaSummary').innerHTML = `
+    ${legendDecomp}
+    <div class="receita-summary-list">${summaryHtml}</div>
+    <div class="receita-summary-total">${totalBlocks}</div>
   `;
 }
 
@@ -4283,19 +4437,29 @@ function collectChecklistTasks() {
   const tasks = [];
   state.operations.forEach(op => {
     (op.checklist || []).forEach(ck => {
-      // Apenas itens customizados (sem num) E com prazo definido
-      if (!ck.num && ck.prazo && ck.texto) {
-        tasks.push({
-          opId: op.id,
-          opNome: op.nome,
-          opTipo: op.tipo,
-          opStatus: op.status,
-          texto: ck.texto,
-          responsavel: (ck.responsavel || '').trim() || op.responsavel || 'Sem responsável',
-          prazo: ck.prazo,
-          done: !!ck.done
-        });
-      }
+      // Apenas itens com prazo definido E texto preenchido
+      if (!ck.prazo || !ck.texto) return;
+
+      // Itens template Netz (com num) usam status; itens customizados usam done
+      const isTemplate = !!ck.num;
+      const done = isTemplate ? (ck.status === 'concluido' || ck.status === 'na') : !!ck.done;
+
+      // Texto exibido: se for template, prefixa o número (ex: "1.1 Regulamento do Fundo...")
+      const displayText = isTemplate ? `${ck.num} ${ck.texto}` : ck.texto;
+
+      tasks.push({
+        opId: op.id,
+        opNome: op.nome,
+        opTipo: op.tipo,
+        opStatus: op.status,
+        texto: displayText,
+        textoOriginal: ck.texto,
+        isTemplate: isTemplate,
+        categoria: ck.categoria || null,
+        responsavel: (ck.responsavel || '').trim() || op.responsavel || 'Sem responsável',
+        prazo: ck.prazo,
+        done: done
+      });
     });
   });
   return tasks;
@@ -4961,7 +5125,8 @@ function renderChecklistTemplate(items) {
         <span class="item-num">${escapeHtml(it.num)}</span>
         <span class="item-text" title="${escapeAttr(it.texto)}">${escapeHtml(it.texto)}</span>
         <input type="text" value="${escapeAttr(it.area || 'Fin/Ops')}" placeholder="Área" data-field="area">
-        <input type="text" value="${escapeAttr(it.responsavel || '')}" placeholder="Resp." data-field="responsavel">
+        <input type="text" value="${escapeAttr(it.responsavel || '')}" placeholder="Resp." data-field="responsavel" list="respList">
+        <input type="date" value="${escapeAttr(it.prazo || '')}" data-field="prazo" title="Prazo">
         <select class="ck-status-${statusVal}" onchange="this.className='ck-status-'+this.value" data-field="status">
           <option value="pendente" ${statusVal==='pendente'?'selected':''}>PENDENTE</option>
           <option value="andamento" ${statusVal==='andamento'?'selected':''}>EM ANDAMENTO</option>
@@ -4981,6 +5146,7 @@ function getChecklistTemplate() {
     const texto = el.querySelector('.item-text').textContent;
     const area = el.querySelector('input[data-field="area"]').value;
     const responsavel = el.querySelector('input[data-field="responsavel"]').value;
+    const prazo = el.querySelector('input[data-field="prazo"]').value || null;
     const status = el.querySelector('select[data-field="status"]').value;
     // Recuperar categoria do contexto (preserva)
     let categoria = '';
@@ -4992,7 +5158,7 @@ function getChecklistTemplate() {
       }
       prev = prev.previousElementSibling;
     }
-    return { num, texto, area, responsavel, status, categoria };
+    return { num, texto, area, responsavel, prazo, status, categoria };
   });
 }
 function toggleTemplateItem(idx) {
@@ -5079,6 +5245,72 @@ function calcReceitaMensalRecorrente(breakdown, volumeOperacao) {
     if (!item || !item.recorrente) return sum;
     return sum + calcReceitaMensalDoItem(item, volumeOperacao);
   }, 0);
+}
+
+// ============================================
+// Decomposição de receita por tempo (recebida vs a receber)
+// ============================================
+// Retorna { recebido, aReceber, total } para um item específico, considerando data de liquidação
+function decomposeReceitaItem(item, typeMeta, volumeOperacao, dataLiquidacao) {
+  if (!item) return { recebido: 0, aReceber: 0, total: 0 };
+
+  // Tipo não-recorrente: pago integralmente na liquidação
+  if (!typeMeta.recurring || !item.recorrente) {
+    const valor = Number(item.valor) || 0;
+    if (dataLiquidacao) {
+      // Já liquidado: valor único foi pago
+      return { recebido: valor, aReceber: 0, total: valor };
+    }
+    // Ainda não liquidado: tudo a receber
+    return { recebido: 0, aReceber: valor, total: valor };
+  }
+
+  // Recorrente: depende de quanto tempo passou desde a liquidação
+  const mensal = calcReceitaMensalDoItem(item, volumeOperacao);
+  const prazoMeses = Number(item.prazo_meses) || 0;
+  const total = mensal * prazoMeses;
+
+  if (!dataLiquidacao) {
+    // Não liquidou ainda: tudo a receber
+    return { recebido: 0, aReceber: total, total };
+  }
+
+  // Calcula meses corridos desde a liquidação
+  const liq = new Date(dataLiquidacao + 'T00:00:00');
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+
+  if (hoje < liq) {
+    // Liquidação no futuro (raro): tudo a receber
+    return { recebido: 0, aReceber: total, total };
+  }
+
+  // Diferença em meses (com fração proporcional dos dias)
+  let mesesPassados = (hoje.getFullYear() - liq.getFullYear()) * 12 + (hoje.getMonth() - liq.getMonth());
+  // Ajuste pelo dia do mês
+  if (hoje.getDate() < liq.getDate()) mesesPassados -= 1;
+  // Adiciona fração proporcional do mês corrente
+  const diasNoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate();
+  const diasDecorridosNoMes = hoje.getDate() - liq.getDate();
+  const fracaoDoMes = diasDecorridosNoMes >= 0 ? diasDecorridosNoMes / diasNoMes : (diasNoMes + diasDecorridosNoMes) / diasNoMes;
+  const mesesEfetivos = Math.max(0, Math.min(prazoMeses, mesesPassados + Math.max(0, fracaoDoMes)));
+
+  const recebido = mensal * mesesEfetivos;
+  const aReceber = Math.max(0, total - recebido);
+
+  return { recebido, aReceber, total };
+}
+
+function decomposeReceitaTotal(breakdown, volumeOperacao, dataLiquidacao) {
+  const result = { recebido: 0, aReceber: 0, total: 0 };
+  if (!breakdown) return result;
+  RECEITA_TYPES.forEach(t => {
+    const dec = decomposeReceitaItem(breakdown[t.key], t, volumeOperacao, dataLiquidacao);
+    result.recebido += dec.recebido;
+    result.aReceber += dec.aReceber;
+    result.total += dec.total;
+  });
+  return result;
 }
 
 // Pega o volume atual do input do modal (para cálculos em tempo real)
