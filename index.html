@@ -448,6 +448,311 @@
     fill: var(--text-mute); text-anchor: middle;
   }
 
+  /* Relatório Semanal */
+  .weekly-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 16px; flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .weekly-subtitle {
+    font-size: 12px; color: var(--text-mute);
+    margin-top: 4px; text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .weekly-controls {
+    display: flex; gap: 6px; align-items: center;
+    flex-wrap: wrap;
+  }
+  .weekly-controls .btn {
+    height: 36px; padding: 0 12px; font-size: 12px;
+  }
+
+  .weekly-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+  .weekly-summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .weekly-summary-label {
+    font-size: 10px; color: var(--text-mute);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+  .weekly-summary-value {
+    font-family: 'Fraunces', serif;
+    font-size: 24px; font-weight: 600; color: var(--navy);
+    line-height: 1.1;
+  }
+  .weekly-summary-sub {
+    font-size: 11px; color: var(--text-mute); margin-top: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .weekly-person-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .weekly-person-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 18px;
+    background: linear-gradient(135deg, var(--navy-deep) 0%, var(--navy) 100%);
+    color: #fff;
+  }
+  .weekly-person-name {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Fraunces', serif; font-size: 16px; font-weight: 600;
+  }
+  .weekly-person-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--orange);
+    color: var(--navy-deep);
+    display: grid; place-items: center;
+    font-weight: 700; font-size: 13px;
+    flex-shrink: 0;
+  }
+  .weekly-person-stats {
+    display: flex; gap: 14px;
+    font-size: 11px; color: var(--blue-pale);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .weekly-person-stats strong { color: #fff; font-weight: 600; }
+  .weekly-tasks {
+    padding: 0;
+  }
+  .weekly-task-row {
+    display: grid;
+    grid-template-columns: 24px 1fr 200px 110px 90px;
+    gap: 12px;
+    padding: 10px 18px;
+    align-items: center;
+    border-bottom: 1px solid var(--border-soft);
+    font-size: 13px;
+    transition: background 0.15s;
+  }
+  .weekly-task-row:last-child { border-bottom: none; }
+  .weekly-task-row:hover { background: var(--bg); cursor: pointer; }
+  .weekly-task-status {
+    width: 18px; height: 18px;
+    border: 2px solid var(--border);
+    border-radius: 50%;
+    background: #fff;
+    flex-shrink: 0;
+  }
+  .weekly-task-status.done {
+    background: var(--green);
+    border-color: var(--green);
+    position: relative;
+  }
+  .weekly-task-status.done::after {
+    content: '✓';
+    position: absolute;
+    top: -3px; left: 2px;
+    color: #fff; font-size: 12px; font-weight: 700;
+  }
+  .weekly-task-status.late {
+    border-color: var(--red);
+    background: var(--red-bg);
+  }
+  .weekly-task-text {
+    color: var(--text);
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .weekly-task-text.done {
+    text-decoration: line-through;
+    color: var(--text-soft);
+  }
+  .weekly-task-op {
+    font-size: 11px;
+    color: var(--text-mute);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .weekly-task-op .op-tipo-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    background: var(--blue-light);
+    color: var(--navy);
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-right: 4px;
+  }
+  .weekly-task-deadline {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    text-align: right;
+    color: var(--text-mute);
+  }
+  .weekly-task-deadline.late { color: var(--red); font-weight: 600; }
+  .weekly-task-deadline.today { color: var(--orange-dim); font-weight: 600; }
+  .weekly-task-status-badge {
+    text-align: right;
+    font-size: 10px;
+    padding: 3px 7px;
+    border-radius: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .weekly-task-status-badge.pending {
+    background: var(--blue-light); color: var(--navy);
+  }
+  .weekly-task-status-badge.late {
+    background: var(--red-bg); color: var(--red);
+  }
+  .weekly-task-status-badge.done {
+    background: var(--green-bg); color: var(--green);
+  }
+
+  .weekly-empty {
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-mute);
+  }
+  .weekly-empty h3 {
+    font-family: 'Fraunces', serif; color: var(--navy);
+    font-size: 18px; margin-bottom: 8px;
+  }
+
+  @media (max-width: 720px) {
+    .weekly-task-row {
+      grid-template-columns: 24px 1fr;
+      grid-template-rows: auto auto auto;
+      gap: 4px 12px;
+    }
+    .weekly-task-op, .weekly-task-deadline, .weekly-task-status-badge {
+      grid-column: 2;
+    }
+  }
+
+  /* Receita Summary (card de composição) */
+  .receita-summary-list {
+    display: flex; flex-direction: column;
+    gap: 8px; padding: 8px 0;
+  }
+  .receita-summary-row {
+    display: grid;
+    grid-template-columns: 130px 1fr 110px;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+  }
+  .receita-summary-label {
+    display: flex; align-items: center; gap: 6px;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .receita-summary-bar-track {
+    height: 18px;
+    background: var(--blue-light);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .receita-summary-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+  .receita-summary-value {
+    text-align: right;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .receita-summary-value strong {
+    display: block;
+    font-size: 12px; color: var(--navy); font-weight: 600;
+  }
+  .receita-summary-pct {
+    font-size: 10px; color: var(--text-mute);
+  }
+  .receita-summary-total {
+    margin-top: 14px; padding-top: 14px;
+    border-top: 1px solid var(--border-soft);
+    display: flex; justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .receita-summary-total > div {
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .receita-summary-total-label {
+    font-size: 10px; color: var(--text-mute);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .receita-summary-total strong {
+    font-family: 'Fraunces', serif;
+    font-size: 17px; color: var(--navy); font-weight: 600;
+  }
+
+  /* Receita Breakdown Grid */
+  .receita-card {
+    background: var(--bg);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    padding: 10px 12px;
+    transition: border-color 0.15s;
+  }
+  .receita-card:focus-within { border-color: var(--orange); }
+  .receita-card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .receita-card-name {
+    font-size: 12px; font-weight: 600; color: var(--navy);
+    text-transform: uppercase; letter-spacing: 0.04em;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .receita-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .receita-card-rec-toggle {
+    font-size: 10px; color: var(--text-mute);
+    display: flex; align-items: center; gap: 4px;
+    cursor: pointer;
+  }
+  .receita-card-rec-toggle input { accent-color: var(--orange); }
+  .receita-card input[type="number"] {
+    width: 100%;
+    padding: 5px 8px; font-size: 12px;
+    border: 1px solid var(--border); border-radius: 4px;
+    background: #fff;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .receita-card input[type="number"]:focus {
+    outline: none; border-color: var(--orange);
+  }
+  .receita-card-rec-fields {
+    display: grid; grid-template-columns: 1fr 80px;
+    gap: 6px; margin-top: 6px;
+  }
+  .receita-card label {
+    font-size: 10px; color: var(--text-mute);
+    text-transform: uppercase; letter-spacing: 0.04em;
+    margin-bottom: 2px; display: block;
+  }
+  .receita-card-total {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border-soft);
+    font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text-mute);
+    display: flex; justify-content: space-between;
+  }
+  .receita-card-total strong {
+    color: var(--navy); font-weight: 600;
+  }
+
   /* Pie Chart (Distribuição por Tipo / Status) */
   .pie-chart-wrap {
     display: flex;
@@ -860,6 +1165,50 @@
     background: #fff; outline: 1px solid var(--border); border-radius: 3px;
   }
   .checklist-item.done input[type="text"] { text-decoration: line-through; color: var(--text-soft); }
+
+  /* Checklist customizado novo (com responsável + prazo) */
+  .checklist-item-custom {
+    display: grid;
+    grid-template-columns: 18px 1fr 130px 130px 28px;
+    gap: 8px; align-items: center;
+    margin-bottom: 6px; padding: 6px 8px;
+    background: var(--bg); border-radius: var(--radius-sm);
+  }
+  .checklist-item-custom input[type="checkbox"] {
+    width: 16px; height: 16px; accent-color: var(--orange);
+    cursor: pointer; flex-shrink: 0;
+  }
+  .checklist-item-custom input[type="text"],
+  .checklist-item-custom input[type="date"] {
+    border: 1px solid transparent; background: transparent;
+    font-family: inherit; font-size: 12px; color: var(--text);
+    padding: 5px 7px; border-radius: 4px;
+    min-width: 0;
+  }
+  .checklist-item-custom .ck-texto {
+    font-size: 13px; font-weight: 400;
+  }
+  .checklist-item-custom .ck-resp,
+  .checklist-item-custom .ck-prazo {
+    font-size: 11px;
+    color: var(--text-mute);
+  }
+  .checklist-item-custom input:focus {
+    background: #fff; outline: none; border-color: var(--border);
+  }
+  .checklist-item-custom.done .ck-texto {
+    text-decoration: line-through; color: var(--text-soft);
+  }
+  @media (max-width: 720px) {
+    .checklist-item-custom {
+      grid-template-columns: 18px 1fr 28px;
+      grid-template-rows: auto auto;
+    }
+    .checklist-item-custom .ck-resp, .checklist-item-custom .ck-prazo {
+      grid-column: 2;
+    }
+  }
+
   .item-remove {
     background: none; border: none; color: var(--text-soft);
     cursor: pointer; font-size: 16px; padding: 0 4px;
@@ -1732,6 +2081,7 @@
       <button class="tab" data-tab="kanban">Kanban</button>
       <button class="tab" data-tab="table">Tabela</button>
       <button class="tab" data-tab="gantt">Gantt</button>
+      <button class="tab" data-tab="weekly">Semana</button>
       <button class="tab" data-tab="audit">Auditoria</button>
     </nav>
   </header>
@@ -1826,6 +2176,18 @@
         </div>
       </div>
 
+      <h2 class="section-title">Composição de Receita</h2>
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h3>Receita por Tipo (Pipeline)</h3>
+          <div id="chartReceitaTipo"></div>
+        </div>
+        <div class="chart-card">
+          <h3>Composição</h3>
+          <div id="chartReceitaSummary"></div>
+        </div>
+      </div>
+
       <h2 class="section-title">Operações em Pipeline</h2>
       <div class="ops-cards" id="opsCards"></div>
     </section>
@@ -1895,6 +2257,32 @@
       <div class="gantt-help">
         💡 Arraste o início ou fim de uma fase para reagendar. Clique no nome da operação para abrir o detalhamento.
       </div>
+    </section>
+
+    <!-- RELATÓRIO SEMANAL -->
+    <section class="panel" id="panel-weekly">
+      <div class="weekly-header">
+        <div>
+          <h2 class="section-title" style="margin: 0;">Relatório Semanal</h2>
+          <div class="weekly-subtitle" id="weeklySubtitle">—</div>
+        </div>
+        <div class="weekly-controls">
+          <button class="btn btn-secondary" onclick="weekShift(-1)" title="Semana anterior">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <button class="btn btn-secondary" onclick="weekShift(0)">Hoje</button>
+          <button class="btn btn-secondary" onclick="weekShift(1)" title="Próxima semana">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+          <button class="btn btn-secondary" onclick="exportWeeklyReport()" title="Exportar para Excel">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            <span>Excel</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="weekly-summary" id="weeklySummary"></div>
+      <div class="weekly-content" id="weeklyContent"></div>
     </section>
 
     <!-- AUDITORIA -->
@@ -2030,6 +2418,21 @@
 
       <div class="form-section">
         <div class="form-section-title">
+          <span>Detalhamento de Receita</span>
+          <div class="form-section-title-actions">
+            <span style="font-size: 11px; color: var(--text-mute);">Soma: <strong id="receitaSomaPreview" style="color: var(--navy);">R$ 0</strong></span>
+          </div>
+        </div>
+        <div class="receita-grid" id="receitaGrid">
+          <!-- Renderizado dinamicamente em renderReceitaBreakdown() -->
+        </div>
+        <div style="font-size: 11px; color: var(--text-mute); margin-top: 8px;">
+          Para receitas <strong>recorrentes</strong> (Gestão, Consultoria, Tech), informe valor mensal e prazo em meses — o total é calculado automaticamente.
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">
           <span>Fases & Marcos (Gantt)</span>
           <div class="form-section-title-actions">
             <button class="phase-template-btn" onclick="loadPhaseTemplate()">⚡ template padrão</button>
@@ -2120,6 +2523,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<datalist id="respList"></datalist>
 <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
 <div class="gantt-tooltip" id="ganttTooltip" style="display:none;"></div>
 <div class="chart-tooltip" id="chartTooltip" style="display:none;"></div>
@@ -2586,6 +2990,7 @@ function sortBy(field) {
 }
 
 function renderAll() {
+  populateRespList();
   populateDashFilters();
   renderSavedFilters();
   renderKPIs();
@@ -2594,12 +2999,31 @@ function renderAll() {
   renderFunnelChart();
   renderTipoChart();
   renderStatusChart();
+  renderRevenueTypeChart();
   renderTimeByStageChart();
   renderOpsCards();
   renderKanban();
   renderTable();
   renderGantt();
+  renderWeeklyReport();
   renderLogs();
+}
+
+function populateRespList() {
+  const respSet = new Set();
+  state.operations.forEach(o => {
+    if (o.responsavel) {
+      // Pode ter múltiplos separados por · ou ,
+      o.responsavel.split(/[·,;]/).map(s => s.trim()).filter(Boolean).forEach(r => respSet.add(r));
+    }
+    (o.checklist || []).forEach(ck => {
+      if (ck.responsavel) respSet.add(ck.responsavel);
+    });
+  });
+  const list = document.getElementById('respList');
+  if (list) {
+    list.innerHTML = [...respSet].sort().map(r => `<option value="${escapeAttr(r)}">`).join('');
+  }
 }
 </script><script>
 // ===== Dashboard Filters =====
@@ -2768,6 +3192,18 @@ function renderKPIs() {
   // Atrasados — apenas operações ativas que passaram da data prevista
   const atrasados = ops.filter(isOperationAtrasada).length;
 
+  // Receita média mensal — receita realizada YTD / mês corrente
+  // (sempre baseada no ano corrente, independente do filtro de período)
+  const yearStartStr = new Date().getFullYear() + '-01-01';
+  const liquidadasAnoCorrente = state.operations.filter(o =>
+    o.data_liquidacao && o.data_liquidacao >= yearStartStr
+  );
+  const receitaAnoCorrente = liquidadasAnoCorrente.reduce(
+    (s, o) => s + (Number(o.receita_realizada) || Number(o.receita) || 0), 0
+  );
+  const mesAtual = new Date().getMonth() + 1;  // 1-12
+  const receitaMediaMensal = receitaAnoCorrente / mesAtual;
+
   // Label dinâmica para o período
   const periodLabel = state.dashFilter.period === 'ytd' ? 'YTD' :
     state.dashFilter.period === 'prev_year' ? (new Date().getFullYear() - 1) :
@@ -2780,6 +3216,11 @@ function renderKPIs() {
       <div class="kpi-label">Receita Realizada</div>
       <div class="kpi-value">${fmtBRLshort(receitaPeriodo)}</div>
       <div class="kpi-meta">${liquidadasNoPeriodo.length} liquidada${liquidadasNoPeriodo.length!==1?'s':''} · ${periodLabel}</div>
+    </div>
+    <div class="kpi kpi-revenue">
+      <div class="kpi-label">Receita Média Mensal</div>
+      <div class="kpi-value">${fmtBRLshort(receitaMediaMensal)}</div>
+      <div class="kpi-meta">${fmtBRLshort(receitaAnoCorrente)} ÷ ${mesAtual}m · YTD</div>
     </div>
     <div class="kpi kpi-revenue">
       <div class="kpi-label">Volume Liquidado</div>
@@ -3424,6 +3865,96 @@ function renderTipoChart() {
   renderPieChart('chartTipo', segments, { valueMode: 'value' });
 }
 
+// Pizza por tipo de receita (estruturação, consultoria, gestão, legal, tech)
+function renderRevenueTypeChart() {
+  const ops = getFilteredOps();
+  const totalsByType = {};
+  RECEITA_TYPES.forEach(t => totalsByType[t.key] = { valor: 0, count: 0, ops: [] });
+
+  ops.forEach(o => {
+    const breakdown = o.receita_breakdown || {};
+    RECEITA_TYPES.forEach(t => {
+      const item = breakdown[t.key];
+      if (!item) return;
+      const valor = calcReceitaItem(item, t);
+      if (valor > 0) {
+        totalsByType[t.key].valor += valor;
+        totalsByType[t.key].count++;
+        totalsByType[t.key].ops.push({
+          nome: o.nome,
+          valTxt: fmtBRLshort(valor) + (item.recorrente ? ' (rec)' : '')
+        });
+      }
+    });
+  });
+
+  // Ver se existe algum dado de receita por tipo
+  const totalGeral = Object.values(totalsByType).reduce((s, x) => s + x.valor, 0);
+
+  if (totalGeral === 0) {
+    document.getElementById('chartReceitaTipo').innerHTML =
+      '<div class="empty-state" style="padding:30px;"><h3>Sem detalhamento de receita</h3><p style="font-size:12px;">Detalhe a receita por tipo nas operações para ver esse gráfico.</p></div>';
+    document.getElementById('chartReceitaSummary').innerHTML =
+      '<div class="empty-state" style="padding:30px;"><p style="font-size:12px; color: var(--text-mute);">Edite uma operação e preencha o "Detalhamento de Receita".</p></div>';
+    return;
+  }
+
+  // Monta segmentos pra pizza (só tipos com valor > 0)
+  const segments = RECEITA_TYPES
+    .filter(t => totalsByType[t.key].valor > 0)
+    .map(t => ({
+      key: t.key,
+      label: t.label,
+      value: totalsByType[t.key].valor,
+      count: totalsByType[t.key].count,
+      color: t.color,
+      ops: totalsByType[t.key].ops
+    }));
+
+  renderPieChart('chartReceitaTipo', segments, { valueMode: 'value' });
+
+  // Card resumo: lista vertical com os tipos, valor e %
+  const summaryHtml = RECEITA_TYPES.map(t => {
+    const data = totalsByType[t.key];
+    const pct = totalGeral > 0 ? (data.valor / totalGeral) * 100 : 0;
+    const recurringHint = t.recurring ? ' <span style="font-size:10px; color: var(--text-mute);">(recorrente)</span>' : '';
+    return `
+      <div class="receita-summary-row">
+        <div class="receita-summary-label">
+          <span class="receita-dot" style="background: ${t.color};"></span>
+          <span>${t.label}${recurringHint}</span>
+        </div>
+        <div class="receita-summary-bar-track">
+          <div class="receita-summary-bar-fill" style="width: ${pct}%; background: ${t.color};"></div>
+        </div>
+        <div class="receita-summary-value">
+          <strong>${fmtBRLshort(data.valor)}</strong>
+          <span class="receita-summary-pct">${pct.toFixed(1)}%</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Soma total + receita mensal recorrente (se houver)
+  const receitaMensalRec = ops.reduce((sum, o) => sum + calcReceitaMensalRecorrente(o.receita_breakdown), 0);
+
+  document.getElementById('chartReceitaSummary').innerHTML = `
+    <div class="receita-summary-list">${summaryHtml}</div>
+    <div class="receita-summary-total">
+      <div>
+        <span class="receita-summary-total-label">Total agregado</span>
+        <strong>${fmtBRL(totalGeral)}</strong>
+      </div>
+      ${receitaMensalRec > 0 ? `
+        <div>
+          <span class="receita-summary-total-label">Receita mensal recorrente</span>
+          <strong style="color: var(--orange-dim);">${fmtBRL(receitaMensalRec)}/mês</strong>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
 function renderTimeByStageChart() {
   // Calcula tempo médio que operações ficam em cada status, baseado nas fases dos jsonb
   const stageTotals = {};
@@ -3656,6 +4187,239 @@ function renderTable() {
 }
 
 // ===== Logs =====
+// ============================================
+// RELATÓRIO SEMANAL (checklist customizado por responsável)
+// ============================================
+
+state.weekOffset = 0; // 0 = essa semana, -1 = anterior, +1 = próxima
+
+// Dado uma data, retorna {monday, sunday} da semana dela
+function getWeekRange(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay(); // 0=dom, 1=seg ... 6=sab
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() + diffToMonday);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  return { monday, sunday };
+}
+
+function getCurrentWeekRange() {
+  const base = new Date();
+  base.setDate(base.getDate() + (state.weekOffset * 7));
+  return getWeekRange(base);
+}
+
+function dateToYMD(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function fmtWeekRange(monday, sunday) {
+  const opts = { day: '2-digit', month: 'short' };
+  return `${monday.toLocaleDateString('pt-BR', opts)} – ${sunday.toLocaleDateString('pt-BR', opts)} · ${sunday.getFullYear()}`;
+}
+
+function weekShift(direction) {
+  if (direction === 0) state.weekOffset = 0;
+  else state.weekOffset += direction;
+  renderWeeklyReport();
+}
+
+// Coleta todos os checklist customizados com prazo, com info da operação
+function collectChecklistTasks() {
+  const tasks = [];
+  state.operations.forEach(op => {
+    (op.checklist || []).forEach(ck => {
+      // Apenas itens customizados (sem num) E com prazo definido
+      if (!ck.num && ck.prazo && ck.texto) {
+        tasks.push({
+          opId: op.id,
+          opNome: op.nome,
+          opTipo: op.tipo,
+          opStatus: op.status,
+          texto: ck.texto,
+          responsavel: (ck.responsavel || '').trim() || op.responsavel || 'Sem responsável',
+          prazo: ck.prazo,
+          done: !!ck.done
+        });
+      }
+    });
+  });
+  return tasks;
+}
+
+function renderWeeklyReport() {
+  const { monday, sunday } = getCurrentWeekRange();
+  const mondayStr = dateToYMD(monday);
+  const sundayStr = dateToYMD(sunday);
+  const todayStr_ = todayStr();
+
+  document.getElementById('weeklySubtitle').textContent = fmtWeekRange(monday, sunday);
+
+  const allTasks = collectChecklistTasks();
+
+  // Tasks dessa semana (prazo entre seg-dom)
+  const weekTasks = allTasks.filter(t => t.prazo >= mondayStr && t.prazo <= sundayStr);
+  // Tasks atrasadas (prazo antes de hoje E não concluídas) — mostradas como contexto
+  const lateTasks = allTasks.filter(t => t.prazo < mondayStr && !t.done);
+
+  // Combina pra exibição (atrasadas primeiro como atenção, depois desta semana)
+  const showTasks = [...lateTasks, ...weekTasks];
+
+  // Sumário
+  const total = weekTasks.length;
+  const done = weekTasks.filter(t => t.done).length;
+  const pending = weekTasks.filter(t => !t.done).length;
+  const lateCount = lateTasks.length;
+  const responsaveis = new Set(showTasks.map(t => t.responsavel));
+
+  document.getElementById('weeklySummary').innerHTML = `
+    <div class="weekly-summary-card">
+      <div class="weekly-summary-label">Tarefas da Semana</div>
+      <div class="weekly-summary-value">${total}</div>
+      <div class="weekly-summary-sub">${done} concluídas · ${pending} pendentes</div>
+    </div>
+    <div class="weekly-summary-card">
+      <div class="weekly-summary-label">Pessoas Envolvidas</div>
+      <div class="weekly-summary-value">${responsaveis.size}</div>
+      <div class="weekly-summary-sub">com tarefas em aberto</div>
+    </div>
+    <div class="weekly-summary-card">
+      <div class="weekly-summary-label">Atrasadas (acumulado)</div>
+      <div class="weekly-summary-value" style="${lateCount > 0 ? 'color: var(--red);' : ''}">${lateCount}</div>
+      <div class="weekly-summary-sub">de semanas anteriores</div>
+    </div>
+    <div class="weekly-summary-card">
+      <div class="weekly-summary-label">Taxa de Conclusão</div>
+      <div class="weekly-summary-value">${total > 0 ? Math.round((done/total)*100) : 0}%</div>
+      <div class="weekly-summary-sub">desta semana</div>
+    </div>
+  `;
+
+  // Agrupa por responsável
+  if (showTasks.length === 0) {
+    document.getElementById('weeklyContent').innerHTML = `
+      <div class="weekly-empty">
+        <h3>Nenhuma tarefa para essa semana</h3>
+        <p>Adicione prazos aos itens do checklist customizado das operações para acompanhar entregas semanais.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const byResp = {};
+  showTasks.forEach(t => {
+    if (!byResp[t.responsavel]) byResp[t.responsavel] = [];
+    byResp[t.responsavel].push(t);
+  });
+
+  // Ordena pessoas: primeiro com mais atrasos, depois mais tarefas
+  const resps = Object.keys(byResp).sort((a, b) => {
+    const aLate = byResp[a].filter(t => t.prazo < todayStr_ && !t.done).length;
+    const bLate = byResp[b].filter(t => t.prazo < todayStr_ && !t.done).length;
+    if (aLate !== bLate) return bLate - aLate;
+    return byResp[b].length - byResp[a].length;
+  });
+
+  document.getElementById('weeklyContent').innerHTML = resps.map(resp => {
+    const tasks = byResp[resp].sort((a, b) => {
+      // Atrasadas no topo, depois por prazo crescente, concluídas no fim
+      if (a.done !== b.done) return a.done ? 1 : -1;
+      return a.prazo.localeCompare(b.prazo);
+    });
+    const lateN = tasks.filter(t => t.prazo < todayStr_ && !t.done).length;
+    const doneN = tasks.filter(t => t.done).length;
+    const pendN = tasks.filter(t => !t.done).length;
+    const initial = (resp[0] || '?').toUpperCase();
+
+    return `
+      <div class="weekly-person-block">
+        <div class="weekly-person-head">
+          <div class="weekly-person-name">
+            <div class="weekly-person-avatar">${escapeHtml(initial)}</div>
+            <span>${escapeHtml(resp)}</span>
+          </div>
+          <div class="weekly-person-stats">
+            <span><strong>${tasks.length}</strong> tarefa${tasks.length !== 1 ? 's' : ''}</span>
+            <span><strong>${pendN}</strong> pendente${pendN !== 1 ? 's' : ''}</span>
+            ${lateN > 0 ? `<span style="color: #ffb3b3;"><strong>${lateN}</strong> atrasada${lateN !== 1 ? 's' : ''}</span>` : ''}
+            <span><strong>${doneN}</strong> concluída${doneN !== 1 ? 's' : ''}</span>
+          </div>
+        </div>
+        <div class="weekly-tasks">
+          ${tasks.map(t => {
+            const isLate = t.prazo < todayStr_ && !t.done;
+            const isToday = t.prazo === todayStr_;
+            const statusBadge = t.done ? 'done' : (isLate ? 'late' : 'pending');
+            const statusLabel = t.done ? 'concluída' : (isLate ? 'atrasada' : 'pendente');
+            const deadlineCls = t.done ? '' : (isLate ? 'late' : (isToday ? 'today' : ''));
+            const deadlineLabel = isToday ? 'hoje' : fmtDate(t.prazo);
+            return `
+              <div class="weekly-task-row" onclick="openModal('${t.opId}')">
+                <div class="weekly-task-status ${t.done ? 'done' : (isLate ? 'late' : '')}"></div>
+                <div class="weekly-task-text ${t.done ? 'done' : ''}">${escapeHtml(t.texto)}</div>
+                <div class="weekly-task-op">
+                  <span class="op-tipo-tag">${escapeHtml(t.opTipo)}</span>${escapeHtml(t.opNome)}
+                </div>
+                <div class="weekly-task-deadline ${deadlineCls}">${deadlineLabel}</div>
+                <div class="weekly-task-status-badge ${statusBadge}">${statusLabel}</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function exportWeeklyReport() {
+  if (!window.XLSX) {
+    showToast('Biblioteca Excel ainda carregando', true);
+    return;
+  }
+  const { monday, sunday } = getCurrentWeekRange();
+  const mondayStr = dateToYMD(monday);
+  const sundayStr = dateToYMD(sunday);
+  const todayStr_ = todayStr();
+
+  const allTasks = collectChecklistTasks();
+  const weekTasks = allTasks.filter(t => t.prazo >= mondayStr && t.prazo <= sundayStr);
+  const lateTasks = allTasks.filter(t => t.prazo < mondayStr && !t.done);
+  const showTasks = [...lateTasks, ...weekTasks];
+
+  if (showTasks.length === 0) {
+    showToast('Nenhuma tarefa para exportar', true);
+    return;
+  }
+
+  const rows = showTasks.map(t => {
+    const isLate = t.prazo < todayStr_ && !t.done;
+    return {
+      'Responsável': t.responsavel,
+      'Operação': t.opNome,
+      'Tipo': t.opTipo,
+      'Status Op.': STATUS_LABELS[t.opStatus] || t.opStatus,
+      'Tarefa': t.texto,
+      'Prazo': t.prazo,
+      'Status': t.done ? 'Concluída' : (isLate ? 'Atrasada' : 'Pendente'),
+      'Dias até prazo': Math.ceil((new Date(t.prazo) - new Date(todayStr_)) / 86400000)
+    };
+  });
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [
+    { wch: 18 }, { wch: 30 }, { wch: 10 }, { wch: 16 },
+    { wch: 50 }, { wch: 12 }, { wch: 12 }, { wch: 10 }
+  ];
+  XLSX.utils.book_append_sheet(wb, ws, 'Tarefas Semanais');
+  const filename = `Relatorio-Semanal-${mondayStr}.xlsx`;
+  XLSX.writeFile(wb, filename);
+  showToast(`Excel gerado · ${rows.length} tarefa(s)`);
+}
+
 function renderLogs() {
   const wrap = document.getElementById('logList');
   if (!state.logs.length) {
@@ -4032,6 +4796,7 @@ function openModal(opId) {
   }
 
   renderPhases(op.phases || []);
+  renderReceitaBreakdown(op.receita_breakdown || {});
 
   // Separar checklist em template (com num) e custom (sem num)
   const allCk = op.checklist || [];
@@ -4202,22 +4967,191 @@ function loadChecklistTemplate() {
   renderChecklistTemplate(items);
 }
 
+// ============================================
+// RECEITA BREAKDOWN (5 tipos)
+// ============================================
+
+const RECEITA_TYPES = [
+  { key: 'estruturacao', label: 'Estruturação', recurring: false, color: '#001B5C' },
+  { key: 'consultoria',  label: 'Consultoria',  recurring: true,  color: '#FF965A' },
+  { key: 'gestao',       label: 'Gestão',       recurring: true,  color: '#15326C' },
+  { key: 'legal',        label: 'Legal',        recurring: false, color: '#6A4A8C' },
+  { key: 'tech',         label: 'Tech',         recurring: true,  color: '#2E7D5B' },
+];
+
+// Calcula valor total de uma receita (considerando recorrência se aplicável)
+function calcReceitaItem(item, typeMeta) {
+  if (!item) return 0;
+  // Se tipo é não-recorrente: valor único
+  if (!typeMeta.recurring) return Number(item.valor) || 0;
+  // Se é recorrente E o usuário marcou recorrente:
+  if (item.recorrente) {
+    const mensal = Number(item.valor_mensal) || 0;
+    const meses = Number(item.prazo_meses) || 0;
+    return mensal * meses;
+  }
+  // Recorrente desativado, usa valor único
+  return Number(item.valor) || 0;
+}
+
+// Calcula o total geral somando os 5 tipos
+function calcReceitaTotal(breakdown) {
+  if (!breakdown) return 0;
+  return RECEITA_TYPES.reduce((sum, t) => sum + calcReceitaItem(breakdown[t.key], t), 0);
+}
+
+// Calcula receita mensal (para tipos recorrentes ainda em curso) — usado em métricas
+function calcReceitaMensalRecorrente(breakdown) {
+  if (!breakdown) return 0;
+  return RECEITA_TYPES.filter(t => t.recurring).reduce((sum, t) => {
+    const item = breakdown[t.key];
+    if (!item || !item.recorrente) return sum;
+    return sum + (Number(item.valor_mensal) || 0);
+  }, 0);
+}
+
+function renderReceitaBreakdown(breakdown) {
+  breakdown = breakdown || {};
+  const grid = document.getElementById('receitaGrid');
+  grid.innerHTML = RECEITA_TYPES.map(t => {
+    const it = breakdown[t.key] || {};
+    const isRec = !!it.recorrente && t.recurring;
+    const valor = Number(it.valor) || 0;
+    const valorMensal = Number(it.valor_mensal) || 0;
+    const prazoMeses = Number(it.prazo_meses) || 0;
+    const totalCalc = isRec ? valorMensal * prazoMeses : valor;
+    return `
+      <div class="receita-card" data-type="${t.key}">
+        <div class="receita-card-head">
+          <div class="receita-card-name">
+            <span class="receita-dot" style="background: ${t.color};"></span>
+            ${t.label}
+          </div>
+          ${t.recurring ? `
+            <label class="receita-card-rec-toggle">
+              <input type="checkbox" class="rec-toggle" ${isRec ? 'checked' : ''} onchange="onReceitaRecToggle(this)">
+              <span>recorrente</span>
+            </label>
+          ` : ''}
+        </div>
+
+        <div class="rec-single-fields" style="${isRec ? 'display:none;' : ''}">
+          <label>Valor único</label>
+          <input type="number" class="rec-valor" step="1000" placeholder="0" value="${valor || ''}" oninput="onReceitaInput()">
+        </div>
+
+        ${t.recurring ? `
+          <div class="rec-recurring-fields" style="${isRec ? '' : 'display:none;'}">
+            <div class="receita-card-rec-fields">
+              <div>
+                <label>Valor mensal</label>
+                <input type="number" class="rec-valor-mensal" step="500" placeholder="0" value="${valorMensal || ''}" oninput="onReceitaInput()">
+              </div>
+              <div>
+                <label>Prazo (meses)</label>
+                <input type="number" class="rec-prazo-meses" step="1" min="0" placeholder="0" value="${prazoMeses || ''}" oninput="onReceitaInput()">
+              </div>
+            </div>
+          </div>
+        ` : ''}
+
+        <div class="receita-card-total">
+          <span>Total</span>
+          <strong class="rec-total-display">${fmtBRL(totalCalc)}</strong>
+        </div>
+      </div>
+    `;
+  }).join('');
+  updateReceitaPreview();
+}
+
+function onReceitaRecToggle(checkbox) {
+  const card = checkbox.closest('.receita-card');
+  const isRec = checkbox.checked;
+  card.querySelector('.rec-single-fields').style.display = isRec ? 'none' : '';
+  card.querySelector('.rec-recurring-fields').style.display = isRec ? '' : 'none';
+  // Limpa o lado oposto pra evitar dupla contagem
+  if (isRec) {
+    card.querySelector('.rec-valor').value = '';
+  } else {
+    const m = card.querySelector('.rec-valor-mensal'); if (m) m.value = '';
+    const p = card.querySelector('.rec-prazo-meses'); if (p) p.value = '';
+  }
+  onReceitaInput();
+}
+
+function onReceitaInput() {
+  // Atualiza os totais por card e a soma geral
+  document.querySelectorAll('.receita-card').forEach(card => {
+    const t = RECEITA_TYPES.find(tt => tt.key === card.dataset.type);
+    const isRec = card.querySelector('.rec-toggle')?.checked || false;
+    let total = 0;
+    if (t.recurring && isRec) {
+      const m = Number(card.querySelector('.rec-valor-mensal').value) || 0;
+      const p = Number(card.querySelector('.rec-prazo-meses').value) || 0;
+      total = m * p;
+    } else {
+      total = Number(card.querySelector('.rec-valor').value) || 0;
+    }
+    card.querySelector('.rec-total-display').textContent = fmtBRL(total);
+  });
+  updateReceitaPreview();
+}
+
+function updateReceitaPreview() {
+  const breakdown = getReceitaBreakdown();
+  const total = calcReceitaTotal(breakdown);
+  document.getElementById('receitaSomaPreview').textContent = fmtBRL(total);
+  // Sincroniza o campo "Receita Prevista" se a soma for diferente
+  // (mantém compatibilidade — o campo continua sendo a fonte da verdade pro código antigo)
+  const fReceita = document.getElementById('fReceita');
+  if (fReceita && total > 0) {
+    fReceita.value = total;
+  }
+}
+
+function getReceitaBreakdown() {
+  const breakdown = {};
+  document.querySelectorAll('.receita-card').forEach(card => {
+    const key = card.dataset.type;
+    const t = RECEITA_TYPES.find(tt => tt.key === key);
+    const isRec = card.querySelector('.rec-toggle')?.checked || false;
+    const item = { recorrente: t.recurring && isRec };
+    if (item.recorrente) {
+      item.valor_mensal = Number(card.querySelector('.rec-valor-mensal').value) || 0;
+      item.prazo_meses = Number(card.querySelector('.rec-prazo-meses').value) || 0;
+      item.valor = item.valor_mensal * item.prazo_meses;
+    } else {
+      item.valor = Number(card.querySelector('.rec-valor').value) || 0;
+    }
+    // Só guarda se tem algum valor preenchido
+    if (item.valor > 0 || item.valor_mensal > 0) {
+      breakdown[key] = item;
+    }
+  });
+  return breakdown;
+}
+
 // ===== Checklist Customizado =====
 function renderChecklist(items) {
   document.getElementById('checklistContainer').innerHTML = items.map((it, i) => `
-    <div class="checklist-item ${it.done ? 'done' : ''}">
-      <input type="checkbox" ${it.done ? 'checked' : ''} onchange="toggleChecklist()">
-      <input type="text" value="${escapeAttr(it.texto)}" placeholder="Etapa...">
-      <button class="item-remove" onclick="removeChecklist(${i})">×</button>
+    <div class="checklist-item-custom ${it.done ? 'done' : ''}">
+      <input type="checkbox" ${it.done ? 'checked' : ''} onchange="toggleChecklist()" title="Concluído">
+      <input type="text" class="ck-texto" value="${escapeAttr(it.texto || '')}" placeholder="O que precisa ser feito...">
+      <input type="text" class="ck-resp" value="${escapeAttr(it.responsavel || '')}" placeholder="Responsável" list="respList">
+      <input type="date" class="ck-prazo" value="${escapeAttr(it.prazo || '')}" title="Prazo">
+      <button class="item-remove" onclick="removeChecklist(${i})" title="Excluir">×</button>
     </div>`).join('');
 }
 function getChecklist() {
-  return Array.from(document.querySelectorAll('#checklistContainer .checklist-item')).map(el => ({
+  return Array.from(document.querySelectorAll('#checklistContainer .checklist-item-custom')).map(el => ({
     done: el.querySelector('input[type="checkbox"]').checked,
-    texto: el.querySelector('input[type="text"]').value
+    texto: el.querySelector('.ck-texto').value,
+    responsavel: el.querySelector('.ck-resp').value,
+    prazo: el.querySelector('.ck-prazo').value || null
   }));
 }
-function addChecklist() { renderChecklist([...getChecklist(), { texto:'', done:false }]); }
+function addChecklist() { renderChecklist([...getChecklist(), { texto:'', done:false, responsavel:'', prazo:'' }]); }
 function removeChecklist(i) { const it = getChecklist(); it.splice(i,1); renderChecklist(it); }
 function toggleChecklist() { renderChecklist(getChecklist()); }
 
@@ -4292,7 +5226,8 @@ async function saveOp() {
     checklist: allChecklist,
     steps: getSteps().filter(s => s.texto.trim()),
     risks: getRisks().filter(r => r.texto.trim()),
-    files: getFiles()
+    files: getFiles(),
+    receita_breakdown: getReceitaBreakdown()
   };
 
   const btn = document.getElementById('btnSave');
@@ -5120,6 +6055,14 @@ function buildOperationsContext() {
       responsavel: o.responsavel || null,
       volume_estruturado: Number(o.valor) || 0,
       receita_prevista: Number(o.receita) || 0,
+      receita_breakdown: o.receita_breakdown && Object.keys(o.receita_breakdown).length > 0
+        ? Object.fromEntries(Object.entries(o.receita_breakdown).map(([k, v]) => [
+            k,
+            v.recorrente
+              ? { recorrente: true, valor_mensal: v.valor_mensal, prazo_meses: v.prazo_meses, total: v.valor }
+              : { valor: v.valor }
+          ]))
+        : null,
       volume_liquidado: Number(o.volume_liquidado) || 0,
       receita_realizada: Number(o.receita_realizada) || 0,
       progresso: o.progresso || 0,
