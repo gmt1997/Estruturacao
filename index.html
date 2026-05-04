@@ -5778,6 +5778,15 @@ async function exportPDFExecutivo() {
 
     addPdfHeader(doc, pageW);
 
+    // Helper: garante espaço, quebra página se preciso
+    const ensureSpace = (need) => {
+      if (y + need > pageH - 18) {
+        doc.addPage();
+        addPdfHeader(doc, pageW);
+        y = 38;
+      }
+    };
+
     // Título do relatório
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(18);
@@ -5790,7 +5799,9 @@ async function exportPDFExecutivo() {
     doc.text('Snapshot do pipeline de estruturação · Visão consolidada', margin, y);
     y += 10;
 
-    // ===== KPIs =====
+    // ====================================================================
+    // KPIs (todos os 8)
+    // ====================================================================
     const ops = state.operations;
     const pipelineAtivo = ops.filter(o => isOperationAtiva(o));
     const liquidadas = ops.filter(o => !!o.data_liquidacao);
@@ -5804,49 +5815,342 @@ async function exportPDFExecutivo() {
     const totalConvertivel = ops.filter(o => o.status !== 'stand').length;
     const conversao = totalConvertivel ? Math.round((liquidadas.length / totalConvertivel) * 100) : 0;
 
-    // Grid de 4 KPIs (2x2)
+    // Receita Média Mensal (YTD)
+    const mesAtual = new Date().getMonth() + 1;
+    const receitaMediaMensal = receitaYTD / mesAtual;
+
+    // Tempo Médio (data_inicio → data_liquidacao)
+    const tempos = liquidadas
+      .filter(o => o.data_inicio && o.data_liquidacao)
+      .map(o => dateToDays(o.data_liquidacao) - dateToDays(o.data_inicio));
+    const tempoMedio = tempos.length ? Math.round(tempos.reduce((a,b)=>a+b,0) / tempos.length) : 0;
+
+    // 8 KPIs em grid 2 linhas × 4 colunas
     const kpis = [
       { label: 'RECEITA YTD', value: fmtBRLshort(receitaYTD), sub: `${liquidadasYTD.length} liquidadas`, color: NETZ_COLORS.green },
+      { label: 'RECEITA MÉDIA / MÊS', value: fmtBRLshort(receitaMediaMensal), sub: `÷ ${mesAtual}m · YTD`, color: NETZ_COLORS.green },
       { label: 'VOLUME YTD', value: fmtBRLshort(volumeYTD), sub: `${new Date().getFullYear()}`, color: NETZ_COLORS.green },
       { label: 'RECEITA PIPELINE', value: fmtBRLshort(receitaPipeline), sub: `${pipelineAtivo.length} em estruturação`, color: NETZ_COLORS.orange },
       { label: 'VOLUME PIPELINE', value: fmtBRLshort(volumePipeline), sub: 'a estruturar', color: NETZ_COLORS.orange },
+      { label: 'TEMPO MÉDIO', value: tempoMedio + 'd', sub: tempos.length ? `${tempos.length} amostras` : 'sem amostras', color: NETZ_COLORS.navy },
       { label: 'TAXA CONVERSÃO', value: conversao + '%', sub: `${liquidadas.length}/${totalConvertivel}`, color: NETZ_COLORS.navy },
       { label: 'ATRASADAS', value: String(atrasados), sub: 'vs. previsão', color: atrasados > 0 ? NETZ_COLORS.red : NETZ_COLORS.navy },
     ];
-    const kpiW = (pageW - margin * 2 - 8) / 3;
-    const kpiH = 22;
+    const cols = 4;
+    const kpiW = (pageW - margin * 2 - (cols - 1) * 3) / cols;
+    const kpiH = 20;
     kpis.forEach((kpi, i) => {
-      const col = i % 3;
-      const row = Math.floor(i / 3);
-      const x = margin + col * (kpiW + 4);
-      const yPos = y + row * (kpiH + 4);
-      // box
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = margin + col * (kpiW + 3);
+      const yPos = y + row * (kpiH + 3);
       doc.setFillColor(255, 255, 255);
       doc.setDrawColor(...NETZ_COLORS.border);
       doc.setLineWidth(0.3);
-      doc.roundedRect(x, yPos, kpiW, kpiH, 2, 2, 'FD');
-      // barra colorida na esquerda
+      doc.roundedRect(x, yPos, kpiW, kpiH, 1.5, 1.5, 'FD');
       doc.setFillColor(...kpi.color);
       doc.rect(x, yPos, 1.5, kpiH, 'F');
-      // label
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7);
+      doc.setFontSize(6.5);
       doc.setTextColor(...NETZ_COLORS.textMute);
-      doc.text(kpi.label, x + 4, yPos + 5);
-      // value
+      doc.text(kpi.label, x + 3.5, yPos + 4.5);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(13);
+      doc.setFontSize(11);
       doc.setTextColor(...NETZ_COLORS.navy);
-      doc.text(kpi.value, x + 4, yPos + 12);
-      // sub
+      doc.text(kpi.value, x + 3.5, yPos + 11);
       doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6.5);
+      doc.setTextColor(...NETZ_COLORS.textMute);
+      doc.text(kpi.sub, x + 3.5, yPos + 16.5);
+    });
+    y += 2 * (kpiH + 3) + 8;
+
+    // ====================================================================
+    // Helper: desenhar título de seção
+    // ====================================================================
+    const drawSectionTitle = (title) => {
+      ensureSpace(12);
+      doc.setFillColor(...NETZ_COLORS.orange);
+      doc.rect(margin, y, 2, 5, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(...NETZ_COLORS.navy);
+      doc.text(title, margin + 4, y + 4);
+      y += 8;
+    };
+
+    // ====================================================================
+    // Receita & Volume Mensal (gráfico de barras)
+    // ====================================================================
+    drawSectionTitle('Receita & Volume Mensal');
+
+    // Coleta dados mensais (últimos 6 meses + 3 futuros)
+    const today = new Date();
+    const months = [];
+    for (let i = -5; i <= 3; i++) {
+      const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
+      months.push({
+        ym: dateToYM(d),
+        label: d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.','') + '/' + String(d.getFullYear()).slice(-2),
+        receitaReal: 0,
+        receitaProj: 0,
+        volumeReal: 0,
+        volumeProj: 0
+      });
+    }
+
+    ops.forEach(o => {
+      // Realizado
+      if (o.data_liquidacao) {
+        const ym = o.data_liquidacao.slice(0, 7);
+        const m = months.find(x => x.ym === ym);
+        if (m) {
+          m.receitaReal += Number(o.receita_realizada) || Number(o.receita) || 0;
+          m.volumeReal += Number(o.volume_liquidado) || 0;
+        }
+      }
+      // Projeção
+      if (!o.data_liquidacao && o.data_prevista && o.status !== 'stand') {
+        const ym = o.data_prevista.slice(0, 7);
+        const m = months.find(x => x.ym === ym);
+        if (m) {
+          m.receitaProj += Number(o.receita) || 0;
+          m.volumeProj += Number(o.valor) || 0;
+        }
+      }
+    });
+
+    // Gráfico de Receita (mensal)
+    const chartH = 38;
+    const chartW = (pageW - margin * 2 - 4) / 2;
+    ensureSpace(chartH + 12);
+
+    drawBarsChart(doc, margin, y, chartW, chartH, months, 'receita',
+      ['receitaReal', 'receitaProj'],
+      [NETZ_COLORS.navy, NETZ_COLORS.orange],
+      ['Realizado', 'Projetado'],
+      'Receita');
+
+    drawBarsChart(doc, margin + chartW + 4, y, chartW, chartH, months, 'volume',
+      ['volumeReal', 'volumeProj'],
+      [NETZ_COLORS.navy, NETZ_COLORS.bluePale],
+      ['Realizado', 'Projetado'],
+      'Volume');
+
+    y += chartH + 10;
+
+    // ====================================================================
+    // Distribuição por Tipo & Distribuição por Status (pizzas lado a lado)
+    // ====================================================================
+    drawSectionTitle('Distribuição por Tipo e Status');
+
+    const pieH = 50;
+    ensureSpace(pieH + 6);
+
+    // Tipo
+    const byTipo = {};
+    ops.forEach(o => {
+      if (!byTipo[o.tipo]) byTipo[o.tipo] = { count: 0, valor: 0 };
+      byTipo[o.tipo].count++;
+      byTipo[o.tipo].valor += Number(o.valor) || 0;
+    });
+    const tipoSegs = Object.keys(byTipo)
+      .sort((a, b) => byTipo[b].valor - byTipo[a].valor)
+      .map((t, i) => ({
+        label: t,
+        value: byTipo[t].valor,
+        count: byTipo[t].count,
+        color: PDF_PIE_PALETTE[i % PDF_PIE_PALETTE.length]
+      }));
+    drawPieChart(doc, margin, y, chartW, pieH, tipoSegs, 'Por Tipo (R$)', 'value');
+
+    // Status
+    const byStatus = {};
+    STATUS_ORDER.forEach(s => byStatus[s] = { count: 0, valor: 0 });
+    ops.forEach(o => {
+      if (byStatus[o.status]) {
+        byStatus[o.status].count++;
+        byStatus[o.status].valor += Number(o.valor) || 0;
+      }
+    });
+    const statusSegs = STATUS_ORDER
+      .filter(s => byStatus[s].count > 0)
+      .map((s, i) => ({
+        label: STATUS_LABELS[s],
+        value: byStatus[s].count,
+        count: byStatus[s].count,
+        color: PDF_PIE_PALETTE[i % PDF_PIE_PALETTE.length]
+      }));
+    drawPieChart(doc, margin + chartW + 4, y, chartW, pieH, statusSegs, 'Por Status (qtd)', 'count');
+
+    y += pieH + 8;
+
+    // ====================================================================
+    // Tempo Médio por Etapa
+    // ====================================================================
+    drawSectionTitle('Tempo Médio por Etapa');
+
+    const stageTotals = {};
+    STATUS_ORDER.forEach(s => stageTotals[s] = { total: 0, count: 0 });
+    ops.forEach(o => {
+      (o.phases || []).forEach(p => {
+        if (p.kind === 'task' && p.start && p.end && stageTotals[p.status]) {
+          const days = dateToDays(p.end) - dateToDays(p.start);
+          if (days >= 0) {
+            stageTotals[p.status].total += days;
+            stageTotals[p.status].count++;
+          }
+        }
+      });
+    });
+
+    const stageData = STATUS_ORDER
+      .filter(s => s !== 'stand')
+      .map(s => ({
+        label: STATUS_LABELS[s],
+        days: stageTotals[s].count > 0 ? Math.round(stageTotals[s].total / stageTotals[s].count) : 0,
+        count: stageTotals[s].count
+      }));
+    const stageMaxDays = Math.max(...stageData.map(s => s.days), 1);
+    const stageH = 5 * stageData.length + 8;
+    ensureSpace(stageH + 4);
+
+    stageData.forEach((s, i) => {
+      const yPos = y + i * 5;
+      // Label
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(...NETZ_COLORS.text);
+      doc.text(s.label, margin, yPos + 3);
+      // Bar track
+      const barX = margin + 32;
+      const barW = pageW - margin * 2 - 32 - 30;
+      doc.setFillColor(...NETZ_COLORS.blueLight);
+      doc.rect(barX, yPos, barW, 3.5, 'F');
+      // Bar fill
+      if (s.days > 0) {
+        const fillW = (s.days / stageMaxDays) * barW;
+        doc.setFillColor(...NETZ_COLORS.navy);
+        doc.rect(barX, yPos, fillW, 3.5, 'F');
+      }
+      // Valor
+      doc.setFont('helvetica', 'bold');
       doc.setFontSize(7);
       doc.setTextColor(...NETZ_COLORS.textMute);
-      doc.text(kpi.sub, x + 4, yPos + 18);
+      const valueText = s.days > 0 ? `${s.days}d · ${s.count} obs` : '0d';
+      doc.text(valueText, pageW - margin, yPos + 3, { align: 'right' });
     });
-    y += 2 * (kpiH + 4) + 6;
+    y += stageH;
 
-    // ===== Operações por Status (todas, agrupadas) =====
+    // ====================================================================
+    // Composição de Receita
+    // ====================================================================
+    const totalReceitasByType = {};
+    RECEITA_TYPES.forEach(t => totalReceitasByType[t.key] = { recebido: 0, aReceber: 0, total: 0, count: 0 });
+    ops.forEach(o => {
+      const breakdown = o.receita_breakdown || {};
+      const volume = Number(o.valor) || 0;
+      RECEITA_TYPES.forEach(t => {
+        const item = breakdown[t.key];
+        if (!item) return;
+        const dec = decomposeReceitaItem(item, t, volume, o.data_liquidacao);
+        if (dec.total > 0) {
+          totalReceitasByType[t.key].recebido += dec.recebido;
+          totalReceitasByType[t.key].aReceber += dec.aReceber;
+          totalReceitasByType[t.key].total += dec.total;
+          totalReceitasByType[t.key].count++;
+        }
+      });
+    });
+    const totalReceitaGeral = Object.values(totalReceitasByType).reduce((s,x) => s + x.total, 0);
+
+    if (totalReceitaGeral > 0) {
+      drawSectionTitle('Composição de Receita');
+      const recH = 5 * RECEITA_TYPES.length + 14;
+      ensureSpace(recH + 4);
+
+      RECEITA_TYPES.forEach((t, i) => {
+        const data = totalReceitasByType[t.key];
+        const yPos = y + i * 5;
+        // Label com cor
+        doc.setFillColor(...hexToRgb(t.color));
+        doc.circle(margin + 1.5, yPos + 1.7, 1.3, 'F');
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(...NETZ_COLORS.text);
+        const lbl = t.label + (t.recurring ? ' (rec)' : '');
+        doc.text(lbl, margin + 5, yPos + 3);
+        // Bar
+        const barX = margin + 36;
+        const barW = pageW - margin * 2 - 36 - 35;
+        doc.setFillColor(...NETZ_COLORS.blueLight);
+        doc.rect(barX, yPos, barW, 3.5, 'F');
+        if (data.total > 0) {
+          const totalPct = (data.total / totalReceitaGeral);
+          const recPct = data.total > 0 ? data.recebido / data.total : 0;
+          const fillW = totalPct * barW;
+          // Recebido (cor sólida)
+          if (data.recebido > 0) {
+            const recW = recPct * fillW;
+            doc.setFillColor(...hexToRgb(t.color));
+            doc.rect(barX, yPos, recW, 3.5, 'F');
+            // A receber (cor com transparência simulada via mix com branco)
+            if (data.aReceber > 0) {
+              const aRecW = fillW - recW;
+              const mixed = mixWithWhite(hexToRgb(t.color), 0.6);
+              doc.setFillColor(...mixed);
+              doc.rect(barX + recW, yPos, aRecW, 3.5, 'F');
+            }
+          } else {
+            // Apenas a receber → cor mais clara
+            const mixed = mixWithWhite(hexToRgb(t.color), 0.6);
+            doc.setFillColor(...mixed);
+            doc.rect(barX, yPos, fillW, 3.5, 'F');
+          }
+        }
+        // Valor
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7);
+        doc.setTextColor(...NETZ_COLORS.textMute);
+        doc.text(fmtBRLshort(data.total), pageW - margin, yPos + 3, { align: 'right' });
+      });
+      y += 5 * RECEITA_TYPES.length + 4;
+
+      // Totalizadores
+      const recebidoGeral = Object.values(totalReceitasByType).reduce((s,x) => s + x.recebido, 0);
+      const aReceberGeral = Object.values(totalReceitasByType).reduce((s,x) => s + x.aReceber, 0);
+      const receitaMensalRec = ops.reduce((sum, o) => sum + calcReceitaMensalRecorrente(o.receita_breakdown, Number(o.valor) || 0), 0);
+
+      const tots = [
+        { label: 'TOTAL AGREGADO', value: fmtBRLshort(totalReceitaGeral), color: NETZ_COLORS.navy },
+        { label: 'RECEBIDO', value: fmtBRLshort(recebidoGeral), color: NETZ_COLORS.green },
+        { label: 'A RECEBER', value: fmtBRLshort(aReceberGeral), color: NETZ_COLORS.textMute },
+        { label: 'MENSAL RECORRENTE', value: fmtBRLshort(receitaMensalRec) + '/mês', color: NETZ_COLORS.orange },
+      ];
+      const totW = (pageW - margin * 2) / 4;
+      doc.setDrawColor(...NETZ_COLORS.border);
+      doc.setLineWidth(0.2);
+      doc.line(margin, y + 1, pageW - margin, y + 1);
+      y += 4;
+      tots.forEach((t, i) => {
+        const tx = margin + i * totW;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.5);
+        doc.setTextColor(...NETZ_COLORS.textMute);
+        doc.text(t.label, tx, y);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(...t.color);
+        doc.text(t.value, tx, y + 5);
+      });
+      y += 10;
+    }
+
+    // ====================================================================
+    // Operações por Status (todas, agrupadas)
+    // ====================================================================
+    drawSectionTitle('Operações por Status');
+
     const grouped = {};
     STATUS_ORDER.forEach(s => grouped[s] = []);
     ops.forEach(o => {
@@ -5856,13 +6160,7 @@ async function exportPDFExecutivo() {
     STATUS_ORDER.forEach(status => {
       const list = grouped[status];
       if (!list || !list.length) return;
-      // Quebra de página se faltar espaço
-      if (y > pageH - 50) {
-        addPdfFooter(doc, pageW, pageH, doc.internal.getNumberOfPages());
-        doc.addPage();
-        addPdfHeader(doc, pageW);
-        y = 38;
-      }
+      ensureSpace(20);
       // Header do grupo
       doc.setFillColor(...NETZ_COLORS.navy);
       doc.rect(margin, y, pageW - margin * 2, 7, 'F');
@@ -5896,7 +6194,7 @@ async function exportPDFExecutivo() {
           4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' },
         },
         margin: { left: margin, right: margin },
-        didDrawPage: (data) => { addPdfHeader(doc, pageW); }
+        didDrawPage: () => { addPdfHeader(doc, pageW); }
       });
       y = doc.lastAutoTable.finalY + 6;
     });
@@ -5916,6 +6214,206 @@ async function exportPDFExecutivo() {
     showToast('Erro ao gerar PDF: ' + err.message, true);
   } finally {
     showLoading(false);
+  }
+}
+
+// ============================================
+// Helpers para gráficos no PDF
+// ============================================
+
+const PDF_PIE_PALETTE = [
+  [0, 27, 92],     // navy
+  [255, 150, 90],  // orange
+  [21, 50, 108],   // navy-soft
+  [224, 122, 64],  // orange-dim
+  [31, 96, 136],   // azul médio
+  [106, 74, 140],  // roxo
+  [46, 125, 91],   // verde
+  [176, 119, 0],   // amber
+  [79, 170, 124],  // verde claro
+  [177, 198, 229], // azul pale
+];
+
+function hexToRgb(hex) {
+  hex = hex.replace('#', '');
+  return [
+    parseInt(hex.slice(0, 2), 16),
+    parseInt(hex.slice(2, 4), 16),
+    parseInt(hex.slice(4, 6), 16)
+  ];
+}
+
+function mixWithWhite(rgb, factor) {
+  // factor 0 = cor original, 1 = branco
+  return [
+    Math.round(rgb[0] + (255 - rgb[0]) * factor),
+    Math.round(rgb[1] + (255 - rgb[1]) * factor),
+    Math.round(rgb[2] + (255 - rgb[2]) * factor)
+  ];
+}
+
+// Desenha gráfico de barras agrupadas (Realizado vs Projetado)
+function drawBarsChart(doc, x, y, w, h, months, prefix, dataKeys, colors, legendLabels, title) {
+  // Título
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(0, 27, 92);
+  doc.text(title, x, y + 4);
+
+  // Legenda no canto superior direito
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6);
+  let legX = x + w;
+  legendLabels.forEach((lbl, i) => {
+    const txtW = doc.getTextWidth(lbl) + 4;
+    legX -= txtW + 2;
+  });
+  legendLabels.forEach((lbl, i) => {
+    doc.setFillColor(...colors[i]);
+    doc.rect(legX, y + 1.5, 2.5, 2.5, 'F');
+    doc.setTextColor(80, 80, 80);
+    doc.text(lbl, legX + 3.5, y + 4);
+    legX += doc.getTextWidth(lbl) + 8;
+  });
+
+  // Calcula max
+  let maxVal = 0;
+  months.forEach(m => {
+    dataKeys.forEach(k => {
+      if (m[k] > maxVal) maxVal = m[k];
+    });
+  });
+  if (maxVal === 0) maxVal = 1;
+
+  // Área do gráfico
+  const chartTop = y + 6;
+  const chartBottom = y + h - 5;
+  const chartLeft = x + 4;
+  const chartRight = x + w - 2;
+  const chartWidth = chartRight - chartLeft;
+  const chartHeight = chartBottom - chartTop;
+
+  // Eixo X (linha base)
+  doc.setDrawColor(220, 227, 238);
+  doc.setLineWidth(0.2);
+  doc.line(chartLeft, chartBottom, chartRight, chartBottom);
+
+  // Barras
+  const slotW = chartWidth / months.length;
+  const barW = Math.min(2.5, (slotW - 1) / dataKeys.length);
+  months.forEach((m, mi) => {
+    const slotX = chartLeft + mi * slotW + slotW / 2 - (barW * dataKeys.length) / 2;
+    dataKeys.forEach((k, ki) => {
+      const v = m[k] || 0;
+      if (v > 0) {
+        const barH = (v / maxVal) * chartHeight;
+        const bx = slotX + ki * barW;
+        doc.setFillColor(...colors[ki]);
+        doc.rect(bx, chartBottom - barH, barW, barH, 'F');
+      }
+    });
+
+    // Label do mês
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(5.5);
+    doc.setTextColor(120, 120, 120);
+    doc.text(m.label, chartLeft + mi * slotW + slotW / 2, y + h - 1, { align: 'center' });
+  });
+
+  // Borda
+  doc.setDrawColor(228, 243, 255);
+  doc.setLineWidth(0.2);
+  doc.rect(x, y - 1, w, h + 1);
+}
+
+// Desenha pizza/donut com legenda à direita
+function drawPieChart(doc, x, y, w, h, segments, title, valueMode) {
+  // Título
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(0, 27, 92);
+  doc.text(title, x + 2, y + 4);
+
+  // Borda
+  doc.setDrawColor(228, 243, 255);
+  doc.setLineWidth(0.2);
+  doc.rect(x, y - 1, w, h + 1);
+
+  if (segments.length === 0) {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(120, 120, 120);
+    doc.text('Sem dados', x + w / 2, y + h / 2, { align: 'center' });
+    return;
+  }
+
+  const total = segments.reduce((s, x) => s + x.value, 0);
+  if (total === 0) return;
+
+  // Pizza à esquerda
+  const cx = x + 16;
+  const cy = y + h / 2 + 2;
+  const r = Math.min(13, (h - 12) / 2);
+
+  // Desenha cada fatia como triângulos pequenos (jsPDF não tem arc nativo)
+  let startAngle = -Math.PI / 2;
+  segments.forEach((seg, i) => {
+    const fraction = seg.value / total;
+    const endAngle = startAngle + fraction * 2 * Math.PI;
+    drawPieSlice(doc, cx, cy, r, startAngle, endAngle, seg.color);
+    startAngle = endAngle;
+  });
+
+  // Buraco central (donut)
+  doc.setFillColor(255, 255, 255);
+  doc.circle(cx, cy, r * 0.55, 'F');
+
+  // Total no centro
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(0, 27, 92);
+  const totalText = valueMode === 'count' ? String(total) : fmtBRLshort(total);
+  doc.text(totalText, cx, cy + 1, { align: 'center' });
+
+  // Legenda à direita
+  const legX = x + 35;
+  const legW = w - 36;
+  const itemH = 4;
+  const startY = y + 8;
+  segments.slice(0, 7).forEach((seg, i) => {
+    const ly = startY + i * itemH;
+    if (ly + 2 > y + h) return;
+    // swatch
+    doc.setFillColor(...seg.color);
+    doc.rect(legX, ly - 1.5, 2, 2, 'F');
+    // label
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.5);
+    doc.setTextColor(50, 50, 50);
+    const lblTrunc = truncate(seg.label, 14);
+    doc.text(lblTrunc, legX + 3, ly);
+    // value à direita
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6.5);
+    doc.setTextColor(0, 27, 92);
+    const valTxt = valueMode === 'count' ? String(seg.value) : fmtBRLshort(seg.value);
+    doc.text(valTxt, x + w - 2, ly, { align: 'right' });
+  });
+}
+
+// Aproxima uma fatia de pizza usando triangulação
+function drawPieSlice(doc, cx, cy, r, startAngle, endAngle, color) {
+  doc.setFillColor(...color);
+  // Subdivide em triângulos para suavizar
+  const steps = Math.max(3, Math.ceil(((endAngle - startAngle) / Math.PI) * 16));
+  for (let i = 0; i < steps; i++) {
+    const a1 = startAngle + (endAngle - startAngle) * (i / steps);
+    const a2 = startAngle + (endAngle - startAngle) * ((i + 1) / steps);
+    const x1 = cx + r * Math.cos(a1);
+    const y1 = cy + r * Math.sin(a1);
+    const x2 = cx + r * Math.cos(a2);
+    const y2 = cy + r * Math.sin(a2);
+    doc.triangle(cx, cy, x1, y1, x2, y2, 'F');
   }
 }
 
