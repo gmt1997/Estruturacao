@@ -2457,8 +2457,8 @@
             <option value="estruturacao">Estruturação</option>
             <option value="signoff">Sign-Off</option>
             <option value="distribuicao">Distribuição</option>
-            <option value="liquidacao">Em liquidação</option>
             <option value="handover">Handover</option>
+            <option value="liquidacao">Em liquidação</option>
             <option value="stand">Stand-by</option>
           </select>
         </div>
@@ -2709,7 +2709,7 @@ const STATUS_LABELS = {
   handover: 'Handover',
   stand: 'Stand-by'
 };
-const STATUS_ORDER = ['mandatado','kickoff','estruturacao','signoff','distribuicao','liquidacao','handover','stand'];
+const STATUS_ORDER = ['mandatado','kickoff','estruturacao','signoff','distribuicao','handover','liquidacao','stand'];
 const PHASE_STATUS_LABELS = {
   mandatado: 'Mandatado',
   kickoff: 'Kick-Off',
@@ -3035,10 +3035,10 @@ const daysToDate = (n) => {
 };
 const cryptoId = () => 'p_' + Math.random().toString(36).slice(2, 10);
 
-// Operação considerada concluída: já liquidou, está em handover, ou está 100% e em fase final
+// Operação considerada concluída: já liquidou, está em "Em liquidação", ou está 100% nas etapas finais
 const isOperationConcluida = (o) =>
   !!o.data_liquidacao ||
-  o.status === 'handover' ||
+  o.status === 'liquidacao' ||
   (Number(o.progresso) >= 100 && (o.status === 'liquidacao' || o.status === 'handover'));
 
 // Operação está no pipeline ativo (não em standby nem concluída)
@@ -3744,8 +3744,8 @@ function renderFunnelChart() {
     { key: 'estruturacao', label: 'Estruturação' },
     { key: 'signoff', label: 'Sign-Off' },
     { key: 'distribuicao', label: 'Distribuição' },
-    { key: 'liquidacao', label: 'Em liquidação' },
     { key: 'handover', label: 'Handover' },
+    { key: 'liquidacao', label: 'Em liquidação' },
   ];
   const max = counts['mandatado'] || 1;
 
@@ -4266,8 +4266,8 @@ function renderKanban() {
   const wrap = document.getElementById('kanban');
   wrap.innerHTML = STATUS_ORDER.map(s => {
     let cards = filtered.filter(o => o.status === s);
-    // Para Handover: ordenar por data de liquidação (mais recente primeiro)
-    if (s === 'handover') {
+    // Para "Em liquidação": ordenar por data de liquidação (mais recente primeiro)
+    if (s === 'liquidacao') {
       cards = [...cards].sort((a, b) => {
         const da = a.data_liquidacao || '';
         const db = b.data_liquidacao || '';
@@ -4676,8 +4676,8 @@ function defaultPhaseTemplate(startDate) {
     { kind: 'task', label: 'Estruturação', status: 'estruturacao', days: 35 },
     { kind: 'milestone', label: 'Sign-Off', status: 'signoff' },
     { kind: 'task', label: 'Distribuição', status: 'distribuicao', days: 21 },
-    { kind: 'task', label: 'Em liquidação', status: 'liquidacao', days: 7 },
     { kind: 'milestone', label: 'Handover', status: 'handover' },
+    { kind: 'task', label: 'Em liquidação', status: 'liquidacao', days: 7 },
   ];
   recipe.forEach(r => {
     if (r.kind === 'milestone') {
