@@ -740,6 +740,50 @@
     text-transform: uppercase; letter-spacing: 0.04em;
     margin-bottom: 2px; display: block;
   }
+  /* Toggle de modo (% do volume / valor fixo) */
+  .rec-modo-toggle {
+    display: flex;
+    background: rgba(0,27,92,0.06);
+    border-radius: 5px;
+    padding: 2px;
+    gap: 2px;
+    margin-bottom: 6px;
+  }
+  .rec-modo-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-mute);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .rec-modo-btn:hover {
+    color: var(--text);
+  }
+  .rec-modo-btn.active {
+    background: #fff;
+    color: var(--navy);
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0,27,92,0.08);
+  }
+  .rec-mensal-display {
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--text-mute);
+    font-family: 'IBM Plex Mono', monospace;
+    text-align: right;
+  }
+  .rec-mensal-display strong {
+    color: var(--orange-dim);
+    font-weight: 600;
+  }
   .receita-card-total {
     margin-top: 8px;
     padding-top: 8px;
@@ -2069,6 +2113,13 @@
               <div class="export-item-content">
                 <div class="export-item-title">PDF Detalhado</div>
                 <div class="export-item-desc">Uma página por operação</div>
+              </div>
+            </button>
+            <button class="export-item" onclick="exportPDFSemanal()">
+              <span class="export-item-icon">🗓️</span>
+              <div class="export-item-content">
+                <div class="export-item-title">PDF Semanal</div>
+                <div class="export-item-desc">Tarefas da semana por responsável</div>
               </div>
             </button>
           </div>
@@ -3876,7 +3927,7 @@ function renderRevenueTypeChart() {
     RECEITA_TYPES.forEach(t => {
       const item = breakdown[t.key];
       if (!item) return;
-      const valor = calcReceitaItem(item, t);
+      const valor = calcReceitaItem(item, t, Number(o.valor) || 0);
       if (valor > 0) {
         totalsByType[t.key].valor += valor;
         totalsByType[t.key].count++;
@@ -3936,7 +3987,7 @@ function renderRevenueTypeChart() {
   }).join('');
 
   // Soma total + receita mensal recorrente (se houver)
-  const receitaMensalRec = ops.reduce((sum, o) => sum + calcReceitaMensalRecorrente(o.receita_breakdown), 0);
+  const receitaMensalRec = ops.reduce((sum, o) => sum + calcReceitaMensalRecorrente(o.receita_breakdown, Number(o.valor) || 0), 0);
 
   document.getElementById('chartReceitaSummary').innerHTML = `
     <div class="receita-summary-list">${summaryHtml}</div>
@@ -4798,6 +4849,13 @@ function openModal(opId) {
   renderPhases(op.phases || []);
   renderReceitaBreakdown(op.receita_breakdown || {});
 
+  // Recalcular receita quando o volume mudar (afeta cálculos baseados em %)
+  const fValorEl = document.getElementById('fValor');
+  if (fValorEl && !fValorEl.dataset.receitaListener) {
+    fValorEl.addEventListener('input', () => onReceitaInput());
+    fValorEl.dataset.receitaListener = '1';
+  }
+
   // Separar checklist em template (com num) e custom (sem num)
   const allCk = op.checklist || [];
   const templateCk = allCk.filter(c => c.num);
@@ -4979,49 +5037,78 @@ const RECEITA_TYPES = [
   { key: 'tech',         label: 'Tech',         recurring: true,  color: '#2E7D5B' },
 ];
 
-// Calcula valor total de uma receita (considerando recorrência se aplicável)
-function calcReceitaItem(item, typeMeta) {
+// Para tipos recorrentes, suporta dois modos de cálculo:
+//   modo='pct' : valor_mensal = (volume × pct_anual) / 12  → total = valor_mensal × prazo_meses
+//   modo='fixo': usuário informa valor_mensal direto       → total = valor_mensal × prazo_meses
+
+// Calcula valor_mensal de um item recorrente, dado o volume da operação
+function calcReceitaMensalDoItem(item, volumeOperacao) {
   if (!item) return 0;
-  // Se tipo é não-recorrente: valor único
-  if (!typeMeta.recurring) return Number(item.valor) || 0;
-  // Se é recorrente E o usuário marcou recorrente:
-  if (item.recorrente) {
-    const mensal = Number(item.valor_mensal) || 0;
-    const meses = Number(item.prazo_meses) || 0;
-    return mensal * meses;
+  const modo = item.modo || 'pct'; // default: pct
+  if (modo === 'pct') {
+    const pct = Number(item.pct_anual) || 0;
+    return (Number(volumeOperacao) || 0) * (pct / 100) / 12;
   }
+  return Number(item.valor_mensal) || 0;
+}
+
+// Calcula valor total de uma receita (considerando recorrência se aplicável)
+function calcReceitaItem(item, typeMeta, volumeOperacao) {
+  if (!item) return 0;
+  // Tipo não-recorrente: valor único
+  if (!typeMeta.recurring) return Number(item.valor) || 0;
   // Recorrente desativado, usa valor único
-  return Number(item.valor) || 0;
+  if (!item.recorrente) return Number(item.valor) || 0;
+  // Recorrente ativado: total = mensal × meses
+  const mensal = calcReceitaMensalDoItem(item, volumeOperacao);
+  const meses = Number(item.prazo_meses) || 0;
+  return mensal * meses;
 }
 
 // Calcula o total geral somando os 5 tipos
-function calcReceitaTotal(breakdown) {
+function calcReceitaTotal(breakdown, volumeOperacao) {
   if (!breakdown) return 0;
-  return RECEITA_TYPES.reduce((sum, t) => sum + calcReceitaItem(breakdown[t.key], t), 0);
+  return RECEITA_TYPES.reduce((sum, t) => sum + calcReceitaItem(breakdown[t.key], t, volumeOperacao), 0);
 }
 
-// Calcula receita mensal (para tipos recorrentes ainda em curso) — usado em métricas
-function calcReceitaMensalRecorrente(breakdown) {
+// Calcula receita mensal recorrente (somando os tipos com modo recorrente ativo)
+function calcReceitaMensalRecorrente(breakdown, volumeOperacao) {
   if (!breakdown) return 0;
   return RECEITA_TYPES.filter(t => t.recurring).reduce((sum, t) => {
     const item = breakdown[t.key];
     if (!item || !item.recorrente) return sum;
-    return sum + (Number(item.valor_mensal) || 0);
+    return sum + calcReceitaMensalDoItem(item, volumeOperacao);
   }, 0);
+}
+
+// Pega o volume atual do input do modal (para cálculos em tempo real)
+function getCurrentVolume() {
+  const v = document.getElementById('fValor');
+  return v ? (Number(v.value) || 0) : 0;
 }
 
 function renderReceitaBreakdown(breakdown) {
   breakdown = breakdown || {};
   const grid = document.getElementById('receitaGrid');
+  const volume = getCurrentVolume();
+
   grid.innerHTML = RECEITA_TYPES.map(t => {
     const it = breakdown[t.key] || {};
     const isRec = !!it.recorrente && t.recurring;
+    const modo = it.modo || 'pct'; // default: pct (mais comum)
     const valor = Number(it.valor) || 0;
     const valorMensal = Number(it.valor_mensal) || 0;
+    const pctAnual = Number(it.pct_anual) || 0;
     const prazoMeses = Number(it.prazo_meses) || 0;
-    const totalCalc = isRec ? valorMensal * prazoMeses : valor;
+
+    // Mensal calculado em tempo real (% × volume / 12 OU valor fixo)
+    const mensalCalc = isRec
+      ? (modo === 'pct' ? (volume * pctAnual / 100 / 12) : valorMensal)
+      : 0;
+    const totalCalc = isRec ? mensalCalc * prazoMeses : valor;
+
     return `
-      <div class="receita-card" data-type="${t.key}">
+      <div class="receita-card" data-type="${t.key}" data-modo="${modo}">
         <div class="receita-card-head">
           <div class="receita-card-name">
             <span class="receita-dot" style="background: ${t.color};"></span>
@@ -5042,15 +5129,39 @@ function renderReceitaBreakdown(breakdown) {
 
         ${t.recurring ? `
           <div class="rec-recurring-fields" style="${isRec ? '' : 'display:none;'}">
-            <div class="receita-card-rec-fields">
-              <div>
-                <label>Valor mensal</label>
-                <input type="number" class="rec-valor-mensal" step="500" placeholder="0" value="${valorMensal || ''}" oninput="onReceitaInput()">
+            <div class="rec-modo-toggle">
+              <button type="button" class="rec-modo-btn ${modo === 'pct' ? 'active' : ''}" onclick="setReceitaModo(this, 'pct')">% do volume</button>
+              <button type="button" class="rec-modo-btn ${modo === 'fixo' ? 'active' : ''}" onclick="setReceitaModo(this, 'fixo')">Valor fixo/mês</button>
+            </div>
+
+            <div class="rec-fields-pct" style="${modo === 'pct' ? '' : 'display:none;'}">
+              <div class="receita-card-rec-fields">
+                <div>
+                  <label>% ao ano</label>
+                  <input type="number" class="rec-pct-anual" step="0.05" min="0" placeholder="0,0" value="${pctAnual || ''}" oninput="onReceitaInput()">
+                </div>
+                <div>
+                  <label>Prazo (meses)</label>
+                  <input type="number" class="rec-prazo-meses" step="1" min="0" placeholder="0" value="${prazoMeses || ''}" oninput="onReceitaInput()">
+                </div>
               </div>
-              <div>
-                <label>Prazo (meses)</label>
-                <input type="number" class="rec-prazo-meses" step="1" min="0" placeholder="0" value="${prazoMeses || ''}" oninput="onReceitaInput()">
+            </div>
+
+            <div class="rec-fields-fixo" style="${modo === 'fixo' ? '' : 'display:none;'}">
+              <div class="receita-card-rec-fields">
+                <div>
+                  <label>Valor mensal</label>
+                  <input type="number" class="rec-valor-mensal" step="500" placeholder="0" value="${valorMensal || ''}" oninput="onReceitaInput()">
+                </div>
+                <div>
+                  <label>Prazo (meses)</label>
+                  <input type="number" class="rec-prazo-meses-fixo" step="1" min="0" placeholder="0" value="${prazoMeses || ''}" oninput="onReceitaInput()">
+                </div>
               </div>
+            </div>
+
+            <div class="rec-mensal-display">
+              ≈ <strong class="rec-mensal-val">${fmtBRL(mensalCalc)}</strong>/mês
             </div>
           </div>
         ` : ''}
@@ -5065,31 +5176,56 @@ function renderReceitaBreakdown(breakdown) {
   updateReceitaPreview();
 }
 
+function setReceitaModo(btn, modo) {
+  const card = btn.closest('.receita-card');
+  card.dataset.modo = modo;
+  // Atualiza botões
+  card.querySelectorAll('.rec-modo-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  // Mostra/esconde campos
+  card.querySelector('.rec-fields-pct').style.display = modo === 'pct' ? '' : 'none';
+  card.querySelector('.rec-fields-fixo').style.display = modo === 'fixo' ? '' : 'none';
+  onReceitaInput();
+}
+
 function onReceitaRecToggle(checkbox) {
   const card = checkbox.closest('.receita-card');
   const isRec = checkbox.checked;
   card.querySelector('.rec-single-fields').style.display = isRec ? 'none' : '';
   card.querySelector('.rec-recurring-fields').style.display = isRec ? '' : 'none';
-  // Limpa o lado oposto pra evitar dupla contagem
   if (isRec) {
     card.querySelector('.rec-valor').value = '';
   } else {
-    const m = card.querySelector('.rec-valor-mensal'); if (m) m.value = '';
-    const p = card.querySelector('.rec-prazo-meses'); if (p) p.value = '';
+    // Limpa campos recorrentes
+    ['.rec-pct-anual', '.rec-prazo-meses', '.rec-valor-mensal', '.rec-prazo-meses-fixo'].forEach(sel => {
+      const el = card.querySelector(sel);
+      if (el) el.value = '';
+    });
   }
   onReceitaInput();
 }
 
 function onReceitaInput() {
-  // Atualiza os totais por card e a soma geral
+  const volume = getCurrentVolume();
   document.querySelectorAll('.receita-card').forEach(card => {
     const t = RECEITA_TYPES.find(tt => tt.key === card.dataset.type);
     const isRec = card.querySelector('.rec-toggle')?.checked || false;
-    let total = 0;
+    const modo = card.dataset.modo || 'pct';
+    let mensal = 0, total = 0;
+
     if (t.recurring && isRec) {
-      const m = Number(card.querySelector('.rec-valor-mensal').value) || 0;
-      const p = Number(card.querySelector('.rec-prazo-meses').value) || 0;
-      total = m * p;
+      let prazo = 0;
+      if (modo === 'pct') {
+        const pct = Number(card.querySelector('.rec-pct-anual').value) || 0;
+        prazo = Number(card.querySelector('.rec-prazo-meses').value) || 0;
+        mensal = volume * pct / 100 / 12;
+      } else {
+        mensal = Number(card.querySelector('.rec-valor-mensal').value) || 0;
+        prazo = Number(card.querySelector('.rec-prazo-meses-fixo').value) || 0;
+      }
+      total = mensal * prazo;
+      const mensalDisp = card.querySelector('.rec-mensal-val');
+      if (mensalDisp) mensalDisp.textContent = fmtBRL(mensal);
     } else {
       total = Number(card.querySelector('.rec-valor').value) || 0;
     }
@@ -5100,10 +5236,9 @@ function onReceitaInput() {
 
 function updateReceitaPreview() {
   const breakdown = getReceitaBreakdown();
-  const total = calcReceitaTotal(breakdown);
+  const volume = getCurrentVolume();
+  const total = calcReceitaTotal(breakdown, volume);
   document.getElementById('receitaSomaPreview').textContent = fmtBRL(total);
-  // Sincroniza o campo "Receita Prevista" se a soma for diferente
-  // (mantém compatibilidade — o campo continua sendo a fonte da verdade pro código antigo)
   const fReceita = document.getElementById('fReceita');
   if (fReceita && total > 0) {
     fReceita.value = total;
@@ -5111,21 +5246,30 @@ function updateReceitaPreview() {
 }
 
 function getReceitaBreakdown() {
+  const volume = getCurrentVolume();
   const breakdown = {};
   document.querySelectorAll('.receita-card').forEach(card => {
     const key = card.dataset.type;
     const t = RECEITA_TYPES.find(tt => tt.key === key);
     const isRec = card.querySelector('.rec-toggle')?.checked || false;
+    const modo = card.dataset.modo || 'pct';
     const item = { recorrente: t.recurring && isRec };
+
     if (item.recorrente) {
-      item.valor_mensal = Number(card.querySelector('.rec-valor-mensal').value) || 0;
-      item.prazo_meses = Number(card.querySelector('.rec-prazo-meses').value) || 0;
+      item.modo = modo;
+      if (modo === 'pct') {
+        item.pct_anual = Number(card.querySelector('.rec-pct-anual').value) || 0;
+        item.prazo_meses = Number(card.querySelector('.rec-prazo-meses').value) || 0;
+        item.valor_mensal = volume * item.pct_anual / 100 / 12;
+      } else {
+        item.valor_mensal = Number(card.querySelector('.rec-valor-mensal').value) || 0;
+        item.prazo_meses = Number(card.querySelector('.rec-prazo-meses-fixo').value) || 0;
+      }
       item.valor = item.valor_mensal * item.prazo_meses;
     } else {
       item.valor = Number(card.querySelector('.rec-valor').value) || 0;
     }
-    // Só guarda se tem algum valor preenchido
-    if (item.valor > 0 || item.valor_mensal > 0) {
+    if (item.valor > 0 || item.valor_mensal > 0 || item.pct_anual > 0) {
       breakdown[key] = item;
     }
   });
@@ -5324,7 +5468,9 @@ const NETZ_COLORS = {
   text: [14, 27, 61],
   textMute: [90, 103, 133],
   green: [46, 125, 91],
+  greenBg: [232, 245, 237],
   red: [201, 59, 59],
+  redBg: [253, 232, 232],
   amber: [176, 119, 0],
   border: [220, 227, 238],
 };
@@ -5890,6 +6036,232 @@ async function exportPDFDetalhado() {
     const filename = `Pipeline-Netz-Detalhado-${new Date().toISOString().slice(0,10)}.pdf`;
     doc.save(filename);
     showToast('PDF Detalhado gerado · ' + sortedOps.length + ' operações');
+  } catch (err) {
+    console.error(err);
+    showToast('Erro ao gerar PDF: ' + err.message, true);
+  } finally {
+    showLoading(false);
+  }
+}
+
+// ============================================
+// PDF SEMANAL (Relatório de Atividades)
+// ============================================
+async function exportPDFSemanal() {
+  document.getElementById('exportMenu').classList.remove('show');
+  if (!window.jspdf) {
+    showToast('Carregando bibliotecas... tente novamente em 2s', true);
+    return;
+  }
+  showLoading(true);
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 15;
+
+    addPdfHeader(doc, pageW);
+
+    const { monday, sunday } = getCurrentWeekRange();
+    const mondayStr = dateToYMD(monday);
+    const sundayStr = dateToYMD(sunday);
+    const todayStr_ = todayStr();
+
+    let y = 38;
+
+    // Título
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.setTextColor(...NETZ_COLORS.navy);
+    doc.text('Relatório Semanal', margin, y);
+    y += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(...NETZ_COLORS.textMute);
+    doc.text(`Semana de ${fmtWeekRange(monday, sunday)}`, margin, y);
+    y += 10;
+
+    // Coleta tasks
+    const allTasks = collectChecklistTasks();
+    const weekTasks = allTasks.filter(t => t.prazo >= mondayStr && t.prazo <= sundayStr);
+    const lateTasks = allTasks.filter(t => t.prazo < mondayStr && !t.done);
+    const showTasks = [...lateTasks, ...weekTasks];
+
+    if (showTasks.length === 0) {
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(11);
+      doc.setTextColor(...NETZ_COLORS.textMute);
+      doc.text('Nenhuma tarefa cadastrada para esta semana.', margin, y + 10);
+      doc.text('Adicione prazos aos itens do checklist customizado das operações para acompanhar entregas.', margin, y + 16);
+      const filename = `Relatorio-Semanal-Netz-${mondayStr}.pdf`;
+      doc.save(filename);
+      showToast('PDF Semanal gerado · sem tarefas');
+      showLoading(false);
+      return;
+    }
+
+    // ===== Cards de resumo =====
+    const total = weekTasks.length;
+    const done = weekTasks.filter(t => t.done).length;
+    const pending = weekTasks.filter(t => !t.done).length;
+    const lateCount = lateTasks.length;
+    const responsaveis = new Set(showTasks.map(t => t.responsavel));
+    const taxa = total > 0 ? Math.round((done / total) * 100) : 0;
+
+    const summaryCards = [
+      { label: 'TAREFAS', value: String(total), sub: `${done} OK · ${pending} pendentes`, color: NETZ_COLORS.navy },
+      { label: 'PESSOAS', value: String(responsaveis.size), sub: 'envolvidas', color: NETZ_COLORS.navy },
+      { label: 'ATRASADAS', value: String(lateCount), sub: 'acumulado', color: lateCount > 0 ? NETZ_COLORS.red : NETZ_COLORS.navy },
+      { label: 'CONCLUSÃO', value: taxa + '%', sub: 'desta semana', color: NETZ_COLORS.green },
+    ];
+
+    const cardW = (pageW - margin * 2 - 6) / 4;
+    const cardH = 22;
+    summaryCards.forEach((c, i) => {
+      const x = margin + i * (cardW + 2);
+      doc.setFillColor(...NETZ_COLORS.bluePale);
+      doc.roundedRect(x, y, cardW, cardH, 1.5, 1.5, 'F');
+      doc.setFillColor(...c.color);
+      doc.rect(x, y, 2, cardH, 'F');
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(...NETZ_COLORS.textMute);
+      doc.text(c.label, x + 4, y + 5);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(...c.color);
+      doc.text(c.value, x + 4, y + 13);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(...NETZ_COLORS.textMute);
+      doc.text(c.sub, x + 4, y + 18);
+    });
+    y += cardH + 10;
+
+    // ===== Agrupa por responsável =====
+    const byResp = {};
+    showTasks.forEach(t => {
+      if (!byResp[t.responsavel]) byResp[t.responsavel] = [];
+      byResp[t.responsavel].push(t);
+    });
+
+    const resps = Object.keys(byResp).sort((a, b) => {
+      const aLate = byResp[a].filter(t => t.prazo < todayStr_ && !t.done).length;
+      const bLate = byResp[b].filter(t => t.prazo < todayStr_ && !t.done).length;
+      if (aLate !== bLate) return bLate - aLate;
+      return byResp[b].length - byResp[a].length;
+    });
+
+    // Helper pra checar quebra de página
+    const ensureSpace = (h) => {
+      if (y + h > pageH - 18) {
+        doc.addPage();
+        addPdfHeader(doc, pageW);
+        y = 38;
+      }
+    };
+
+    resps.forEach(resp => {
+      const tasks = byResp[resp].sort((a, b) => {
+        if (a.done !== b.done) return a.done ? 1 : -1;
+        return a.prazo.localeCompare(b.prazo);
+      });
+      const lateN = tasks.filter(t => t.prazo < todayStr_ && !t.done).length;
+      const doneN = tasks.filter(t => t.done).length;
+      const pendN = tasks.filter(t => !t.done).length;
+
+      // Header da pessoa
+      ensureSpace(14);
+      doc.setFillColor(...NETZ_COLORS.navy);
+      doc.rect(margin, y, pageW - margin * 2, 9, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.text(resp, margin + 3, y + 6);
+      // Stats à direita
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(...NETZ_COLORS.bluePale);
+      const statsTxt = `${tasks.length} tarefa${tasks.length !== 1 ? 's' : ''} · ${pendN} pendente${pendN !== 1 ? 's' : ''}${lateN > 0 ? ` · ${lateN} atrasada${lateN !== 1 ? 's' : ''}` : ''} · ${doneN} concluída${doneN !== 1 ? 's' : ''}`;
+      doc.text(statsTxt, pageW - margin - 3, y + 6, { align: 'right' });
+      y += 9;
+
+      // Tabela de tasks via autoTable
+      const tableRows = tasks.map(t => {
+        const isLate = t.prazo < todayStr_ && !t.done;
+        const status = t.done ? 'OK' : (isLate ? 'ATRASO' : 'PEND');
+        return [
+          status,
+          t.texto,
+          `${t.opTipo} · ${t.opNome}`,
+          fmtDate(t.prazo)
+        ];
+      });
+
+      doc.autoTable({
+        startY: y,
+        head: [['', 'Tarefa', 'Operação', 'Prazo']],
+        body: tableRows,
+        theme: 'plain',
+        margin: { left: margin, right: margin },
+        styles: {
+          font: 'helvetica',
+          fontSize: 8,
+          cellPadding: { top: 2, right: 3, bottom: 2, left: 3 },
+          textColor: NETZ_COLORS.text,
+          lineColor: NETZ_COLORS.border,
+          lineWidth: 0.1,
+        },
+        headStyles: {
+          fillColor: NETZ_COLORS.bluePale,
+          textColor: NETZ_COLORS.navy,
+          fontStyle: 'bold',
+          fontSize: 7,
+          halign: 'left',
+        },
+        columnStyles: {
+          0: { cellWidth: 16, halign: 'center', fontStyle: 'bold', fontSize: 7 },
+          1: { cellWidth: 80 },
+          2: { cellWidth: 'auto' },
+          3: { cellWidth: 22, halign: 'right' },
+        },
+        didParseCell: (data) => {
+          if (data.section === 'body' && data.column.index === 0) {
+            const status = data.cell.raw;
+            if (status === 'OK') {
+              data.cell.styles.fillColor = NETZ_COLORS.greenBg;
+              data.cell.styles.textColor = NETZ_COLORS.green;
+            } else if (status === 'ATRASO') {
+              data.cell.styles.fillColor = NETZ_COLORS.redBg;
+              data.cell.styles.textColor = NETZ_COLORS.red;
+            } else {
+              data.cell.styles.fillColor = NETZ_COLORS.bluePale;
+              data.cell.styles.textColor = NETZ_COLORS.navy;
+            }
+          }
+        },
+        didDrawPage: (data) => {
+          if (data.pageNumber > 1) addPdfHeader(doc, pageW);
+        },
+      });
+      y = doc.lastAutoTable.finalY + 6;
+    });
+
+    // ===== Rodapé com data e usuário =====
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(...NETZ_COLORS.textMute);
+      doc.text(`Página ${p} de ${totalPages}`, pageW - margin, pageH - 8, { align: 'right' });
+      doc.text('Netz Solution · Relatório Semanal de Atividades', margin, pageH - 8);
+    }
+
+    const filename = `Relatorio-Semanal-Netz-${mondayStr}.pdf`;
+    doc.save(filename);
+    showToast(`PDF Semanal gerado · ${showTasks.length} tarefa(s)`);
   } catch (err) {
     console.error(err);
     showToast('Erro ao gerar PDF: ' + err.message, true);
