@@ -448,6 +448,77 @@
     fill: var(--text-mute); text-anchor: middle;
   }
 
+  /* Pie Chart (Distribuição por Tipo / Status) */
+  .pie-chart-wrap {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 6px 4px;
+  }
+  .pie-chart-wrap svg {
+    flex-shrink: 0;
+  }
+  .pie-slice {
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.15s;
+    transform-origin: center;
+  }
+  .pie-slice:hover {
+    opacity: 0.85;
+  }
+  .pie-legend {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    overflow-y: auto;
+    max-height: 220px;
+  }
+  .pie-legend-item {
+    display: grid;
+    grid-template-columns: 14px 1fr auto auto;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .pie-legend-item:hover {
+    background: var(--blue-light);
+  }
+  .pie-legend-swatch {
+    width: 12px; height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+  .pie-legend-label {
+    font-weight: 500;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .pie-legend-count {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-mute);
+    background: var(--bg);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    padding: 1px 6px;
+  }
+  .pie-legend-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text-mute);
+    text-align: right;
+    flex-shrink: 0;
+  }
+
   /* Funil */
   .funnel-wrap { display: flex; flex-direction: column; gap: 4px; padding: 4px 0; }
   .funnel-row {
@@ -531,14 +602,29 @@
     transition: all 0.15s;
   }
   .search-input:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(0,27,92,0.08); }
-  .kanban { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 14px; }
+  .kanban {
+    display: flex; gap: 14px;
+    overflow-x: auto;
+    padding-bottom: 14px;
+    /* Altura fixa baseada na viewport, descontando header + tabs + toolbar */
+    height: calc(100vh - 280px);
+    min-height: 520px;
+  }
   .kanban-col {
     flex: 0 0 280px;
     background: rgba(220,227,238,0.4);
     border-radius: var(--radius);
-    padding: 12px; min-height: 200px;
+    padding: 12px;
+    display: flex; flex-direction: column;
+    /* Coluna preenche altura toda do .kanban */
+    height: 100%;
+    min-height: 0; /* fix flex overflow */
   }
-  .kanban-col-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 4px; }
+  .kanban-col-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px; padding: 0 4px;
+    flex-shrink: 0;
+  }
   .kanban-col-title {
     font-size: 12px; font-weight: 600; color: var(--navy);
     text-transform: uppercase; letter-spacing: 0.08em;
@@ -552,12 +638,41 @@
   .kanban-col-total {
     font-family: 'IBM Plex Mono', monospace; font-size: 10px;
     color: var(--text-mute); text-align: right;
-    margin-bottom: 10px; padding: 0 4px;
+    margin-bottom: 8px; padding: 0 4px;
+    flex-shrink: 0;
+  }
+  /* Wrapper interno que scroola, deixando o head e total fixos */
+  .kanban-col-cards {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+    padding-right: 4px;  /* respiro pra scrollbar */
+  }
+  /* Scrollbar custom */
+  .kanban-col-cards::-webkit-scrollbar {
+    width: 8px;
+  }
+  .kanban-col-cards::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .kanban-col-cards::-webkit-scrollbar-thumb {
+    background: var(--blue-pale);
+    border-radius: 4px;
+    transition: background 0.15s;
+  }
+  .kanban-col-cards::-webkit-scrollbar-thumb:hover {
+    background: var(--navy);
+  }
+  /* Firefox */
+  .kanban-col-cards {
+    scrollbar-width: thin;
+    scrollbar-color: var(--blue-pale) transparent;
   }
   .kanban-card {
     background: var(--surface);
     border-radius: var(--radius-sm);
-    padding: 12px; margin-bottom: 8px;
+    padding: 10px 12px; margin-bottom: 6px;
     cursor: grab; box-shadow: var(--shadow-sm);
     border-left: 3px solid var(--orange);
     transition: all 0.15s;
@@ -3130,6 +3245,135 @@ function onFunnelHover(e, el) {
   chartTooltipShow(e, { title, total, ops, empty: ops.length === 0 });
 }
 
+// ============================================
+// Pie Chart genérico (SVG)
+// ============================================
+// segments: [{ key, label, value, count, color, ops: [{nome, valTxt}] }]
+// containerId: id do div destino
+// valueLabel: 'count' (mostra contagem) ou 'value' (mostra valor R$)
+function renderPieChart(containerId, segments, options) {
+  options = options || {};
+  const valueMode = options.valueMode || 'value'; // 'value' ou 'count'
+  const fmtVal = options.fmt || fmtBRLshort;
+  const total = segments.reduce((s, x) => s + x.value, 0);
+  const container = document.getElementById(containerId);
+
+  if (total <= 0 || segments.length === 0) {
+    container.innerHTML = '<div class="empty-state" style="padding:30px;">Sem dados</div>';
+    return;
+  }
+
+  const w = 360, h = 220;
+  const cx = 110, cy = h / 2;
+  const r = 85;
+  const innerR = 50; // doughnut
+
+  // Calcula segmentos
+  let cumPct = 0;
+  const slices = segments.map(seg => {
+    const pct = seg.value / total;
+    const startAngle = cumPct * 2 * Math.PI - Math.PI / 2;
+    cumPct += pct;
+    const endAngle = cumPct * 2 * Math.PI - Math.PI / 2;
+    const largeArc = pct > 0.5 ? 1 : 0;
+    const x1 = cx + r * Math.cos(startAngle);
+    const y1 = cy + r * Math.sin(startAngle);
+    const x2 = cx + r * Math.cos(endAngle);
+    const y2 = cy + r * Math.sin(endAngle);
+    const ix1 = cx + innerR * Math.cos(endAngle);
+    const iy1 = cy + innerR * Math.sin(endAngle);
+    const ix2 = cx + innerR * Math.cos(startAngle);
+    const iy2 = cy + innerR * Math.sin(startAngle);
+    const path = `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} L ${ix1} ${iy1} A ${innerR} ${innerR} 0 ${largeArc} 0 ${ix2} ${iy2} Z`;
+    // posição do label (no meio do arco)
+    const midAngle = (startAngle + endAngle) / 2;
+    const labelR = (r + innerR) / 2;
+    const labelX = cx + labelR * Math.cos(midAngle);
+    const labelY = cy + labelR * Math.sin(midAngle);
+    return { ...seg, path, pct, labelX, labelY, midAngle };
+  });
+
+  // Constrói SVG slices + legenda à direita
+  const slicesSvg = slices.map((s, i) => {
+    const opsAttr = (s.ops || [])
+      .sort((a,b) => (Number(b.val)||0) - (Number(a.val)||0))
+      .map(o => `${o.nome.replace(/\|/g,'/')}|${o.valTxt}`)
+      .join('§§');
+    const showLabel = s.pct > 0.06;  // só mostra % no slice se ele for grande o bastante
+    return `
+      <path d="${s.path}" fill="${s.color}" stroke="#fff" stroke-width="1.5"
+        class="pie-slice"
+        data-tt-title="${escapeAttr(s.label)}"
+        data-tt-total="${valueMode === 'count' ? s.count + ' operações' : (s.count + ' op · ' + fmtVal(s.value))}"
+        data-tt-ops="${escapeAttr(opsAttr)}"
+        onmouseenter="onFunnelHover(event, this)"
+        onmousemove="chartTooltipMove(event)"
+        onmouseleave="chartTooltipHide()"></path>
+      ${showLabel ? `<text x="${s.labelX}" y="${s.labelY}" text-anchor="middle" dominant-baseline="middle"
+        style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; fill: #fff; font-weight: 600; pointer-events: none;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);">${Math.round(s.pct * 100)}%</text>` : ''}
+    `;
+  }).join('');
+
+  // Total no centro do donut
+  const totalLabel = valueMode === 'count'
+    ? segments.reduce((s,x) => s + x.count, 0) + ''
+    : fmtVal(total);
+  const totalSubLabel = valueMode === 'count' ? 'operações' : 'total';
+  const centerSvg = `
+    <text x="${cx}" y="${cy - 6}" text-anchor="middle"
+      style="font-family: 'Fraunces', serif; font-size: 16px; font-weight: 600; fill: var(--navy);">
+      ${totalLabel}
+    </text>
+    <text x="${cx}" y="${cy + 10}" text-anchor="middle"
+      style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; fill: var(--text-mute); text-transform: uppercase; letter-spacing: 0.06em;">
+      ${totalSubLabel}
+    </text>
+  `;
+
+  // Legenda
+  const legendItems = segments.map((s, i) => `
+    <div class="pie-legend-item hoverable"
+      data-tt-title="${escapeAttr(s.label)}"
+      data-tt-total="${valueMode === 'count' ? s.count + ' operações' : (s.count + ' op · ' + fmtVal(s.value))}"
+      data-tt-ops="${escapeAttr((s.ops || []).map(o => `${o.nome.replace(/\|/g,'/')}|${o.valTxt}`).join('§§'))}"
+      onmouseenter="onFunnelHover(event, this)"
+      onmousemove="chartTooltipMove(event)"
+      onmouseleave="chartTooltipHide()">
+      <span class="pie-legend-swatch" style="background: ${s.color};"></span>
+      <span class="pie-legend-label">${escapeHtml(s.label)}</span>
+      <span class="pie-legend-count">${s.count}</span>
+      <span class="pie-legend-value">${fmtVal(s.value)}</span>
+    </div>
+  `).join('');
+
+  container.innerHTML = `
+    <div class="pie-chart-wrap">
+      <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" style="width: 220px; height: ${h}px; flex-shrink: 0;">
+        ${slicesSvg}
+        ${centerSvg}
+      </svg>
+      <div class="pie-legend">
+        ${legendItems}
+      </div>
+    </div>
+  `;
+}
+
+// Paleta para slices (alterna entre cores Netz)
+const PIE_PALETTE = [
+  '#001B5C',  // navy
+  '#FF965A',  // orange
+  '#15326C',  // navy-soft
+  '#E07A40',  // orange-dim
+  '#1F6088',  // azul médio
+  '#6A4A8C',  // roxo
+  '#2E7D5B',  // verde
+  '#B07700',  // amber
+  '#4FAA7C',  // verde claro
+  '#B1C6E5',  // azul pale (claros no fim pra não competir)
+];
+
 function renderStatusChart() {
   const ops = getFilteredOps();
   const byStatus = {};
@@ -3141,23 +3385,20 @@ function renderStatusChart() {
       byStatus[o.status].ops.push(o);
     }
   });
-  const max = Math.max(...Object.values(byStatus).map(s => s.count), 1);
-  document.getElementById('chartStatus').innerHTML = STATUS_ORDER.map(s => {
-    const item = byStatus[s];
-    const pct = (item.count / max) * 100;
-    const opsAttr = item.ops
-      .sort((a,b) => (Number(b.valor)||0) - (Number(a.valor)||0))
-      .map(o => `${o.nome.replace(/\|/g,'/')}|${fmtBRLshort(Number(o.valor)||0).replace('R$ ','R$ ')}`)
-      .join('§§');
-    return `<div class="bar-row hoverable"
-      data-tt-title="${escapeAttr(STATUS_LABELS[s])}" data-tt-total="${item.count} operações · ${fmtBRLshort(item.valor)}"
-      data-tt-ops="${escapeAttr(opsAttr)}"
-      onmouseenter="onFunnelHover(event, this)" onmousemove="chartTooltipMove(event)" onmouseleave="chartTooltipHide()">
-      <span class="label">${STATUS_LABELS[s]}</span>
-      <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
-      <span class="value">${item.count} · ${fmtBRLshort(item.valor)}</span>
-    </div>`;
-  }).join('');
+
+  // Filtra só status com pelo menos 1 operação
+  const segments = STATUS_ORDER
+    .filter(s => byStatus[s].count > 0)
+    .map((s, i) => ({
+      key: s,
+      label: STATUS_LABELS[s],
+      value: byStatus[s].count,  // pizza por contagem (faz mais sentido pra status)
+      count: byStatus[s].count,
+      color: PIE_PALETTE[i % PIE_PALETTE.length],
+      ops: byStatus[s].ops.map(o => ({ nome: o.nome, valTxt: fmtBRLshort(Number(o.valor)||0) }))
+    }));
+
+  renderPieChart('chartStatus', segments, { valueMode: 'count', fmt: (v) => v + (v === 1 ? ' op' : ' ops') });
 }
 
 function renderTipoChart() {
@@ -3170,23 +3411,17 @@ function renderTipoChart() {
     byTipo[o.tipo].ops.push(o);
   });
   const tipos = Object.keys(byTipo).sort((a,b) => byTipo[b].valor - byTipo[a].valor);
-  const max = Math.max(...Object.values(byTipo).map(s => s.valor), 1);
-  document.getElementById('chartTipo').innerHTML = tipos.length ? tipos.map(t => {
-    const item = byTipo[t];
-    const pct = (item.valor / max) * 100;
-    const opsAttr = item.ops
-      .sort((a,b) => (Number(b.valor)||0) - (Number(a.valor)||0))
-      .map(o => `${o.nome.replace(/\|/g,'/')}|${fmtBRLshort(Number(o.valor)||0).replace('R$ ','R$ ')}`)
-      .join('§§');
-    return `<div class="bar-row hoverable"
-      data-tt-title="${escapeAttr(t)}" data-tt-total="${item.count} operações · ${fmtBRLshort(item.valor)}"
-      data-tt-ops="${escapeAttr(opsAttr)}"
-      onmouseenter="onFunnelHover(event, this)" onmousemove="chartTooltipMove(event)" onmouseleave="chartTooltipHide()">
-      <span class="label">${t} <span style="color:var(--text-mute); font-weight:400;">(${item.count})</span></span>
-      <div class="bar-track"><div class="bar-fill" style="width:${pct}%; background: linear-gradient(90deg, var(--orange) 0%, var(--orange-dim) 100%);"></div></div>
-      <span class="value">${fmtBRLshort(item.valor)}</span>
-    </div>`;
-  }).join('') : '<div class="empty-state" style="padding:30px;">Sem dados</div>';
+
+  const segments = tipos.map((t, i) => ({
+    key: t,
+    label: t,
+    value: byTipo[t].valor,  // pizza por valor (faz mais sentido pra tipo)
+    count: byTipo[t].count,
+    color: PIE_PALETTE[i % PIE_PALETTE.length],
+    ops: byTipo[t].ops.map(o => ({ nome: o.nome, valTxt: fmtBRLshort(Number(o.valor)||0) }))
+  }));
+
+  renderPieChart('chartTipo', segments, { valueMode: 'value' });
 }
 
 function renderTimeByStageChart() {
@@ -3294,7 +3529,15 @@ function renderKanban() {
   );
   const wrap = document.getElementById('kanban');
   wrap.innerHTML = STATUS_ORDER.map(s => {
-    const cards = filtered.filter(o => o.status === s);
+    let cards = filtered.filter(o => o.status === s);
+    // Para Handover: ordenar por data de liquidação (mais recente primeiro)
+    if (s === 'handover') {
+      cards = [...cards].sort((a, b) => {
+        const da = a.data_liquidacao || '';
+        const db = b.data_liquidacao || '';
+        return db.localeCompare(da);  // desc
+      });
+    }
     const total = cards.reduce((sum, o) => sum + (Number(o.valor)||0), 0);
     return `<div class="kanban-col" data-status="${s}" ondragover="kanbanDragOver(event)" ondragleave="kanbanDragLeave(event)" ondrop="kanbanDrop(event)">
       <div class="kanban-col-head">
@@ -3302,6 +3545,7 @@ function renderKanban() {
         <span class="kanban-col-count">${cards.length}</span>
       </div>
       <div class="kanban-col-total">${fmtBRLshort(total)}</div>
+      <div class="kanban-col-cards">
       ${cards.map(o => `
         <div class="kanban-card" draggable="true" data-id="${o.id}"
           ondragstart="kanbanDragStart(event)" ondragend="kanbanDragEnd(event)"
@@ -3318,6 +3562,7 @@ function renderKanban() {
           </div>
         </div>
       `).join('')}
+      </div>
     </div>`;
   }).join('');
 }
