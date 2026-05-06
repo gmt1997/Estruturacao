@@ -749,6 +749,55 @@
     vertical-align: middle;
   }
 
+  /* Indicadores de progresso (modal) */
+  .progress-indicators {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+    padding: 8px 0;
+  }
+  .progress-card {
+    background: var(--bg);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .progress-card-head {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 6px;
+  }
+  .progress-card-icon {
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .progress-card-label {
+    flex: 1;
+    font-size: 11px; font-weight: 600; color: var(--text-mute);
+    text-transform: uppercase; letter-spacing: 0.04em;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .progress-card-value {
+    font-family: 'Fraunces', serif;
+    font-size: 16px; font-weight: 600; color: var(--navy);
+  }
+  .progress-card-bar {
+    height: 6px;
+    background: rgba(0, 27, 92, 0.08);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+  .progress-card-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+  }
+  .progress-card-sub {
+    font-size: 11px;
+    color: var(--text-mute);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
   /* Receita Breakdown Grid */
   .receita-card {
     background: var(--bg);
@@ -979,6 +1028,20 @@
   .op-progress { height: 6px; background: var(--blue-light); border-radius: 3px; overflow: hidden; margin-bottom: 6px; }
   .op-progress-fill { height: 100%; background: linear-gradient(90deg, var(--orange) 0%, var(--orange-dim) 100%); }
   .op-progress-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-mute); font-family: 'IBM Plex Mono', monospace; }
+  .op-ck-badges {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    margin-top: 8px; padding-top: 8px;
+    border-top: 1px dashed var(--border-soft);
+  }
+  .op-ck-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10px; font-family: 'IBM Plex Mono', monospace;
+    color: var(--text-mute); font-weight: 500;
+  }
+  .op-ck-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    flex-shrink: 0;
+  }
 
   .status-badge {
     display: inline-block; padding: 3px 8px; border-radius: 3px;
@@ -2462,9 +2525,11 @@
             <option value="stand">Stand-by</option>
           </select>
         </div>
-        <div class="field">
-          <label>% Conclusão</label>
-          <input type="number" id="fProgresso" min="0" max="100" step="5" value="0">
+        <div class="field full">
+          <label>Indicadores de Progresso <span style="font-weight:400; color:var(--text-mute); font-size:11px;">(calculados automaticamente)</span></label>
+          <div class="progress-indicators" id="progressIndicators">
+            <!-- Renderizado em renderProgressIndicators() -->
+          </div>
         </div>
         <div class="field">
           <label>Cliente / Originador</label>
@@ -3035,11 +3100,50 @@ const daysToDate = (n) => {
 };
 const cryptoId = () => 'p_' + Math.random().toString(36).slice(2, 10);
 
-// Operação considerada concluída: já liquidou, está em "Em liquidação", ou está 100% nas etapas finais
+// Operação considerada concluída: já liquidou OU está em "Em liquidação"
 const isOperationConcluida = (o) =>
-  !!o.data_liquidacao ||
-  o.status === 'liquidacao' ||
-  (Number(o.progresso) >= 100 && (o.status === 'liquidacao' || o.status === 'handover'));
+  !!o.data_liquidacao || o.status === 'liquidacao';
+
+// ============================================
+// PROGRESSO CALCULADO AUTOMATICAMENTE
+// ============================================
+
+// % de andamento baseado em datas (início → previsão de conclusão)
+// Operação liquidada = 100%; sem datas = 0%
+function calcProgressoTempo(op) {
+  if (!op) return 0;
+  if (op.data_liquidacao) return 100;
+  if (op.status === 'stand') return 0;
+  if (!op.data_inicio || !op.data_prevista) return 0;
+
+  const inicio = dateToDays(op.data_inicio);
+  const fim = dateToDays(op.data_prevista);
+  const hoje = dateToDays(todayStr());
+
+  if (fim <= inicio) return hoje >= fim ? 100 : 0;
+  if (hoje <= inicio) return 0;
+  if (hoje >= fim) return 100;
+
+  return Math.round(((hoje - inicio) / (fim - inicio)) * 100);
+}
+
+// % do checklist Netz (template, 35 itens) — exclui N/A do denominador
+function calcProgressoChecklistNetz(op) {
+  const items = (op.checklist || []).filter(c => c.num);  // só template
+  if (items.length === 0) return null;  // null = não tem template carregado
+  const valid = items.filter(c => c.status !== 'na');
+  if (valid.length === 0) return 100;  // todos N/A = considera completo
+  const done = valid.filter(c => c.status === 'concluido').length;
+  return Math.round((done / valid.length) * 100);
+}
+
+// % do checklist customizado — done / total
+function calcProgressoChecklistCustom(op) {
+  const items = (op.checklist || []).filter(c => !c.num);  // só customizado
+  if (items.length === 0) return null;  // null = não tem itens
+  const done = items.filter(c => c.done).length;
+  return Math.round((done / items.length) * 100);
+}
 
 // Operação está no pipeline ativo (não em standby nem concluída)
 const isOperationAtiva = (o) => !isOperationConcluida(o) && o.status !== 'stand';
@@ -4211,7 +4315,7 @@ function renderTimeByStageChart() {
 // ===== Op cards (Visão Geral) =====
 function renderOpsCards() {
   const ops = [...getFilteredOps()].sort((a,b) =>
-    (STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status)) || (b.progresso - a.progresso)
+    (STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status)) || (calcProgressoTempo(b) - calcProgressoTempo(a))
   );
   const wrap = document.getElementById('opsCards');
   if (!ops.length) {
@@ -4221,6 +4325,10 @@ function renderOpsCards() {
   wrap.innerHTML = ops.map(o => {
     const concluida = isOperationConcluida(o);
     const dias = daysUntil(o.data_prevista);
+    const progressoTempo = calcProgressoTempo(o);
+    const ckNetz = calcProgressoChecklistNetz(o);
+    const ckCustom = calcProgressoChecklistCustom(o);
+
     let diasTxt;
     if (concluida) {
       diasTxt = o.data_liquidacao ? `liquidada em ${fmtDate(o.data_liquidacao)}` : 'concluída';
@@ -4236,6 +4344,12 @@ function renderOpsCards() {
       diasTxt = `${dias}d restantes`;
     }
     const receitaTxt = Number(o.receita) > 0 ? `Receita prev: ${fmtBRLshort(o.receita)}` : '';
+
+    // Mini-indicadores de checklist (mostra só quando tem itens)
+    const ckBadges = [];
+    if (ckNetz !== null) ckBadges.push(`<span class="op-ck-badge" title="Checklist Netz"><span class="op-ck-dot" style="background:var(--orange);"></span>Netz ${ckNetz}%</span>`);
+    if (ckCustom !== null) ckBadges.push(`<span class="op-ck-badge" title="Checklist Customizado"><span class="op-ck-dot" style="background:var(--green);"></span>Custom ${ckCustom}%</span>`);
+
     return `<div class="op-card" onclick="openModal('${o.id}')">
       <div class="op-card-head">
         <div class="op-name">${escapeHtml(o.nome)}</div>
@@ -4246,11 +4360,12 @@ function renderOpsCards() {
       </div>
       <div class="op-valor">${fmtBRL(o.valor)}</div>
       <div class="op-receita">${receitaTxt}</div>
-      <div class="op-progress"><div class="op-progress-fill" style="width:${o.progresso}%"></div></div>
+      <div class="op-progress"><div class="op-progress-fill" style="width:${progressoTempo}%"></div></div>
       <div class="op-progress-label">
         <span class="status-badge status-${o.status}">${STATUS_LABELS[o.status]}</span>
-        <span>${o.progresso}% · ${diasTxt}</span>
+        <span>${progressoTempo}% · ${diasTxt}</span>
       </div>
+      ${ckBadges.length ? `<div class="op-ck-badges">${ckBadges.join('')}</div>` : ''}
     </div>`;
   }).join('');
 }
@@ -4282,7 +4397,9 @@ function renderKanban() {
       </div>
       <div class="kanban-col-total">${fmtBRLshort(total)}</div>
       <div class="kanban-col-cards">
-      ${cards.map(o => `
+      ${cards.map(o => {
+        const prog = calcProgressoTempo(o);
+        return `
         <div class="kanban-card" draggable="true" data-id="${o.id}"
           ondragstart="kanbanDragStart(event)" ondragend="kanbanDragEnd(event)"
           onclick="openModal('${o.id}')">
@@ -4292,12 +4409,12 @@ function renderKanban() {
           <div class="kc-foot">
             <span class="kc-resp">${escapeHtml(o.responsavel || '—')}</span>
             <div style="display:flex; align-items:center; gap:6px;">
-              <div class="kc-progress"><div class="kc-progress-fill" style="width:${o.progresso}%"></div></div>
-              <span class="mono" style="font-size:10px; color:var(--text-mute);">${o.progresso}%</span>
+              <div class="kc-progress"><div class="kc-progress-fill" style="width:${prog}%"></div></div>
+              <span class="mono" style="font-size:10px; color:var(--text-mute);">${prog}%</span>
             </div>
           </div>
         </div>
-      `).join('')}
+      `;}).join('')}
       </div>
     </div>`;
   }).join('');
@@ -4374,6 +4491,7 @@ function renderTable() {
     if (isOperationAtrasada(o)) {
       dataCell = `<span style="color:var(--red); font-weight:500;">${dataCell} (${Math.abs(dias)}d atraso)</span>`;
     }
+    const prog = calcProgressoTempo(o);
     return `<tr onclick="openModal('${o.id}')">
       <td><strong>${escapeHtml(o.nome)}</strong></td>
       <td class="mono">${o.tipo}</td>
@@ -4383,8 +4501,8 @@ function renderTable() {
       <td class="right mono">${fmtBRL(o.valor)}</td>
       <td class="right mono green-text">${fmtBRL(o.receita)}</td>
       <td><div class="progress-cell">
-        <div class="progress-bar-mini"><div class="progress-bar-mini-fill" style="width:${o.progresso}%"></div></div>
-        <span class="mono" style="font-size:11px; color:var(--text-mute); min-width:32px; text-align:right;">${o.progresso}%</span>
+        <div class="progress-bar-mini"><div class="progress-bar-mini-fill" style="width:${prog}%"></div></div>
+        <span class="mono" style="font-size:11px; color:var(--text-mute); min-width:32px; text-align:right;">${prog}%</span>
       </div></td>
       <td class="mono">${dataCell}</td>
     </tr>`;
@@ -4999,11 +5117,21 @@ function openModal(opId) {
   document.getElementById('fReceita').value = op.receita || '';
   document.getElementById('fVolumeLiquidado').value = op.volume_liquidado || '';
   document.getElementById('fReceitaRealizada').value = op.receita_realizada || '';
-  document.getElementById('fProgresso').value = op.progresso || 0;
   document.getElementById('fDataInicio').value = op.data_inicio || '';
   document.getElementById('fDataPrevista').value = op.data_prevista || '';
   document.getElementById('fDataLiquidacao').value = op.data_liquidacao || '';
   document.getElementById('fObs').value = op.obs || '';
+
+  // Indicadores de progresso (calculados em tempo real)
+  renderProgressIndicators(op);
+  // Quando datas mudam, recalcula
+  ['fDataInicio', 'fDataPrevista', 'fDataLiquidacao'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.dataset.progressListener) {
+      el.addEventListener('change', () => renderProgressIndicators(getOpFromForm()));
+      el.dataset.progressListener = '1';
+    }
+  });
 
   if (isEdit) {
     document.getElementById('auditCreated').textContent = `${op.criado_por_email || '—'} · ${fmtDateTime(op.criado_em)}`;
@@ -5127,7 +5255,7 @@ function renderChecklistTemplate(items) {
         <input type="text" value="${escapeAttr(it.area || 'Fin/Ops')}" placeholder="Área" data-field="area">
         <input type="text" value="${escapeAttr(it.responsavel || '')}" placeholder="Resp." data-field="responsavel" list="respList">
         <input type="date" value="${escapeAttr(it.prazo || '')}" data-field="prazo" title="Prazo">
-        <select class="ck-status-${statusVal}" onchange="this.className='ck-status-'+this.value" data-field="status">
+        <select class="ck-status-${statusVal}" onchange="this.className='ck-status-'+this.value; refreshProgressIndicators();" data-field="status">
           <option value="pendente" ${statusVal==='pendente'?'selected':''}>PENDENTE</option>
           <option value="andamento" ${statusVal==='andamento'?'selected':''}>EM ANDAMENTO</option>
           <option value="concluido" ${statusVal==='concluido'?'selected':''}>CONCLUÍDO</option>
@@ -5166,6 +5294,7 @@ function toggleTemplateItem(idx) {
   if (items[idx]) {
     items[idx].status = items[idx].status === 'concluido' ? 'pendente' : 'concluido';
     renderChecklistTemplate(items);
+    refreshProgressIndicators();
   }
 }
 function removeTemplateItem(idx) {
@@ -5173,6 +5302,7 @@ function removeTemplateItem(idx) {
   const items = getChecklistTemplate();
   items.splice(idx, 1);
   renderChecklistTemplate(items);
+  refreshProgressIndicators();
 }
 function loadChecklistTemplate() {
   const current = getChecklistTemplate();
@@ -5318,6 +5448,104 @@ function getCurrentVolume() {
   const v = document.getElementById('fValor');
   return v ? (Number(v.value) || 0) : 0;
 }
+
+// ============================================
+// INDICADORES DE PROGRESSO (modal)
+// ============================================
+
+// Lê o estado atual do form modal e retorna um objeto-operação parcial
+function getOpFromForm() {
+  return {
+    data_inicio: document.getElementById('fDataInicio')?.value || null,
+    data_prevista: document.getElementById('fDataPrevista')?.value || null,
+    data_liquidacao: document.getElementById('fDataLiquidacao')?.value || null,
+    status: document.getElementById('fStatus')?.value || 'mandatado',
+    checklist: [
+      ...(getChecklistTemplate ? getChecklistTemplate() : []),
+      ...(getChecklist ? getChecklist().map(c => ({ ...c, num: undefined })) : [])
+    ]
+  };
+}
+
+function renderProgressIndicators(op) {
+  if (!op) op = getOpFromForm();
+  const wrap = document.getElementById('progressIndicators');
+  if (!wrap) return;
+
+  const tempoPct = calcProgressoTempo(op);
+  const ckNetzPct = calcProgressoChecklistNetz(op);
+  const ckCustomPct = calcProgressoChecklistCustom(op);
+
+  // Conta itens (para mostrar "X/Y" abaixo)
+  const netzItems = (op.checklist || []).filter(c => c.num);
+  const netzValid = netzItems.filter(c => c.status !== 'na');
+  const netzDone = netzValid.filter(c => c.status === 'concluido').length;
+
+  const customItems = (op.checklist || []).filter(c => !c.num);
+  const customDone = customItems.filter(c => c.done).length;
+
+  // Status do tempo
+  let tempoSub = '';
+  if (op.data_liquidacao) tempoSub = 'liquidada';
+  else if (op.status === 'stand') tempoSub = 'stand-by';
+  else if (!op.data_inicio || !op.data_prevista) tempoSub = 'datas pendentes';
+  else {
+    const dias = daysUntil(op.data_prevista);
+    if (dias === null) tempoSub = '—';
+    else if (dias < 0) tempoSub = `${Math.abs(dias)}d atrasado`;
+    else if (dias === 0) tempoSub = 'vence hoje';
+    else tempoSub = `${dias}d restantes`;
+  }
+
+  wrap.innerHTML = `
+    <div class="progress-card">
+      <div class="progress-card-head">
+        <span class="progress-card-icon">⏱</span>
+        <span class="progress-card-label">Andamento (tempo)</span>
+        <span class="progress-card-value">${tempoPct}%</span>
+      </div>
+      <div class="progress-card-bar">
+        <div class="progress-card-bar-fill" style="width:${tempoPct}%; background: var(--navy);"></div>
+      </div>
+      <div class="progress-card-sub">${escapeHtml(tempoSub)}</div>
+    </div>
+
+    <div class="progress-card">
+      <div class="progress-card-head">
+        <span class="progress-card-icon">📋</span>
+        <span class="progress-card-label">Checklist Netz</span>
+        <span class="progress-card-value">${ckNetzPct === null ? '—' : ckNetzPct + '%'}</span>
+      </div>
+      <div class="progress-card-bar">
+        <div class="progress-card-bar-fill" style="width:${ckNetzPct || 0}%; background: var(--orange);"></div>
+      </div>
+      <div class="progress-card-sub">${ckNetzPct === null ? 'sem template carregado' : `${netzDone}/${netzValid.length} concluído${netzItems.length > netzValid.length ? ` · ${netzItems.length - netzValid.length} N/A` : ''}`}</div>
+    </div>
+
+    <div class="progress-card">
+      <div class="progress-card-head">
+        <span class="progress-card-icon">✓</span>
+        <span class="progress-card-label">Checklist Customizado</span>
+        <span class="progress-card-value">${ckCustomPct === null ? '—' : ckCustomPct + '%'}</span>
+      </div>
+      <div class="progress-card-bar">
+        <div class="progress-card-bar-fill" style="width:${ckCustomPct || 0}%; background: var(--green);"></div>
+      </div>
+      <div class="progress-card-sub">${ckCustomPct === null ? 'sem itens cadastrados' : `${customDone}/${customItems.length} concluído`}</div>
+    </div>
+  `;
+}
+
+// Atualiza os indicadores em resposta a mudanças nos checklists
+function refreshProgressIndicators() {
+  if (document.getElementById('progressIndicators')) {
+    renderProgressIndicators();
+  }
+}
+
+// ============================================
+// RECEITA BREAKDOWN (5 tipos)
+// ============================================
 
 function renderReceitaBreakdown(breakdown) {
   breakdown = breakdown || {};
@@ -5527,9 +5755,9 @@ function getChecklist() {
     prazo: el.querySelector('.ck-prazo').value || null
   }));
 }
-function addChecklist() { renderChecklist([...getChecklist(), { texto:'', done:false, responsavel:'', prazo:'' }]); }
-function removeChecklist(i) { const it = getChecklist(); it.splice(i,1); renderChecklist(it); }
-function toggleChecklist() { renderChecklist(getChecklist()); }
+function addChecklist() { renderChecklist([...getChecklist(), { texto:'', done:false, responsavel:'', prazo:'' }]); refreshProgressIndicators(); }
+function removeChecklist(i) { const it = getChecklist(); it.splice(i,1); renderChecklist(it); refreshProgressIndicators(); }
+function toggleChecklist() { renderChecklist(getChecklist()); refreshProgressIndicators(); }
 
 // ===== Steps & Risks =====
 function renderSteps(items) {
@@ -5583,20 +5811,32 @@ async function saveOp() {
     ...getChecklistTemplate(),
     ...getChecklist().filter(c => c.texto.trim())
   ];
+  const dataInicio = document.getElementById('fDataInicio').value || null;
+  const dataPrevista = document.getElementById('fDataPrevista').value || null;
+  const dataLiquidacao = document.getElementById('fDataLiquidacao').value || null;
+  const status = document.getElementById('fStatus').value;
+  // Progresso calculado automaticamente baseado nas datas
+  const progressoCalc = calcProgressoTempo({
+    data_inicio: dataInicio,
+    data_prevista: dataPrevista,
+    data_liquidacao: dataLiquidacao,
+    status: status
+  });
+
   const data = {
     nome,
     tipo: document.getElementById('fTipo').value,
-    status: document.getElementById('fStatus').value,
+    status: status,
     cliente: document.getElementById('fCliente').value.trim() || null,
     responsavel: document.getElementById('fResp').value.trim() || null,
     valor: Number(document.getElementById('fValor').value) || 0,
     receita: Number(document.getElementById('fReceita').value) || 0,
     volume_liquidado: Number(document.getElementById('fVolumeLiquidado').value) || 0,
     receita_realizada: Number(document.getElementById('fReceitaRealizada').value) || 0,
-    progresso: Math.max(0, Math.min(100, Number(document.getElementById('fProgresso').value) || 0)),
-    data_inicio: document.getElementById('fDataInicio').value || null,
-    data_prevista: document.getElementById('fDataPrevista').value || null,
-    data_liquidacao: document.getElementById('fDataLiquidacao').value || null,
+    progresso: progressoCalc,
+    data_inicio: dataInicio,
+    data_prevista: dataPrevista,
+    data_liquidacao: dataLiquidacao,
     obs: document.getElementById('fObs').value.trim() || null,
     phases: getPhases().filter(p => p.label.trim() && p.start),
     checklist: allChecklist,
@@ -6173,17 +6413,23 @@ async function exportPDFExecutivo() {
       y += 8;
 
       // Tabela
-      const head = [['Operação', 'Cliente', 'Resp.', 'Tipo', 'Volume', 'Receita', 'Prog.', 'Prev.']];
-      const body = list.map(o => [
-        truncate(o.nome, 32),
-        truncate(o.cliente || '—', 22),
-        truncate(o.responsavel || '—', 14),
-        o.tipo,
-        fmtBRLshort(o.valor),
-        fmtBRLshort(o.receita),
-        (o.progresso || 0) + '%',
-        o.data_prevista ? fmtDate(o.data_prevista) : '—',
-      ]);
+      const head = [['Operação', 'Cliente', 'Resp.', 'Tipo', 'Volume', 'Receita', 'Tempo', 'CK Netz', 'CK Cust.', 'Prev.']];
+      const body = list.map(o => {
+        const ckN = calcProgressoChecklistNetz(o);
+        const ckC = calcProgressoChecklistCustom(o);
+        return [
+          truncate(o.nome, 28),
+          truncate(o.cliente || '—', 18),
+          truncate(o.responsavel || '—', 12),
+          o.tipo,
+          fmtBRLshort(o.valor),
+          fmtBRLshort(o.receita),
+          calcProgressoTempo(o) + '%',
+          ckN === null ? '—' : ckN + '%',
+          ckC === null ? '—' : ckC + '%',
+          o.data_prevista ? fmtDate(o.data_prevista) : '—',
+        ];
+      });
       doc.autoTable({
         startY: y,
         head, body,
@@ -6191,7 +6437,9 @@ async function exportPDFExecutivo() {
         headStyles: { fillColor: NETZ_COLORS.blueLight, textColor: NETZ_COLORS.navy, fontStyle: 'bold', fontSize: 7 },
         alternateRowStyles: { fillColor: [248, 250, 253] },
         columnStyles: {
-          4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' },
+          4: { halign: 'right' }, 5: { halign: 'right' },
+          6: { halign: 'right' }, 7: { halign: 'right' },
+          8: { halign: 'right' }, 9: { halign: 'right' },
         },
         margin: { left: margin, right: margin },
         didDrawPage: () => { addPdfHeader(doc, pageW); }
@@ -6549,11 +6797,14 @@ async function exportPDFDetalhado() {
       doc.text('VALORES & DATAS', margin, y);
       y += 4;
 
+      const ckNetzPct = calcProgressoChecklistNetz(op);
+      const ckCustomPct = calcProgressoChecklistCustom(op);
       const finRows = [
         ['Volume Estruturado', fmtBRL(op.valor), 'Volume Liquidado', fmtBRL(op.volume_liquidado)],
         ['Receita Prevista', fmtBRL(op.receita), 'Receita Realizada', fmtBRL(op.receita_realizada)],
         ['Início', fmtDate(op.data_inicio), 'Conclusão Prev.', fmtDate(op.data_prevista)],
-        ['Liquidação', fmtDate(op.data_liquidacao), 'Progresso', (op.progresso || 0) + '%'],
+        ['Liquidação', fmtDate(op.data_liquidacao), 'Andamento (tempo)', calcProgressoTempo(op) + '%'],
+        ['Checklist Netz', ckNetzPct === null ? '—' : ckNetzPct + '%', 'Checklist Custom.', ckCustomPct === null ? '—' : ckCustomPct + '%'],
       ];
       doc.autoTable({
         startY: y,
@@ -7167,7 +7418,9 @@ function buildOperationsContext() {
         : null,
       volume_liquidado: Number(o.volume_liquidado) || 0,
       receita_realizada: Number(o.receita_realizada) || 0,
-      progresso: o.progresso || 0,
+      progresso_tempo_pct: calcProgressoTempo(o),
+      progresso_checklist_netz_pct: calcProgressoChecklistNetz(o),
+      progresso_checklist_custom_pct: calcProgressoChecklistCustom(o),
       data_inicio: o.data_inicio || null,
       data_prevista_conclusao: o.data_prevista || null,
       data_liquidacao: o.data_liquidacao || null,
@@ -7596,7 +7849,9 @@ async function generateOperationSummary() {
       data_inicio: op.data_inicio,
       data_prevista_conclusao: op.data_prevista,
       data_liquidacao: op.data_liquidacao,
-      progresso_geral: op.progresso || 0,
+      progresso_tempo_pct: calcProgressoTempo(op),
+      progresso_checklist_netz_pct: calcProgressoChecklistNetz(op),
+      progresso_checklist_custom_pct: calcProgressoChecklistCustom(op),
       ja_liquidada: !!op.data_liquidacao,
       dias_atraso: dias_atraso !== null && dias_atraso > 0 ? dias_atraso : null
     },
@@ -7806,7 +8061,9 @@ function exportFilteredXLSX() {
       'Receita Prevista': Number(o.receita) || 0,
       'Volume Liquidado': Number(o.volume_liquidado) || 0,
       'Receita Realizada': Number(o.receita_realizada) || 0,
-      'Progresso %': o.progresso || 0,
+      'Andamento Tempo %': calcProgressoTempo(o),
+      'Checklist Netz %': calcProgressoChecklistNetz(o) ?? '',
+      'Checklist Custom %': calcProgressoChecklistCustom(o) ?? '',
       'Data Início': o.data_inicio || '',
       'Data Prevista Conclusão': o.data_prevista || '',
       'Data Liquidação': o.data_liquidacao || '',
@@ -7826,10 +8083,10 @@ function exportFilteredXLSX() {
   // Larguras automáticas
   ws1['!cols'] = [
     { wch: 32 }, { wch: 10 }, { wch: 16 }, { wch: 20 }, { wch: 18 },
-    { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 9 },
-    { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 9 },
-    { wch: 14 }, { wch: 9 }, { wch: 9 }, { wch: 9 }, { wch: 40 },
-    { wch: 18 }, { wch: 18 }, { wch: 24 }
+    { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 14 },
+    { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
+    { wch: 10 }, { wch: 9 }, { wch: 14 }, { wch: 9 }, { wch: 9 },
+    { wch: 9 }, { wch: 40 }, { wch: 18 }, { wch: 18 }, { wch: 24 }
   ];
   // Formato de moeda nas colunas de valor
   const moneyCols = ['F', 'G', 'H', 'I'];  // Volume Estruturado, Receita Prevista, Volume Liquidado, Receita Realizada
