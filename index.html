@@ -1314,6 +1314,125 @@
     cursor: pointer; font-weight: 500;
   }
   .phase-template-btn:hover { background: var(--blue-pale); }
+  .ck-clear-btn {
+    background: rgba(201, 59, 59, 0.08);
+    color: var(--red);
+    border: 1px solid rgba(201, 59, 59, 0.2);
+  }
+  .ck-clear-btn:hover {
+    background: rgba(201, 59, 59, 0.15);
+  }
+
+  /* Select de área no checklist Netz */
+  .ck-area-select {
+    border: 1px solid var(--border);
+    background: #fff;
+    padding: 4px 6px;
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 11px;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .ck-area-select:focus {
+    outline: none;
+    border-color: var(--orange);
+  }
+
+  /* Modal picker do checklist */
+  .ck-picker-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0, 15, 56, 0.55);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 1100;
+    backdrop-filter: blur(2px);
+    animation: fadeIn 0.15s ease;
+  }
+  .ck-picker-overlay.active { display: flex; }
+  .ck-picker-modal {
+    background: #fff;
+    border-radius: 12px;
+    width: min(540px, 92vw);
+    max-height: 90vh;
+    overflow: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: slideUp 0.2s ease;
+  }
+  .ck-picker-head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 20px 24px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .ck-picker-modal-title {
+    font-family: 'Fraunces', serif;
+    font-size: 19px; font-weight: 600;
+    color: var(--navy);
+  }
+  .ck-picker-modal-sub {
+    font-size: 12px; color: var(--text-mute);
+    margin-top: 4px;
+  }
+  .ck-picker-close {
+    background: none; border: none;
+    font-size: 24px; line-height: 1;
+    color: var(--text-mute); cursor: pointer;
+    padding: 0 8px; border-radius: 4px;
+    transition: all 0.15s;
+  }
+  .ck-picker-close:hover {
+    color: var(--red);
+    background: rgba(201, 59, 59, 0.08);
+  }
+  .ck-picker-options {
+    padding: 18px;
+    display: flex; flex-direction: column;
+    gap: 10px;
+  }
+  .ck-picker-option {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--bg);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .ck-picker-option:hover {
+    border-color: var(--orange);
+    background: rgba(255, 150, 90, 0.05);
+    transform: translateX(2px);
+  }
+  .ck-picker-icon {
+    font-size: 32px;
+    flex-shrink: 0;
+    width: 48px;
+    text-align: center;
+  }
+  .ck-picker-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .ck-picker-title {
+    font-family: 'Fraunces', serif;
+    font-size: 16px; font-weight: 600;
+    color: var(--navy);
+    margin-bottom: 2px;
+  }
+  .ck-picker-desc {
+    font-size: 12px;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .ck-picker-count {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
 
   .checklist-item, .step-item {
     display: flex; gap: 8px; align-items: center;
@@ -2622,14 +2741,15 @@
 
       <div class="form-section">
         <div class="form-section-title">
-          <span>Checklist Netz · Estruturação de FIDC</span>
+          <span>Checklist Netz</span>
           <div class="form-section-title-actions">
-            <button class="phase-template-btn" onclick="loadChecklistTemplate()">⚡ carregar checklist padrão</button>
+            <button type="button" class="phase-template-btn" onclick="loadChecklistTemplate()">⚡ carregar checklist padrão</button>
+            <button type="button" class="phase-template-btn ck-clear-btn" onclick="clearChecklistTemplate()" title="Excluir todos os itens">🗑 limpar tudo</button>
           </div>
         </div>
         <div id="checklistTemplateContainer"></div>
         <div style="font-size: 11px; color: var(--text-mute); margin-top: 6px;">
-          Checklist baseado no template padrão da Netz Solution. Use para FIDCs.
+          Templates disponíveis: FIDC e Debênture/CR. Clique em "carregar checklist padrão" para escolher.
         </div>
       </div>
 
@@ -2698,6 +2818,20 @@
 
 <div class="toast" id="toast"></div>
 <datalist id="respList"></datalist>
+
+<!-- Picker para escolher template de checklist -->
+<div class="ck-picker-overlay" id="ckPickerOverlay" onclick="if(event.target===this) closeChecklistPicker()">
+  <div class="ck-picker-modal">
+    <div class="ck-picker-head">
+      <div>
+        <div class="ck-picker-modal-title">Escolha o tipo de checklist</div>
+        <div class="ck-picker-modal-sub">Selecione qual template padrão Netz deseja carregar</div>
+      </div>
+      <button class="ck-picker-close" onclick="closeChecklistPicker()" aria-label="Fechar">×</button>
+    </div>
+    <div class="ck-picker-options" id="ckPickerOptions"></div>
+  </div>
+</div>
 <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
 <div class="gantt-tooltip" id="ganttTooltip" style="display:none;"></div>
 <div class="chart-tooltip" id="chartTooltip" style="display:none;"></div>
@@ -2799,9 +2933,14 @@ const STATUS_LEGACY_MAP = {
 };
 
 // ============================================
-// CHECKLIST PADRÃO NETZ - baseado na planilha
+// CHECKLISTS PADRÃO NETZ
 // ============================================
-const NETZ_CHECKLIST_TEMPLATE = [
+const NETZ_CHECKLIST_TEMPLATES = {
+  fidc: {
+    label: 'FIDC',
+    description: 'Estruturação de FIDC',
+    icon: '🏦',
+    categories: [
   { categoria: '1. Aspectos Societários do Fundo', items: [
     { num: '1.1', texto: 'Regulamento do Fundo. Minuta final do regulamento do Fundo que será analisado pelo administrador, ou então, envio dos comentários ao Regulamento padrão do Administrador para análise.', area: 'Fin/Ops' },
     { num: '1.2', texto: 'Atos Constitutivos e Alterações. Minuta final do Ato do Administrador aprovando a constituição do Fundo.', area: 'Fin/Ops' },
@@ -2843,7 +2982,60 @@ const NETZ_CHECKLIST_TEMPLATE = [
     { num: '5.6', texto: 'Aprovações Internas. Aprovação do fundo pelo time de Crédito, Gestão e Distribuição.', area: 'Fin/Ops' },
     { num: '5.7', texto: 'Material de Divulgação. Conclusão do material de divulgalção do Fundo.', area: 'Fin/Ops' },
   ]},
-];
+    ]
+  },
+  debcr: {
+    label: 'Debênture / CR',
+    description: 'Estruturação de Debênture ou Certificado de Recebíveis',
+    icon: '📜',
+    categories: [
+      { categoria: '1. Aspectos Societários', items: [
+        { num: '1.1', texto: 'Termo de Emissão / Escritura do Emissão. Minuta final do instrumento principal da emissão, contendo características dos títulos, remuneração, amortização, vencimento, eventos de vencimento antecipado, obrigações da emissora, garantias, quóruns, assembleias e regras de pagamento.', area: 'Legal' },
+        { num: '1.2', texto: 'Deliberação societária da Emissora. Aprovação societária da emissão e da oferta, conforme estatuto/contrato social da emissora, incluindo autorização para assinatura dos documentos da operação e constituição de garantias, se aplicável.', area: 'Legal' },
+        { num: '1.3', texto: 'Garantias da Emissão. Minutas finais de alienação fiduciária, cessão fiduciária, fiança, aval, penhor, conta vinculada, garantia real, garantia fidejussória ou demais instrumentos acessórios.', area: 'Legal' },
+        { num: '1.4', texto: 'Instrumento de Lastro. Minuta final e cadeia documental do ativo-lastro da emissão, incluindo, conforme o caso, nota comercial, CCB, contrato de compra e venda, contrato de prestação de serviços, contrato de financiamento, recebíveis cedidos, debênture lastro ou outro título/documento representativo do crédito.', area: 'Legal' },
+        { num: '1.5', texto: 'Documentos da Oferta. Minutas finais de prospecto, lâmina, anúncio de início, anúncio de encerramento, aviso ao mercado, material publicitário e demais documentos exigidos conforme o rito da oferta.', area: 'Legal' },
+        { num: '1.6', texto: 'Contrato de Distribuição / Coordenação. Minuta final do contrato com coordenador líder/distribuidor, incluindo remuneração, obrigações, regime de distribuição, responsabilidade por registro e regras de colocação.', area: 'Legal' },
+        { num: '1.7', texto: 'Contrato de Consultoria Especializada. Minuta final do Contrato de Consultoria Especializada do Fundo, caso aplicável.', area: 'Legal' },
+        { num: '1.8', texto: 'Contratação ou Cotação de Auditor Independente. Solicitação, cotação ou envio de proposta para a contratação de auditor independente do Fundo.', area: 'Fin/Ops' },
+        { num: '1.9', texto: 'Contratação ou Cotação de Agência de Rating e KPMG. Solicitação, cotação ou envio de proposta para a contratação de agência de rating e KPMG.', area: 'Fin/Ops' },
+      ]},
+      { categoria: '2. Aspectos Operacionais', items: [
+        { num: '2.1', texto: 'Contrato de Cessão. Minuta Final do contrato de cessão (ou documento-padrão) que será utilizado pelo veiculo na aquisição do Direito Creditório.', area: 'Legal' },
+        { num: '2.2', texto: 'Estudo de Carteira. Análise prévia do comportamento do Crédito, realizado pelo investidor, pela Netz Solutions ou pela KPMG, conforme aplicável.', area: 'Fin/Ops' },
+        { num: '2.3', texto: 'Contrato de Arrecadação, Cobrança, Convênio e entre outros. Minuta final do Contrato de Arrecadação, Cobrança, Convênio ou qualquer outro que tenha por objetivo regular a cobrança e arrecadação dos Direitos Creditórios, caso aplicável.', area: 'Legal' },
+        { num: '2.4', texto: 'Contrato de Originação. Minuta final do Contrato de Originação ou qualquer outro instrumento que tenha por objetivo a regulação da Originação de Direitos Creditórios, caso aplicável.', area: 'Legal' },
+        { num: '2.5', texto: 'Contrato de Conta Escrow ou Vinculada. Minuta final da contratação de Conta Escrow ou Vinculada para recebimento dos direitos creditórios da operação, caso aplicável.', area: 'Legal' },
+        { num: '2.6', texto: 'Contratos Gerais. Minuta final de qualquer contrato considerado relevante para as operações do Fundo.', area: 'Legal' },
+        { num: '2.7', texto: 'Alinhamento Operacional e Fluxo. Alinhamento sobre o fluxo de cessão, recompra, substituição, cobrança e conciliação do Direito Creditório.', area: 'Fin/Ops' },
+      ]},
+      { categoria: '3. Aspectos Cadastrais e Passivo', items: [
+        { num: '3.1', texto: 'Cadastro Subscritores. Envio do Kit Cadastral para os Subscritores, bem como, os documentos necessários para o KYC.', area: 'Fin/Ops' },
+        { num: '3.2', texto: 'Termo de Adesão e Ciência de Risco. Envio do Termo de Adesão e Ciência de Risco assinado pelo Subscritor.', area: 'Fin/Ops' },
+        { num: '3.3', texto: 'Boletim de Subscrição. Minuta final do Boletim de Subscrição.', area: 'Fin/Ops' },
+        { num: '3.4', texto: 'CETIP. Iniciado o processo de cadastro de ativo na B3 para recebimento de aportes e negociações, caso aplicável.', area: 'Fin/Ops' },
+        { num: '3.5', texto: 'Oferta. Registro da Oferta na CVM [Rito Automático]', area: 'Fin/Ops' },
+      ]},
+      { categoria: '4. Aspectos Bancários', items: [
+        { num: '4.1', texto: 'Contas Bancárias. Solicitação de abertura em bancos externos, preferência para Bradesco e/ou bancos de grande porte.', area: 'Fin/Ops' },
+        { num: '4.2', texto: 'Conta SELIC. Solicitação de abertura de Conta Selic.', area: 'Fin/Ops' },
+        { num: '4.3', texto: 'Zeragem de Caixa. Solicitação de cadastro do Fundo em fundos de zeragem, como Itáu Soberano e entre outros.', area: 'Fin/Ops' },
+      ]},
+      { categoria: '5. Aspectos Institucionais', items: [
+        { num: '5.1', texto: 'Prestadores de Serviço. Definição e pedido de propostas dos prestadores de serviço do Veiculo: (i) agente ficuciário; (ii) agente de cobrança, (iii) custodiante, (iv) banco liquidante e entre outros.', area: 'Fin/Ops' },
+        { num: '5.2', texto: 'Compliance. Análise do Compliance sobre: (i) Consultor; (ii) Ativos a serem adquiridos; (iii) Cedentes; (iv) Subscritores; e (v) demais prestadores de serviços.', area: 'Fin/Ops' },
+        { num: '5.3', texto: 'Modelagem Financeira. Análise financeira sobre a viabilidade da operação do veiculo, tais como: (i) custos e despesas; (ii) remuneração das debentures/CRs; (iii) PDD esperado e etc.', area: 'Fin/Ops' },
+        { num: '5.4', texto: 'Distribuição. Alinhamento com o time de Distribuição da Netz sobre o cronograma de captação, público-alvo e etc.', area: 'Fin/Ops' },
+        { num: '5.5', texto: 'Comunicação. Envio do comunicado de produto para todas as areas da Netz contendo o Teaser/Blueprint do veiculo e da Oferta, bem como o Dataroom com todos os documentos.', area: 'Fin/Ops' },
+        { num: '5.6', texto: 'Aprovações Internas. Aprovação do veiculo pelo time de Crédito, Gestão e Distribuição.', area: 'Fin/Ops' },
+        { num: '5.7', texto: 'Material de Divulgação. Conclusão do material de divulgalção da operação.', area: 'Fin/Ops' },
+      ]},
+    ]
+  }
+};
+
+// Compatibilidade: alguns lugares antigos podem usar a constante singular
+const NETZ_CHECKLIST_TEMPLATE = NETZ_CHECKLIST_TEMPLATES.fidc.categories;
 
 let sb = null;
 let currentUser = null;
@@ -5226,7 +5418,7 @@ function loadPhaseTemplate() {
 function renderChecklistTemplate(items) {
   const wrap = document.getElementById('checklistTemplateContainer');
   if (!items || items.length === 0) {
-    wrap.innerHTML = '<div style="font-size:12px; color:var(--text-soft); padding:12px; background:var(--bg); border-radius:6px; text-align:center;">Clique em "carregar checklist padrão" para usar o template Netz com 35 itens.</div>';
+    wrap.innerHTML = '<div style="font-size:12px; color:var(--text-soft); padding:12px; background:var(--bg); border-radius:6px; text-align:center;">Clique em "carregar checklist padrão" para escolher um template (FIDC ou Debênture/CR).</div>';
     return;
   }
   // Agrupar por categoria (extraída do num: '1.1' → categoria '1')
@@ -5252,7 +5444,10 @@ function renderChecklistTemplate(items) {
         <input type="checkbox" ${statusVal === 'concluido' ? 'checked' : ''} onchange="toggleTemplateItem(${fullIdx})">
         <span class="item-num">${escapeHtml(it.num)}</span>
         <span class="item-text" title="${escapeAttr(it.texto)}">${escapeHtml(it.texto)}</span>
-        <input type="text" value="${escapeAttr(it.area || 'Fin/Ops')}" placeholder="Área" data-field="area">
+        <select class="ck-area-select" data-field="area">
+          <option value="Fin/Ops" ${(it.area || 'Fin/Ops') === 'Fin/Ops' ? 'selected' : ''}>Fin/Ops</option>
+          <option value="Legal" ${it.area === 'Legal' ? 'selected' : ''}>Legal</option>
+        </select>
         <input type="text" value="${escapeAttr(it.responsavel || '')}" placeholder="Resp." data-field="responsavel" list="respList">
         <input type="date" value="${escapeAttr(it.prazo || '')}" data-field="prazo" title="Prazo">
         <select class="ck-status-${statusVal}" onchange="this.className='ck-status-'+this.value; refreshProgressIndicators();" data-field="status">
@@ -5272,7 +5467,7 @@ function getChecklistTemplate() {
     const checkbox = el.querySelector('input[type="checkbox"]');
     const num = el.querySelector('.item-num').textContent;
     const texto = el.querySelector('.item-text').textContent;
-    const area = el.querySelector('input[data-field="area"]').value;
+    const area = el.querySelector('[data-field="area"]').value;
     const responsavel = el.querySelector('input[data-field="responsavel"]').value;
     const prazo = el.querySelector('input[data-field="prazo"]').value || null;
     const status = el.querySelector('select[data-field="status"]').value;
@@ -5304,21 +5499,71 @@ function removeTemplateItem(idx) {
   renderChecklistTemplate(items);
   refreshProgressIndicators();
 }
+// Abre um picker para escolher qual template carregar
 function loadChecklistTemplate() {
+  // Se já tem itens, avisa que vai substituir
   const current = getChecklistTemplate();
-  if (current.length > 0) {
-    if (!confirm('Substituir o checklist atual pelo template padrão da Netz?')) return;
+  const hasExisting = current.length > 0;
+
+  // Renderiza opções do picker dinamicamente
+  const optsHtml = Object.keys(NETZ_CHECKLIST_TEMPLATES).map(key => {
+    const tpl = NETZ_CHECKLIST_TEMPLATES[key];
+    const totalItems = tpl.categories.reduce((s, c) => s + c.items.length, 0);
+    return `
+      <button class="ck-picker-option" onclick="confirmLoadChecklistTemplate('${key}', ${hasExisting})">
+        <div class="ck-picker-icon">${tpl.icon}</div>
+        <div class="ck-picker-info">
+          <div class="ck-picker-title">${escapeHtml(tpl.label)}</div>
+          <div class="ck-picker-desc">${escapeHtml(tpl.description)}</div>
+          <div class="ck-picker-count">${totalItems} itens · ${tpl.categories.length} categorias</div>
+        </div>
+      </button>
+    `;
+  }).join('');
+
+  document.getElementById('ckPickerOptions').innerHTML = optsHtml;
+  document.getElementById('ckPickerOverlay').classList.add('active');
+}
+
+function closeChecklistPicker() {
+  document.getElementById('ckPickerOverlay').classList.remove('active');
+}
+
+function confirmLoadChecklistTemplate(key, hasExisting) {
+  const tpl = NETZ_CHECKLIST_TEMPLATES[key];
+  if (!tpl) return;
+  if (hasExisting) {
+    if (!confirm(`Substituir o checklist atual pelo template "${tpl.label}"?\n\nOs itens preenchidos serão perdidos.`)) {
+      closeChecklistPicker();
+      return;
+    }
   }
+  closeChecklistPicker();
   const items = [];
-  NETZ_CHECKLIST_TEMPLATE.forEach(cat => {
+  tpl.categories.forEach(cat => {
     cat.items.forEach(it => {
       items.push({
         num: it.num, texto: it.texto, area: it.area,
-        responsavel: '', status: 'pendente', categoria: cat.categoria
+        responsavel: '', prazo: '', status: 'pendente', categoria: cat.categoria
       });
     });
   });
   renderChecklistTemplate(items);
+  refreshProgressIndicators && refreshProgressIndicators();
+  showToast && showToast(`Checklist ${tpl.label} carregado · ${items.length} itens`);
+}
+
+// Limpa todos os itens do checklist Netz
+function clearChecklistTemplate() {
+  const current = getChecklistTemplate();
+  if (current.length === 0) {
+    showToast && showToast('Checklist já está vazio', true);
+    return;
+  }
+  if (!confirm(`Excluir TODOS os ${current.length} itens do checklist Netz?\n\nEsta ação não pode ser desfeita (até salvar).`)) return;
+  renderChecklistTemplate([]);
+  refreshProgressIndicators && refreshProgressIndicators();
+  showToast && showToast('Checklist limpo');
 }
 
 // ============================================
