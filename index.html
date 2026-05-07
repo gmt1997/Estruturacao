@@ -1001,6 +1001,77 @@
     text-transform: uppercase; letter-spacing: 0.04em;
     display: flex; align-items: center; gap: 6px;
   }
+  .receita-cost-badge {
+    background: rgba(201, 59, 59, 0.12);
+    color: var(--red);
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+    letter-spacing: 0.06em;
+    margin-left: 4px;
+  }
+  .receita-card.is-cost {
+    background: rgba(201, 59, 59, 0.025);
+    border-color: rgba(201, 59, 59, 0.15);
+  }
+  .receita-card.is-cost:focus-within {
+    border-color: var(--red);
+  }
+  /* Bloco de custos no resumo */
+  .receita-costs-block {
+    margin-top: 14px;
+    padding: 10px 12px;
+    background: rgba(201, 59, 59, 0.04);
+    border: 1px solid rgba(201, 59, 59, 0.18);
+    border-radius: 6px;
+  }
+  .receita-costs-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(201, 59, 59, 0.15);
+  }
+  .receita-costs-title {
+    font-size: 10px; font-weight: 700;
+    color: var(--red);
+    letter-spacing: 0.06em;
+  }
+  .receita-costs-total {
+    font-family: 'Fraunces', serif;
+    font-size: 14px; font-weight: 600;
+    color: var(--red);
+  }
+  .receita-cost-row {
+    display: grid;
+    grid-template-columns: 8px 1fr auto auto;
+    gap: 8px; align-items: center;
+    padding: 4px 0;
+    font-size: 11px;
+  }
+  .receita-cost-name {
+    color: var(--text);
+  }
+  .receita-cost-count {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    color: var(--text-mute);
+    background: rgba(201, 59, 59, 0.06);
+    padding: 1px 5px;
+    border-radius: 8px;
+  }
+  .receita-cost-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--red);
+    font-weight: 500;
+  }
+  .receita-cost-monthly {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed rgba(201, 59, 59, 0.18);
+    display: flex; justify-content: space-between; align-items: center;
+  }
   .receita-dot {
     width: 8px; height: 8px; border-radius: 50%;
     flex-shrink: 0;
@@ -3029,16 +3100,19 @@
 
       <div class="form-section">
         <div class="form-section-title">
-          <span>Detalhamento de Receita</span>
+          <span>Detalhamento de Receita & Custos</span>
           <div class="form-section-title-actions">
-            <span style="font-size: 11px; color: var(--text-mute);">Soma: <strong id="receitaSomaPreview" style="color: var(--navy);">R$ 0</strong></span>
+            <span style="font-size: 11px; color: var(--text-mute);">
+              Receita: <strong id="receitaSomaPreview" style="color: var(--navy);">R$ 0</strong>
+              <span id="custoSomaWrap" style="display:none; margin-left: 12px;">· Custo: <strong id="custoSomaPreview" style="color: var(--red);">R$ 0</strong></span>
+            </span>
           </div>
         </div>
         <div class="receita-grid" id="receitaGrid">
           <!-- Renderizado dinamicamente em renderReceitaBreakdown() -->
         </div>
         <div style="font-size: 11px; color: var(--text-mute); margin-top: 8px;">
-          Para receitas <strong>recorrentes</strong> (Gestão, Consultoria, Tech), informe valor mensal e prazo em meses — o total é calculado automaticamente.
+          Receitas <strong>recorrentes</strong> (Consultoria, Gestão, Tech): informe % anual ou valor mensal + prazo. <strong>Securitização</strong> é registrada como custo (não soma na receita).
         </div>
       </div>
 
@@ -4778,7 +4852,9 @@ function renderRevenueTypeChart() {
 
   // Decompõe a receita por tipo (recebido + a receber)
   const totalsByType = {};
-  RECEITA_TYPES.forEach(t => totalsByType[t.key] = {
+  // Apenas tipos de RECEITA (exclui custos como Securitização)
+  const revenueTypes = getRevenueTypes();
+  revenueTypes.forEach(t => totalsByType[t.key] = {
     recebido: 0, aReceber: 0, total: 0,
     count: 0, ops: []
   });
@@ -4786,7 +4862,7 @@ function renderRevenueTypeChart() {
   ops.forEach(o => {
     const breakdown = o.receita_breakdown || {};
     const volume = Number(o.valor) || 0;
-    RECEITA_TYPES.forEach(t => {
+    revenueTypes.forEach(t => {
       const item = breakdown[t.key];
       if (!item) return;
       const dec = decomposeReceitaItem(item, t, volume, o.data_liquidacao);
@@ -4835,8 +4911,8 @@ function renderRevenueTypeChart() {
     return;
   }
 
-  // Monta segmentos pra pizza
-  const segments = RECEITA_TYPES
+  // Monta segmentos pra pizza (apenas receitas)
+  const segments = revenueTypes
     .filter(t => totalsByType[t.key].total > 0)
     .map(t => ({
       key: t.key,
@@ -4853,7 +4929,7 @@ function renderRevenueTypeChart() {
   renderPieChart('chartReceitaTipoInner', segments, { valueMode: 'value' });
 
   // Card resumo: lista vertical com os tipos, recebido + a receber
-  const summaryHtml = RECEITA_TYPES.map(t => {
+  const summaryHtml = revenueTypes.map(t => {
     const data = totalsByType[t.key];
     const pct = totalGeral > 0 ? (data.total / totalGeral) * 100 : 0;
     const recurringHint = t.recurring ? ' <span style="font-size:10px; color: var(--text-mute);">(recorrente)</span>' : '';
@@ -4901,6 +4977,28 @@ function renderRevenueTypeChart() {
   // Receita mensal recorrente (apenas das operações no filtro)
   const receitaMensalRec = ops.reduce((sum, o) => sum + calcReceitaMensalRecorrente(o.receita_breakdown, Number(o.valor) || 0), 0);
 
+  // Custos agregados (Securitização etc)
+  const costTypes = getCostTypes();
+  const totalsByCost = {};
+  costTypes.forEach(t => totalsByCost[t.key] = { recebido: 0, aReceber: 0, total: 0, count: 0 });
+  ops.forEach(o => {
+    const breakdown = o.receita_breakdown || {};
+    const volume = Number(o.valor) || 0;
+    costTypes.forEach(t => {
+      const item = breakdown[t.key];
+      if (!item) return;
+      const dec = decomposeReceitaItem(item, t, volume, o.data_liquidacao);
+      if (dec.total > 0) {
+        totalsByCost[t.key].recebido += dec.recebido;
+        totalsByCost[t.key].aReceber += dec.aReceber;
+        totalsByCost[t.key].total += dec.total;
+        totalsByCost[t.key].count++;
+      }
+    });
+  });
+  const custoTotalGeral = Object.values(totalsByCost).reduce((s, x) => s + x.total, 0);
+  const custoMensalRec = ops.reduce((sum, o) => sum + calcCustoMensalRecorrente(o.receita_breakdown, Number(o.valor) || 0), 0);
+
   // Bloco de totais com recebido / a receber se aplicável
   const hasDecomp = recebidoGeral > 0 && aReceberGeral > 0;
   const totalBlocks = `
@@ -4934,10 +5032,38 @@ function renderRevenueTypeChart() {
     </div>
   ` : '';
 
+  // Bloco de custos (se houver)
+  const costsBlock = custoTotalGeral > 0 ? `
+    <div class="receita-costs-block">
+      <div class="receita-costs-header">
+        <span class="receita-costs-title">CUSTOS DA OPERAÇÃO</span>
+        <span class="receita-costs-total">${fmtBRL(custoTotalGeral)}</span>
+      </div>
+      ${costTypes.filter(t => totalsByCost[t.key].total > 0).map(t => {
+        const data = totalsByCost[t.key];
+        return `
+          <div class="receita-cost-row">
+            <span class="receita-dot" style="background: ${t.color};"></span>
+            <span class="receita-cost-name">${t.label}</span>
+            <span class="receita-cost-count">${data.count} op${data.count !== 1 ? 's' : ''}</span>
+            <span class="receita-cost-value">${fmtBRL(data.total)}</span>
+          </div>
+        `;
+      }).join('')}
+      ${custoMensalRec > 0 ? `
+        <div class="receita-cost-monthly">
+          <span class="receita-summary-total-label">Custo mensal recorrente</span>
+          <strong style="color: var(--red);">${fmtBRL(custoMensalRec)}/mês</strong>
+        </div>
+      ` : ''}
+    </div>
+  ` : '';
+
   document.getElementById('chartReceitaSummary').innerHTML = `
     ${legendDecomp}
     <div class="receita-summary-list">${summaryHtml}</div>
     <div class="receita-summary-total">${totalBlocks}</div>
+    ${costsBlock}
   `;
 }
 
@@ -6417,12 +6543,22 @@ function exportCronogramaExcel() {
 // ============================================
 
 const RECEITA_TYPES = [
-  { key: 'estruturacao', label: 'Estruturação', recurring: false, color: '#001B5C' },
-  { key: 'consultoria',  label: 'Consultoria',  recurring: true,  color: '#FF965A' },
-  { key: 'gestao',       label: 'Gestão',       recurring: true,  color: '#15326C' },
-  { key: 'legal',        label: 'Legal',        recurring: false, color: '#6A4A8C' },
-  { key: 'tech',         label: 'Tech',         recurring: true,  color: '#2E7D5B' },
+  { key: 'estruturacao', label: 'Estruturação',  recurring: false, color: '#001B5C' },
+  { key: 'consultoria',  label: 'Consultoria',   recurring: true,  color: '#FF965A' },
+  { key: 'gestao',       label: 'Gestão',        recurring: true,  color: '#15326C' },
+  { key: 'legal',        label: 'Legal',         recurring: false, color: '#6A4A8C' },
+  { key: 'tech',         label: 'Tech',          recurring: true,  color: '#2E7D5B' },
+  { key: 'securitizacao',label: 'Securitização', recurring: true,  color: '#C93B3B', cost: true },
 ];
+
+// Helper: filtra apenas os tipos que são RECEITA (exclui custos como Securitização)
+function getRevenueTypes() {
+  return RECEITA_TYPES.filter(t => !t.cost);
+}
+// Helper: filtra apenas os tipos que são CUSTO
+function getCostTypes() {
+  return RECEITA_TYPES.filter(t => t.cost);
+}
 
 // Para tipos recorrentes, suporta dois modos de cálculo:
 //   modo='pct' : valor_mensal = (volume × pct_anual) / 12  → total = valor_mensal × prazo_meses
@@ -6453,15 +6589,32 @@ function calcReceitaItem(item, typeMeta, volumeOperacao) {
 }
 
 // Calcula o total geral somando os 5 tipos
+// Total de RECEITA (exclui custos como Securitização)
 function calcReceitaTotal(breakdown, volumeOperacao) {
   if (!breakdown) return 0;
-  return RECEITA_TYPES.reduce((sum, t) => sum + calcReceitaItem(breakdown[t.key], t, volumeOperacao), 0);
+  return getRevenueTypes().reduce((sum, t) => sum + calcReceitaItem(breakdown[t.key], t, volumeOperacao), 0);
 }
 
-// Calcula receita mensal recorrente (somando os tipos com modo recorrente ativo)
+// Total de CUSTOS (Securitização e outros custos recorrentes)
+function calcCustoTotal(breakdown, volumeOperacao) {
+  if (!breakdown) return 0;
+  return getCostTypes().reduce((sum, t) => sum + calcReceitaItem(breakdown[t.key], t, volumeOperacao), 0);
+}
+
+// Calcula receita mensal recorrente (somando os tipos com modo recorrente ativo, EXCLUINDO custos)
 function calcReceitaMensalRecorrente(breakdown, volumeOperacao) {
   if (!breakdown) return 0;
-  return RECEITA_TYPES.filter(t => t.recurring).reduce((sum, t) => {
+  return getRevenueTypes().filter(t => t.recurring).reduce((sum, t) => {
+    const item = breakdown[t.key];
+    if (!item || !item.recorrente) return sum;
+    return sum + calcReceitaMensalDoItem(item, volumeOperacao);
+  }, 0);
+}
+
+// Calcula custo mensal recorrente (Securitização etc.)
+function calcCustoMensalRecorrente(breakdown, volumeOperacao) {
+  if (!breakdown) return 0;
+  return getCostTypes().filter(t => t.recurring).reduce((sum, t) => {
     const item = breakdown[t.key];
     if (!item || !item.recorrente) return sum;
     return sum + calcReceitaMensalDoItem(item, volumeOperacao);
@@ -6525,10 +6678,23 @@ function decomposeReceitaItem(item, typeMeta, volumeOperacao, dataLiquidacao) {
 function decomposeReceitaTotal(breakdown, volumeOperacao, dataLiquidacao) {
   const result = { recebido: 0, aReceber: 0, total: 0 };
   if (!breakdown) return result;
-  RECEITA_TYPES.forEach(t => {
+  getRevenueTypes().forEach(t => {
     const dec = decomposeReceitaItem(breakdown[t.key], t, volumeOperacao, dataLiquidacao);
     result.recebido += dec.recebido;
     result.aReceber += dec.aReceber;
+    result.total += dec.total;
+  });
+  return result;
+}
+
+// Decomposição dos CUSTOS (recebido vs a pagar)
+function decomposeCustoTotal(breakdown, volumeOperacao, dataLiquidacao) {
+  const result = { pago: 0, aPagar: 0, total: 0 };
+  if (!breakdown) return result;
+  getCostTypes().forEach(t => {
+    const dec = decomposeReceitaItem(breakdown[t.key], t, volumeOperacao, dataLiquidacao);
+    result.pago += dec.recebido;
+    result.aPagar += dec.aReceber;
     result.total += dec.total;
   });
   return result;
@@ -6659,11 +6825,12 @@ function renderReceitaBreakdown(breakdown) {
     const totalCalc = isRec ? mensalCalc * prazoMeses : valor;
 
     return `
-      <div class="receita-card" data-type="${t.key}" data-modo="${modo}">
+      <div class="receita-card ${t.cost ? 'is-cost' : ''}" data-type="${t.key}" data-modo="${modo}">
         <div class="receita-card-head">
           <div class="receita-card-name">
             <span class="receita-dot" style="background: ${t.color};"></span>
             ${t.label}
+            ${t.cost ? '<span class="receita-cost-badge">CUSTO</span>' : ''}
           </div>
           ${t.recurring ? `
             <label class="receita-card-rec-toggle">
@@ -6789,7 +6956,16 @@ function updateReceitaPreview() {
   const breakdown = getReceitaBreakdown();
   const volume = getCurrentVolume();
   const total = calcReceitaTotal(breakdown, volume);
+  const custo = calcCustoTotal(breakdown, volume);
   document.getElementById('receitaSomaPreview').textContent = fmtBRL(total);
+  const custoWrap = document.getElementById('custoSomaWrap');
+  const custoPreview = document.getElementById('custoSomaPreview');
+  if (custo > 0) {
+    if (custoWrap) custoWrap.style.display = 'inline';
+    if (custoPreview) custoPreview.textContent = fmtBRL(custo);
+  } else {
+    if (custoWrap) custoWrap.style.display = 'none';
+  }
   const fReceita = document.getElementById('fReceita');
   if (fReceita && total > 0) {
     fReceita.value = total;
@@ -7376,14 +7552,19 @@ async function exportPDFExecutivo() {
     y += stageH;
 
     // ====================================================================
-    // Composição de Receita
+    // Composição de Receita (apenas tipos de receita, exclui custos)
     // ====================================================================
+    const revenueTypesPdf = getRevenueTypes();
+    const costTypesPdf = getCostTypes();
     const totalReceitasByType = {};
-    RECEITA_TYPES.forEach(t => totalReceitasByType[t.key] = { recebido: 0, aReceber: 0, total: 0, count: 0 });
+    revenueTypesPdf.forEach(t => totalReceitasByType[t.key] = { recebido: 0, aReceber: 0, total: 0, count: 0 });
+    const totalCustosByType = {};
+    costTypesPdf.forEach(t => totalCustosByType[t.key] = { recebido: 0, aReceber: 0, total: 0, count: 0 });
+
     ops.forEach(o => {
       const breakdown = o.receita_breakdown || {};
       const volume = Number(o.valor) || 0;
-      RECEITA_TYPES.forEach(t => {
+      revenueTypesPdf.forEach(t => {
         const item = breakdown[t.key];
         if (!item) return;
         const dec = decomposeReceitaItem(item, t, volume, o.data_liquidacao);
@@ -7394,15 +7575,27 @@ async function exportPDFExecutivo() {
           totalReceitasByType[t.key].count++;
         }
       });
+      costTypesPdf.forEach(t => {
+        const item = breakdown[t.key];
+        if (!item) return;
+        const dec = decomposeReceitaItem(item, t, volume, o.data_liquidacao);
+        if (dec.total > 0) {
+          totalCustosByType[t.key].recebido += dec.recebido;
+          totalCustosByType[t.key].aReceber += dec.aReceber;
+          totalCustosByType[t.key].total += dec.total;
+          totalCustosByType[t.key].count++;
+        }
+      });
     });
     const totalReceitaGeral = Object.values(totalReceitasByType).reduce((s,x) => s + x.total, 0);
+    const totalCustoGeral = Object.values(totalCustosByType).reduce((s,x) => s + x.total, 0);
 
     if (totalReceitaGeral > 0) {
       drawSectionTitle('Composição de Receita');
-      const recH = 5 * RECEITA_TYPES.length + 14;
+      const recH = 5 * revenueTypesPdf.length + 14;
       ensureSpace(recH + 4);
 
-      RECEITA_TYPES.forEach((t, i) => {
+      revenueTypesPdf.forEach((t, i) => {
         const data = totalReceitasByType[t.key];
         const yPos = y + i * 5;
         // Label com cor
@@ -7447,7 +7640,7 @@ async function exportPDFExecutivo() {
         doc.setTextColor(...NETZ_COLORS.textMute);
         doc.text(fmtBRLshort(data.total), pageW - margin, yPos + 3, { align: 'right' });
       });
-      y += 5 * RECEITA_TYPES.length + 4;
+      y += 5 * revenueTypesPdf.length + 4;
 
       // Totalizadores
       const recebidoGeral = Object.values(totalReceitasByType).reduce((s,x) => s + x.recebido, 0);
@@ -7480,6 +7673,55 @@ async function exportPDFExecutivo() {
     }
 
     // ====================================================================
+    // Custos da Operação (Securitização etc) — bloco separado
+    // ====================================================================
+    if (totalCustoGeral > 0) {
+      ensureSpace(20 + costTypesPdf.length * 5);
+      drawSectionTitle('Custos da Operação');
+
+      costTypesPdf.forEach((t, i) => {
+        const data = totalCustosByType[t.key];
+        if (data.total <= 0) return;
+        const yPos = y + i * 5;
+        doc.setFillColor(...hexToRgb(t.color));
+        doc.circle(margin + 1.5, yPos + 1.7, 1.3, 'F');
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(...NETZ_COLORS.text);
+        doc.text(t.label + (t.recurring ? ' (rec)' : ''), margin + 5, yPos + 3);
+        // Valor
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(...NETZ_COLORS.red);
+        doc.text(fmtBRLshort(data.total), pageW - margin, yPos + 3, { align: 'right' });
+        // Count
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(...NETZ_COLORS.textMute);
+        doc.text(`${data.count} op${data.count !== 1 ? 's' : ''}`, pageW - margin - 30, yPos + 3, { align: 'right' });
+      });
+      y += 5 * costTypesPdf.length + 4;
+
+      // Custo mensal recorrente
+      const custoMensalRec = ops.reduce((sum, o) => sum + calcCustoMensalRecorrente(o.receita_breakdown, Number(o.valor) || 0), 0);
+      doc.setDrawColor(...NETZ_COLORS.border);
+      doc.setLineWidth(0.2);
+      doc.line(margin, y + 1, pageW - margin, y + 1);
+      y += 4;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6.5);
+      doc.setTextColor(...NETZ_COLORS.textMute);
+      doc.text('TOTAL DE CUSTOS', margin, y);
+      doc.text('MENSAL RECORRENTE', margin + (pageW - margin * 2) / 2, y);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(...NETZ_COLORS.red);
+      doc.text(fmtBRLshort(totalCustoGeral), margin, y + 5);
+      doc.text(fmtBRLshort(custoMensalRec) + '/mês', margin + (pageW - margin * 2) / 2, y + 5);
+      y += 10;
+    }
+
+    // ====================================================================================
     // Operações por Status (todas, agrupadas)
     // ====================================================================
     drawSectionTitle('Operações por Status');
