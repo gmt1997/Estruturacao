@@ -389,6 +389,92 @@
   }
   @media (max-width: 1100px) { .charts-grid { grid-template-columns: 1fr; } }
 
+  /* Barra de filtro de período dos gráficos mensais */
+  .charts-period-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    flex-wrap: wrap;
+  }
+  .charts-period-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .charts-period-buttons {
+    display: flex;
+    gap: 4px;
+  }
+  .charts-period-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    padding: 5px 12px;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .charts-period-btn:hover {
+    background: var(--blue-light);
+    border-color: var(--blue-pale);
+  }
+  .charts-period-btn.active {
+    background: var(--navy);
+    color: #fff;
+    border-color: var(--navy);
+  }
+  .charts-period-custom {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+  }
+  .charts-period-custom.show {
+    display: flex;
+  }
+  .charts-period-input {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 5px 8px;
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--text);
+    background: #fff;
+  }
+  .charts-period-input:focus {
+    outline: none;
+    border-color: var(--orange);
+  }
+  .charts-period-arrow {
+    color: var(--text-mute);
+    font-size: 14px;
+  }
+  .charts-period-apply {
+    background: var(--orange);
+    color: #fff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .charts-period-apply:hover {
+    background: var(--orange-dim);
+  }
+
   /* Single chart card (full width) */
   .single-chart-card {
     margin-bottom: 24px;
@@ -2526,6 +2612,26 @@
       <div class="kpi-grid" id="kpiGrid"></div>
 
       <h2 class="section-title">Receita & Volume Mensal</h2>
+
+      <!-- Filtro de período dos gráficos mensais -->
+      <div class="charts-period-bar">
+        <div class="charts-period-label">Período:</div>
+        <div class="charts-period-buttons">
+          <button class="charts-period-btn" data-mode="3m" onclick="setChartsFilter('3m')">3m</button>
+          <button class="charts-period-btn" data-mode="6m" onclick="setChartsFilter('6m')">6m</button>
+          <button class="charts-period-btn active" data-mode="12m" onclick="setChartsFilter('12m')">12m</button>
+          <button class="charts-period-btn" data-mode="24m" onclick="setChartsFilter('24m')">24m</button>
+          <button class="charts-period-btn" data-mode="ytd" onclick="setChartsFilter('ytd')">YTD</button>
+          <button class="charts-period-btn" data-mode="custom" onclick="setChartsFilter('custom')">Customizado</button>
+        </div>
+        <div class="charts-period-custom" id="chartsCustomRange">
+          <input type="month" id="chartsFrom" class="charts-period-input">
+          <span class="charts-period-arrow">→</span>
+          <input type="month" id="chartsTo" class="charts-period-input">
+          <button class="charts-period-apply" onclick="applyChartsCustomRange()">Aplicar</button>
+        </div>
+      </div>
+
       <div class="charts-grid">
         <div class="chart-card">
           <h3>Receita · Realizado vs. Projetado</h3>
@@ -3569,6 +3675,8 @@ function populateRespList() {
 // ===== Dashboard Filters =====
 state.dashFilter = { period: 'ytd', tipo: '', status: '', resp: '', cliente: '' };
 state.revenueFilter = 'all'; // 'pipeline' (apenas em estruturação), 'liquidated' (apenas liquidadas), 'all' (tudo)
+// Filtro de período dos gráficos mensais (Receita, Volume, Aportes) — independente do dashFilter
+state.chartsFilter = { mode: '12m', from: null, to: null };
 
 function populateDashFilters() {
   const ops = state.operations;
@@ -3862,6 +3970,107 @@ function getDashMonthRange() {
 }
 function getLast12Months() { return getDashMonthRange(); }
 
+// ============================================
+// Filtro de período dos gráficos mensais (independente do dashFilter)
+// ============================================
+function getChartsMonthRange() {
+  const f = state.chartsFilter || { mode: '12m' };
+  const now = new Date();
+  const todayY = now.getFullYear();
+  const todayM = now.getMonth();
+
+  // Modo customizado: usa from/to
+  if (f.mode === 'custom' && f.from && f.to) {
+    const months = [];
+    const [fY, fM] = f.from.split('-').map(Number);
+    const [tY, tM] = f.to.split('-').map(Number);
+    let y = fY, m = fM - 1;
+    while (y < tY || (y === tY && m <= tM - 1)) {
+      months.push(`${y}-${String(m+1).padStart(2,'0')}`);
+      m++;
+      if (m >= 12) { m = 0; y++; }
+      if (months.length > 60) break; // segurança
+    }
+    return months;
+  }
+
+  // YTD: jan do ano corrente até dezembro
+  if (f.mode === 'ytd') {
+    return Array.from({ length: 12 }, (_, i) => `${todayY}-${String(i+1).padStart(2,'0')}`);
+  }
+
+  // Presets: 3m, 6m, 12m, 24m — distribuídos ao redor de hoje
+  // Distribuição: aproximadamente metade passados + mês atual + metade futuros
+  const totalMonths = parseInt(f.mode, 10) || 12;
+  const monthsBack = Math.floor((totalMonths - 1) / 2);  // passados (não inclui mês atual)
+  const monthsForward = totalMonths - 1 - monthsBack;    // futuros
+
+  const months = [];
+  for (let i = monthsBack; i >= 1; i--) {
+    const d = new Date(todayY, todayM - i, 1);
+    months.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  }
+  months.push(`${todayY}-${String(todayM+1).padStart(2,'0')}`);
+  for (let i = 1; i <= monthsForward; i++) {
+    const d = new Date(todayY, todayM + i, 1);
+    months.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  }
+  return months;
+}
+
+// Aplica preset
+function setChartsFilter(mode) {
+  state.chartsFilter.mode = mode;
+  if (mode !== 'custom') {
+    state.chartsFilter.from = null;
+    state.chartsFilter.to = null;
+    document.getElementById('chartsCustomRange')?.classList.remove('show');
+  } else {
+    // Inicializa com últimos 12 meses como sugestão
+    if (!state.chartsFilter.from || !state.chartsFilter.to) {
+      const now = new Date();
+      const past = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+      const future = new Date(now.getFullYear(), now.getMonth() + 6, 1);
+      state.chartsFilter.from = `${past.getFullYear()}-${String(past.getMonth()+1).padStart(2,'0')}`;
+      state.chartsFilter.to = `${future.getFullYear()}-${String(future.getMonth()+1).padStart(2,'0')}`;
+      const fromInput = document.getElementById('chartsFrom');
+      const toInput = document.getElementById('chartsTo');
+      if (fromInput) fromInput.value = state.chartsFilter.from;
+      if (toInput) toInput.value = state.chartsFilter.to;
+    }
+    document.getElementById('chartsCustomRange')?.classList.add('show');
+  }
+  // Atualiza visual dos botões
+  document.querySelectorAll('.charts-period-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  rerenderMonthlyCharts();
+}
+
+function applyChartsCustomRange() {
+  const fromInput = document.getElementById('chartsFrom');
+  const toInput = document.getElementById('chartsTo');
+  if (!fromInput || !toInput) return;
+  if (!fromInput.value || !toInput.value) {
+    showToast && showToast('Preencha as duas datas', true);
+    return;
+  }
+  if (fromInput.value > toInput.value) {
+    showToast && showToast('Data inicial deve ser anterior à final', true);
+    return;
+  }
+  state.chartsFilter.mode = 'custom';
+  state.chartsFilter.from = fromInput.value;
+  state.chartsFilter.to = toInput.value;
+  rerenderMonthlyCharts();
+}
+
+function rerenderMonthlyCharts() {
+  if (typeof renderRevenueMonthlyChart === 'function') renderRevenueMonthlyChart();
+  if (typeof renderVolumeMonthlyChart === 'function') renderVolumeMonthlyChart();
+  if (typeof renderAportesChart === 'function') renderAportesChart();
+}
+
 const MONTH_NAMES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 function monthLabelShort(ym) {
   const [y, m] = ym.split('-');
@@ -3881,7 +4090,7 @@ function monthLabel(ym) { return monthLabelShort(ym); }
 // monthlyProjected: { 'YYYY-MM': projetadoValue }
 // monthlyProjectedOps: { 'YYYY-MM': [{ nome, val }] }  (operações projetadas)
 function renderTimeSeriesChart(containerId, monthlyData, monthlyOps, monthlyProjected, monthlyProjectedOps, options) {
-  const months = getLast12Months();
+  const months = getChartsMonthRange();
   const realValues = months.map(m => monthlyData[m] || 0);
   const projValues = months.map(m => (monthlyProjected && monthlyProjected[m]) || 0);
   // Para o eixo Y, considerar o máximo entre realizado e projetado
