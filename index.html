@@ -388,6 +388,100 @@
     margin-bottom: 24px;
   }
   @media (max-width: 1100px) { .charts-grid { grid-template-columns: 1fr; } }
+
+  /* Single chart card (full width) */
+  .single-chart-card {
+    margin-bottom: 24px;
+  }
+  .chart-card-wide {
+    /* mesmo estilo do .chart-card mas largura total */
+  }
+
+  /* Mini-cronograma de captação no modal */
+  .captacao-schedule {
+    margin-top: 12px;
+  }
+  .captacao-table-mini {
+    background: var(--bg);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    padding: 8px 12px;
+    max-height: 240px;
+    overflow-y: auto;
+  }
+  .cap-mini-head {
+    display: grid;
+    grid-template-columns: 80px 1fr 110px;
+    gap: 12px;
+    padding: 6px 4px;
+    border-bottom: 1px solid var(--border);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .cap-mini-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 110px;
+    gap: 12px;
+    padding: 6px 4px;
+    align-items: center;
+    border-bottom: 1px solid var(--border-soft);
+    font-size: 12px;
+  }
+  .cap-mini-row:last-child {
+    border-bottom: none;
+  }
+  .cap-mini-row.realizado {
+    background: rgba(46, 125, 91, 0.04);
+  }
+  .cap-mini-row.realizado .cap-mini-status {
+    color: var(--green);
+    font-weight: 500;
+  }
+  .cap-mini-row.projetado .cap-mini-status {
+    color: var(--orange-dim);
+  }
+  .cap-mini-mes {
+    font-size: 11px;
+    color: var(--text-mute);
+  }
+  .cap-mini-val {
+    color: var(--navy);
+    font-weight: 500;
+  }
+  .cap-mini-status {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    text-align: right;
+  }
+  .cap-first-badge {
+    display: inline-block;
+    background: var(--orange);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 8px;
+    margin-left: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .cap-mini-total {
+    display: grid;
+    grid-template-columns: 80px 1fr 110px;
+    gap: 12px;
+    padding: 8px 4px 4px;
+    border-top: 2px solid var(--border);
+    margin-top: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--navy);
+  }
+
   .chart-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -2443,6 +2537,19 @@
         </div>
       </div>
 
+      <h2 class="section-title">Aportes & Desembolsos para Captação</h2>
+      <div class="single-chart-card">
+        <div class="chart-card chart-card-wide">
+          <h3>
+            Cronograma de Desembolsos por Mês
+            <span style="font-size: 11px; font-weight: 400; color: var(--text-mute); margin-left: 8px;">
+              · separação de recursos para o time de captação
+            </span>
+          </h3>
+          <div id="chartAportes"></div>
+        </div>
+      </div>
+
       <h2 class="section-title">Funil de Conversão & Distribuição</h2>
       <div class="charts-grid">
         <div class="chart-card">
@@ -2706,6 +2813,33 @@
             <input type="date" id="fDataLiquidacao">
             <div class="input-help">Quando a operação virou dinheiro</div>
           </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">
+          <span>Captação & Desembolso</span>
+          <div class="form-section-title-actions">
+            <span style="font-size: 11px; color: var(--text-mute);">Aportes mensais previstos: <strong id="aportePreview" style="color: var(--navy);">R$ 0/mês</strong></span>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label>1ª Liberação (R$)</label>
+            <div class="field-currency">
+              <input type="number" id="fPrimeiraLiberacao" step="100000" placeholder="0" oninput="onCaptacaoInput()">
+            </div>
+            <div class="input-help">Valor desembolsado no mês da liquidação</div>
+          </div>
+          <div class="field">
+            <label>Período de Captação (meses)</label>
+            <input type="number" id="fPeriodoCaptacao" min="1" max="60" step="1" placeholder="1" oninput="onCaptacaoInput()">
+            <div class="input-help">Em quantos meses o desembolso total ocorre (incluindo o mês da 1ª liberação)</div>
+          </div>
+        </div>
+        <div id="captacaoSchedule" class="captacao-schedule"></div>
+        <div style="font-size: 11px; color: var(--text-mute); margin-top: 8px;">
+          Após a 1ª liberação, o restante é distribuído uniformemente nos meses seguintes. Use para alinhar o time de captação sobre quanto separar de recursos por mês.
         </div>
       </div>
 
@@ -3401,6 +3535,7 @@ function renderAll() {
   renderKPIs();
   renderRevenueMonthlyChart();
   renderVolumeMonthlyChart();
+  renderAportesChart();
   renderFunnelChart();
   renderTipoChart();
   renderStatusChart();
@@ -3509,6 +3644,7 @@ function onDashFilterChange() {
   renderKPIs();
   renderRevenueMonthlyChart();
   renderVolumeMonthlyChart();
+  renderAportesChart();
   renderFunnelChart();
   renderTipoChart();
   renderStatusChart();
@@ -4013,6 +4149,45 @@ function renderVolumeMonthlyChart() {
   Object.keys(monthlyOps).forEach(k => monthlyOps[k].sort((a,b) => b.val - a.val));
   Object.keys(monthlyProjectedOps).forEach(k => monthlyProjectedOps[k].sort((a,b) => b.val - a.val));
   renderTimeSeriesChart('chartVolumeMonthly', monthly, monthlyOps, monthlyProjected, monthlyProjectedOps, { color: 'navy' });
+}
+
+// ===== Aportes & Desembolsos =====
+// Para cada operação aplicável, distribui o valor mensal segundo getAportesSchedule()
+// e separa em "realizado" (mês passado/atual COM operação liquidada) vs "projetado".
+function renderAportesChart() {
+  const ops = getFilteredOps();
+  const monthly = {};            // realizado (operações já liquidadas com aportes em meses passados/atuais)
+  const monthlyOps = {};
+  const monthlyProjected = {};   // projetado (futuro ou ainda não liquidado)
+  const monthlyProjectedOps = {};
+
+  const todayD = new Date(); todayD.setDate(1); todayD.setHours(0,0,0,0);
+  const todayYM = `${todayD.getFullYear()}-${String(todayD.getMonth()+1).padStart(2,'0')}`;
+
+  ops.forEach(o => {
+    if (o.status === 'stand') return; // ignora stand-by no cronograma
+    const schedule = getAportesSchedule(o);
+    if (schedule.length === 0) return;
+    const liquidada = !!o.data_liquidacao;
+
+    schedule.forEach(s => {
+      // "Realizado" só faz sentido se a operação já liquidou e o mês é <= hoje
+      const isRealizado = liquidada && s.ym <= todayYM;
+      const target = isRealizado ? monthly : monthlyProjected;
+      const targetOps = isRealizado ? monthlyOps : monthlyProjectedOps;
+      target[s.ym] = (target[s.ym] || 0) + s.valor;
+      if (!targetOps[s.ym]) targetOps[s.ym] = [];
+      targetOps[s.ym].push({
+        nome: o.nome + (s.isFirst ? ' (1ª lib)' : ''),
+        val: s.valor
+      });
+    });
+  });
+
+  Object.keys(monthlyOps).forEach(k => monthlyOps[k].sort((a,b) => b.val - a.val));
+  Object.keys(monthlyProjectedOps).forEach(k => monthlyProjectedOps[k].sort((a,b) => b.val - a.val));
+
+  renderTimeSeriesChart('chartAportes', monthly, monthlyOps, monthlyProjected, monthlyProjectedOps, { color: 'navy' });
 }
 
 // ===== Funil =====
@@ -5312,18 +5487,31 @@ function openModal(opId) {
   document.getElementById('fDataInicio').value = op.data_inicio || '';
   document.getElementById('fDataPrevista').value = op.data_prevista || '';
   document.getElementById('fDataLiquidacao').value = op.data_liquidacao || '';
+  document.getElementById('fPrimeiraLiberacao').value = op.primeira_liberacao || '';
+  document.getElementById('fPeriodoCaptacao').value = op.periodo_captacao_meses || '';
   document.getElementById('fObs').value = op.obs || '';
 
   // Indicadores de progresso (calculados em tempo real)
   renderProgressIndicators(op);
-  // Quando datas mudam, recalcula
+  // Captação schedule
+  onCaptacaoInput();
+  // Quando datas mudam, recalcula progresso E captação
   ['fDataInicio', 'fDataPrevista', 'fDataLiquidacao'].forEach(id => {
     const el = document.getElementById(id);
     if (el && !el.dataset.progressListener) {
-      el.addEventListener('change', () => renderProgressIndicators(getOpFromForm()));
+      el.addEventListener('change', () => {
+        renderProgressIndicators(getOpFromForm());
+        onCaptacaoInput();
+      });
       el.dataset.progressListener = '1';
     }
   });
+  // Quando volume muda, recalcula captação também
+  const fValorEl = document.getElementById('fValor');
+  if (fValorEl && !fValorEl.dataset.captacaoListener) {
+    fValorEl.addEventListener('input', () => onCaptacaoInput());
+    fValorEl.dataset.captacaoListener = '1';
+  }
 
   if (isEdit) {
     document.getElementById('auditCreated').textContent = `${op.criado_por_email || '—'} · ${fmtDateTime(op.criado_em)}`;
@@ -5333,11 +5521,11 @@ function openModal(opId) {
   renderPhases(op.phases || []);
   renderReceitaBreakdown(op.receita_breakdown || {});
 
-  // Recalcular receita quando o volume mudar (afeta cálculos baseados em %)
-  const fValorEl = document.getElementById('fValor');
-  if (fValorEl && !fValorEl.dataset.receitaListener) {
-    fValorEl.addEventListener('input', () => onReceitaInput());
-    fValorEl.dataset.receitaListener = '1';
+  // Listener no campo Volume — afeta receita (% do volume) e captação (cronograma de aportes)
+  const fValorEl2 = document.getElementById('fValor');
+  if (fValorEl2 && !fValorEl2.dataset.receitaListener) {
+    fValorEl2.addEventListener('input', () => onReceitaInput());
+    fValorEl2.dataset.receitaListener = '1';
   }
 
   // Separar checklist em template (com num) e custom (sem num)
@@ -5564,6 +5752,125 @@ function clearChecklistTemplate() {
   renderChecklistTemplate([]);
   refreshProgressIndicators && refreshProgressIndicators();
   showToast && showToast('Checklist limpo');
+}
+
+// ============================================
+// CAPTAÇÃO & DESEMBOLSO
+// ============================================
+
+// Retorna array de aportes mensais previstos: [{ ym: '2026-05', valor: 5000000, isFirst: true }, ...]
+// Lógica: 1ª liberação no mês da data_prevista (ou data_liquidacao se já existe).
+// Restante distribuído uniformemente nos (período - 1) meses seguintes.
+function getAportesSchedule(op) {
+  if (!op) return [];
+  const volumeTotal = Number(op.valor) || 0;
+  if (volumeTotal <= 0) return [];
+
+  const primeira = Math.min(Number(op.primeira_liberacao) || 0, volumeTotal);
+  const periodo = Math.max(1, Number(op.periodo_captacao_meses) || 1);
+
+  // Data-base: liquidação prevista (preferencial) ou data_liquidacao
+  const dataBase = op.data_liquidacao || op.data_prevista;
+  if (!dataBase) return [];
+
+  const result = [];
+  const baseDate = new Date(dataBase + 'T00:00:00');
+  const baseY = baseDate.getFullYear();
+  const baseM = baseDate.getMonth();
+
+  if (periodo === 1) {
+    // Tudo no primeiro mês
+    result.push({
+      ym: `${baseY}-${String(baseM + 1).padStart(2, '0')}`,
+      valor: volumeTotal,
+      isFirst: true
+    });
+    return result;
+  }
+
+  // Mês 1: primeira liberação
+  const restante = Math.max(0, volumeTotal - primeira);
+  const mensal = restante / (periodo - 1);
+
+  for (let i = 0; i < periodo; i++) {
+    const d = new Date(baseY, baseM + i, 1);
+    const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    result.push({
+      ym,
+      valor: i === 0 ? primeira : mensal,
+      isFirst: i === 0
+    });
+  }
+  return result;
+}
+
+// Lê o estado atual do form pra calcular schedule em tempo real
+function getOpFromCaptacaoForm() {
+  return {
+    valor: Number(document.getElementById('fValor')?.value) || 0,
+    primeira_liberacao: Number(document.getElementById('fPrimeiraLiberacao')?.value) || 0,
+    periodo_captacao_meses: Number(document.getElementById('fPeriodoCaptacao')?.value) || 1,
+    data_liquidacao: document.getElementById('fDataLiquidacao')?.value || null,
+    data_prevista: document.getElementById('fDataPrevista')?.value || null,
+  };
+}
+
+function onCaptacaoInput() {
+  const op = getOpFromCaptacaoForm();
+  const schedule = getAportesSchedule(op);
+  const wrap = document.getElementById('captacaoSchedule');
+  const preview = document.getElementById('aportePreview');
+
+  if (schedule.length === 0) {
+    wrap.innerHTML = '';
+    if (preview) preview.textContent = 'R$ 0/mês';
+    return;
+  }
+
+  // Cálculo da média mensal pós-1ª-liberação
+  const periodo = Math.max(1, Number(op.periodo_captacao_meses) || 1);
+  const mensal = periodo > 1 ? (Number(op.valor) - Number(op.primeira_liberacao)) / (periodo - 1) : 0;
+  if (preview) preview.textContent = periodo > 1 ? `${fmtBRLshort(mensal)}/mês × ${periodo - 1}m` : 'liberação única';
+
+  // Render do cronograma (mini visualização inline)
+  const totalCheck = schedule.reduce((s, x) => s + x.valor, 0);
+  const todayYM = (() => {
+    const t = new Date();
+    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}`;
+  })();
+
+  wrap.innerHTML = `
+    <div class="captacao-table-mini">
+      <div class="cap-mini-head">
+        <span>Mês</span><span>Aporte</span><span>Status</span>
+      </div>
+      ${schedule.map(s => {
+        const isPast = s.ym < todayYM;
+        const isCurrent = s.ym === todayYM;
+        const isLiquidada = !!op.data_liquidacao;
+        const realizado = isLiquidada && (isPast || isCurrent);
+        return `
+          <div class="cap-mini-row ${realizado ? 'realizado' : 'projetado'}">
+            <span class="cap-mini-mes mono">${formatYM(s.ym)}</span>
+            <span class="cap-mini-val mono">${fmtBRL(s.valor)}${s.isFirst ? ' <span class="cap-first-badge">1ª</span>' : ''}</span>
+            <span class="cap-mini-status">${realizado ? 'desembolsado' : 'a desembolsar'}</span>
+          </div>
+        `;
+      }).join('')}
+      <div class="cap-mini-total">
+        <span>Total</span>
+        <span class="mono">${fmtBRL(totalCheck)}</span>
+        <span></span>
+      </div>
+    </div>
+  `;
+}
+
+// Helper pra formatar 'YYYY-MM' para 'mmm/AA'
+function formatYM(ym) {
+  const [y, m] = ym.split('-').map(Number);
+  const meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  return `${meses[m-1]}/${String(y).slice(-2)}`;
 }
 
 // ============================================
@@ -6078,6 +6385,8 @@ async function saveOp() {
     receita: Number(document.getElementById('fReceita').value) || 0,
     volume_liquidado: Number(document.getElementById('fVolumeLiquidado').value) || 0,
     receita_realizada: Number(document.getElementById('fReceitaRealizada').value) || 0,
+    primeira_liberacao: Number(document.getElementById('fPrimeiraLiberacao').value) || 0,
+    periodo_captacao_meses: Number(document.getElementById('fPeriodoCaptacao').value) || 1,
     progresso: progressoCalc,
     data_inicio: dataInicio,
     data_prevista: dataPrevista,
