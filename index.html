@@ -10,7 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <style>
   :root {
     --navy:        #001B5C;
@@ -2928,7 +2928,8 @@
         <div class="form-section-title">
           <span>Captação & Desembolso</span>
           <div class="form-section-title-actions">
-            <span style="font-size: 11px; color: var(--text-mute);">Aportes mensais previstos: <strong id="aportePreview" style="color: var(--navy);">R$ 0/mês</strong></span>
+            <button type="button" class="phase-template-btn" onclick="exportCronogramaExcel()" title="Gerar Excel para enviar ao cliente">📊 Excel para o cliente</button>
+            <span style="font-size: 11px; color: var(--text-mute); margin-left: 10px;">Aportes mensais previstos: <strong id="aportePreview" style="color: var(--navy);">R$ 0/mês</strong></span>
           </div>
         </div>
         <div class="form-grid">
@@ -6087,6 +6088,223 @@ function formatYM(ym) {
   return `${meses[m-1]}/${String(y).slice(-2)}`;
 }
 
+// Exporta cronograma de desembolsos em Excel formatado para envio ao cliente
+function exportCronogramaExcel() {
+  if (!window.XLSX) {
+    showToast('Carregando bibliotecas... tente novamente em 2s', true);
+    return;
+  }
+  const op = getOpFromCaptacaoForm();
+  const opNome = (document.getElementById('fNome')?.value || '').trim() || 'Operação';
+  const opCliente = (document.getElementById('fCliente')?.value || '').trim() || '';
+  const opTipo = (document.getElementById('fTipo')?.value || '').trim() || '';
+
+  const schedule = getAportesSchedule(op);
+  if (schedule.length === 0) {
+    showToast('Preencha o volume e a 1ª liberação primeiro', true);
+    return;
+  }
+
+  const wb = XLSX.utils.book_new();
+
+  // Cabeçalho de identificação
+  const aoa = [
+    ['NETZ SOLUTION'],
+    ['CRONOGRAMA INDICATIVO DE DESEMBOLSOS'],
+    [],
+    ['Operação:', opNome],
+    ['Cliente / Originador:', opCliente || '—'],
+    ['Tipo de Estruturação:', opTipo || '—'],
+    ['Volume Total:', Number(op.valor) || 0],
+    ['1ª Liberação:', Number(op.primeira_liberacao) || 0],
+    ['Período de Captação:', `${op.periodo_captacao_meses || 1} meses`],
+    ['Data de Liquidação Prevista:', op.data_liquidacao || op.data_prevista || '—'],
+    ['Data de Emissão do Cronograma:', new Date().toLocaleDateString('pt-BR')],
+    [],
+    [],
+    ['#', 'Mês de Referência', 'Valor do Aporte', 'Tipo de Aporte', 'Acumulado']
+  ];
+
+  let acumulado = 0;
+  schedule.forEach((s, i) => {
+    acumulado += s.valor;
+    aoa.push([
+      i + 1,
+      formatYM(s.ym),
+      s.valor,
+      s.isFirst ? '1ª Liberação' : 'Aporte mensal',
+      acumulado
+    ]);
+  });
+
+  aoa.push([]);
+  aoa.push(['', 'TOTAL', Number(op.valor) || 0, '', '']);
+  aoa.push([]);
+  aoa.push([]);
+  aoa.push(['Observações:']);
+  aoa.push(['• Cronograma indicativo. Valores e datas podem ser ajustados conforme a estruturação avança.']);
+  aoa.push(['• A 1ª Liberação ocorre no mês da liquidação da operação.']);
+  aoa.push(['• Os aportes subsequentes são distribuídos uniformemente ao longo do período de captação.']);
+  aoa.push(['• Este documento não constitui compromisso financeiro. Para informações vinculantes, consulte o termo definitivo.']);
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+  ws['!cols'] = [
+    { wch: 8 }, { wch: 32 }, { wch: 22 }, { wch: 22 }, { wch: 22 }
+  ];
+
+  ws['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 4 } },
+    { s: { r: 3, c: 1 }, e: { r: 3, c: 4 } },
+    { s: { r: 4, c: 1 }, e: { r: 4, c: 4 } },
+    { s: { r: 5, c: 1 }, e: { r: 5, c: 4 } },
+    { s: { r: 6, c: 1 }, e: { r: 6, c: 4 } },
+    { s: { r: 7, c: 1 }, e: { r: 7, c: 4 } },
+    { s: { r: 8, c: 1 }, e: { r: 8, c: 4 } },
+    { s: { r: 9, c: 1 }, e: { r: 9, c: 4 } },
+    { s: { r: 10, c: 1 }, e: { r: 10, c: 4 } },
+  ];
+
+  // ===== Estilos =====
+  const NAVY = '001B5C';
+  const ORANGE = 'FF965A';
+  const BLUE_LIGHT = 'E4F3FF';
+  const BLUE_PALE = 'F0F6FC';
+  const TEXT = '0E1B3D';
+  const TEXT_MUTE = '5A6785';
+  const BORDER = 'DCE3EE';
+
+  const setStyle = (ref, style) => {
+    if (!ws[ref]) return;
+    ws[ref].s = style;
+  };
+
+  // Título (linha 1)
+  setStyle('A1', {
+    font: { bold: true, sz: 18, color: { rgb: 'FFFFFF' }, name: 'Calibri' },
+    fill: { patternType: 'solid', fgColor: { rgb: NAVY } },
+    alignment: { horizontal: 'center', vertical: 'center' }
+  });
+
+  // Subtítulo (linha 2)
+  setStyle('A2', {
+    font: { bold: true, sz: 13, color: { rgb: NAVY }, name: 'Calibri' },
+    fill: { patternType: 'solid', fgColor: { rgb: BLUE_LIGHT } },
+    alignment: { horizontal: 'center', vertical: 'center' }
+  });
+
+  // Linhas de info (4 a 11, ou seja, índices excel 4 até 11 = rows 3..10 zero-indexed)
+  for (let rExcel = 4; rExcel <= 11; rExcel++) {
+    setStyle(`A${rExcel}`, {
+      font: { bold: true, sz: 10, color: { rgb: TEXT_MUTE }, name: 'Calibri' },
+      alignment: { horizontal: 'left', vertical: 'center' }
+    });
+    const refB = `B${rExcel}`;
+    const isMoney = rExcel === 7 || rExcel === 8;  // Volume Total e 1ª Liberação
+    setStyle(refB, {
+      font: { sz: 10, color: { rgb: TEXT }, bold: isMoney, name: 'Calibri' },
+      alignment: { horizontal: 'left', vertical: 'center' }
+    });
+    if (isMoney && ws[refB] && typeof ws[refB].v === 'number') {
+      ws[refB].t = 'n';
+      ws[refB].z = '"R$" #,##0.00';
+    }
+  }
+
+  // Header da tabela (linha 14, índice 13)
+  ['A14','B14','C14','D14','E14'].forEach(ref => {
+    setStyle(ref, {
+      font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' }, name: 'Calibri' },
+      fill: { patternType: 'solid', fgColor: { rgb: NAVY } },
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: {
+        top: { style: 'thin', color: { rgb: NAVY } },
+        bottom: { style: 'thin', color: { rgb: NAVY } },
+        left: { style: 'thin', color: { rgb: 'FFFFFF' } },
+        right: { style: 'thin', color: { rgb: 'FFFFFF' } }
+      }
+    });
+  });
+
+  // Linhas dos aportes (linha 15 em diante)
+  for (let i = 0; i < schedule.length; i++) {
+    const rowExcel = 15 + i;
+    const isFirst = schedule[i].isFirst;
+    const zebra = i % 2 === 0 ? 'FFFFFF' : BLUE_PALE;
+    const bgColor = isFirst ? 'FFF1E5' : zebra;
+
+    ['A','B','C','D','E'].forEach((col, ci) => {
+      const ref = `${col}${rowExcel}`;
+      const isMoney = col === 'C' || col === 'E';
+      const halign = ci === 0 ? 'center' : (isMoney ? 'right' : 'left');
+      setStyle(ref, {
+        font: {
+          sz: 10,
+          color: { rgb: TEXT },
+          bold: isFirst && col === 'C',
+          name: 'Calibri'
+        },
+        fill: { patternType: 'solid', fgColor: { rgb: bgColor } },
+        alignment: { horizontal: halign, vertical: 'center' },
+        border: {
+          bottom: { style: 'thin', color: { rgb: BORDER } }
+        }
+      });
+      if (isMoney && ws[ref] && typeof ws[ref].v === 'number') {
+        ws[ref].t = 'n';
+        ws[ref].z = '"R$" #,##0.00';
+      }
+    });
+  }
+
+  // Linha do TOTAL (logo após aportes + 1 linha vazia)
+  const totalRowExcel = 15 + schedule.length + 1;
+  ['A','B','C','D','E'].forEach((col, ci) => {
+    const ref = `${col}${totalRowExcel}`;
+    if (!ws[ref]) {
+      ws[ref] = { v: '', t: 's' };
+    }
+    const isMoney = col === 'C';
+    const halign = ci === 0 ? 'center' : (col === 'C' || col === 'E' ? 'right' : 'left');
+    setStyle(ref, {
+      font: { bold: true, sz: 12, color: { rgb: 'FFFFFF' }, name: 'Calibri' },
+      fill: { patternType: 'solid', fgColor: { rgb: ORANGE } },
+      alignment: { horizontal: halign, vertical: 'center' }
+    });
+    if (isMoney && typeof ws[ref].v === 'number') {
+      ws[ref].t = 'n';
+      ws[ref].z = '"R$" #,##0.00';
+    }
+  });
+
+  // Observações (label em destaque)
+  const obsRowExcel = totalRowExcel + 3;
+  setStyle(`A${obsRowExcel}`, {
+    font: { bold: true, sz: 10, color: { rgb: NAVY }, name: 'Calibri' }
+  });
+  for (let i = 1; i <= 4; i++) {
+    setStyle(`A${obsRowExcel + i}`, {
+      font: { sz: 9, color: { rgb: TEXT_MUTE }, italic: true, name: 'Calibri' },
+      alignment: { vertical: 'center' }
+    });
+  }
+
+  // Alturas
+  ws['!rows'] = [];
+  ws['!rows'][0] = { hpt: 36 };  // Título
+  ws['!rows'][1] = { hpt: 26 };  // Subtítulo
+  ws['!rows'][13] = { hpt: 26 }; // Header tabela
+  ws['!rows'][totalRowExcel - 1] = { hpt: 26 }; // Total
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Cronograma');
+
+  const safeName = opNome.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 40);
+  const filename = `Cronograma-Desembolsos-${safeName}-${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, filename);
+  showToast(`Cronograma gerado · ${schedule.length} aporte${schedule.length !== 1 ? 's' : ''}`);
+}
+
 // ============================================
 // RECEITA BREAKDOWN (5 tipos)
 // ============================================
@@ -7558,6 +7776,129 @@ async function exportPDFDetalhado() {
       doc.text(truncate(subInfo, 100), margin + 6, y + 13);
       y += 20;
 
+      // ===== Cards de resumo (visão rápida) =====
+      const ckNetzPctR = calcProgressoChecklistNetz(op);
+      const ckCustomPctR = calcProgressoChecklistCustom(op);
+      const tempoPctR = calcProgressoTempo(op);
+      const todayDR = dateToDays(todayStr());
+      const diasRestR = (op.data_prevista && !op.data_liquidacao && op.status !== 'stand')
+        ? dateToDays(op.data_prevista) - todayDR : null;
+
+      const resumoCards = [
+        {
+          label: 'ANDAMENTO',
+          value: tempoPctR + '%',
+          sub: diasRestR === null ? (op.data_liquidacao ? 'liquidada' : '—')
+              : diasRestR < 0 ? `${Math.abs(diasRestR)}d atrasado`
+              : diasRestR === 0 ? 'vence hoje'
+              : `${diasRestR}d restantes`,
+          color: tempoPctR >= 100 ? NETZ_COLORS.green : (diasRestR !== null && diasRestR < 0 ? NETZ_COLORS.red : NETZ_COLORS.navy)
+        },
+        {
+          label: 'VOLUME',
+          value: fmtBRLshort(op.valor),
+          sub: op.data_liquidacao ? `liquidado ${fmtBRLshort(op.volume_liquidado)}` : 'a estruturar',
+          color: NETZ_COLORS.navy
+        },
+        {
+          label: 'RECEITA POTENCIAL',
+          value: fmtBRLshort(op.receita),
+          sub: op.data_liquidacao ? `realizado ${fmtBRLshort(op.receita_realizada || op.receita)}` : 'previsto',
+          color: NETZ_COLORS.orangeDim
+        },
+        {
+          label: 'CHECKLIST',
+          value: (ckNetzPctR === null ? '—' : ckNetzPctR + '%'),
+          sub: ckCustomPctR === null ? 'sem custom' : `custom ${ckCustomPctR}%`,
+          color: ckNetzPctR === 100 ? NETZ_COLORS.green : NETZ_COLORS.navy
+        },
+      ];
+      const cardW = (pageW - margin * 2 - 9) / 4;
+      const cardH = 18;
+      resumoCards.forEach((c, i) => {
+        const cx = margin + i * (cardW + 3);
+        // Box
+        doc.setFillColor(255, 255, 255);
+        doc.setDrawColor(...NETZ_COLORS.border);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(cx, y, cardW, cardH, 1.5, 1.5, 'FD');
+        // Barra colorida lateral
+        doc.setFillColor(...c.color);
+        doc.rect(cx, y, 1.5, cardH, 'F');
+        // Label
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6.5);
+        doc.setTextColor(...NETZ_COLORS.textMute);
+        doc.text(c.label, cx + 4, y + 4);
+        // Value
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(...c.color);
+        doc.text(c.value, cx + 4, y + 10);
+        // Sub
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.5);
+        doc.setTextColor(...NETZ_COLORS.textMute);
+        doc.text(truncate(c.sub, 30), cx + 4, y + 15);
+      });
+      y += cardH + 6;
+
+      // ===== Tarefas dos próximos 30 dias =====
+      const allTasksOp = (op.checklist || []).filter(c => c.prazo && c.texto);
+      const todayD = dateToDays(todayStr());
+      const upcoming = allTasksOp
+        .filter(c => {
+          const isDone = c.num ? (c.status === 'concluido' || c.status === 'na') : c.done;
+          if (isDone) return false;
+          const days = dateToDays(c.prazo) - todayD;
+          return days <= 30; // inclui atrasadas + próximas 4 semanas
+        })
+        .sort((a, b) => a.prazo.localeCompare(b.prazo));
+
+      if (upcoming.length > 0) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(...NETZ_COLORS.orangeDim);
+        doc.text('TAREFAS PRÓXIMAS (30 DIAS)', margin, y);
+        y += 4;
+        const upRows = upcoming.slice(0, 8).map(t => {
+          const days = dateToDays(t.prazo) - todayD;
+          const statusBadge = days < 0 ? 'ATRASO' : days === 0 ? 'HOJE' : `${days}d`;
+          const txt = (t.num ? t.num + ' ' : '') + t.texto;
+          return [statusBadge, truncate(txt, 80), t.responsavel || '-', fmtDate(t.prazo)];
+        });
+        doc.autoTable({
+          startY: y,
+          head: [['Prazo', 'Tarefa', 'Resp.', 'Data']],
+          body: upRows,
+          styles: { fontSize: 7.5, cellPadding: 1.2, lineColor: NETZ_COLORS.border, lineWidth: 0.1 },
+          headStyles: { fillColor: NETZ_COLORS.blueLight, textColor: NETZ_COLORS.navy, fontStyle: 'bold' },
+          columnStyles: {
+            0: { cellWidth: 14, halign: 'center', fontStyle: 'bold', fontSize: 7 },
+            1: { cellWidth: 'auto' },
+            2: { cellWidth: 28 },
+            3: { cellWidth: 22, halign: 'right' }
+          },
+          margin: { left: margin, right: margin },
+          didParseCell: (data) => {
+            if (data.column.index === 0 && data.section === 'body') {
+              const v = String(data.cell.raw);
+              if (v === 'ATRASO') {
+                data.cell.styles.textColor = NETZ_COLORS.red;
+                data.cell.styles.fillColor = NETZ_COLORS.redBg;
+              } else if (v === 'HOJE') {
+                data.cell.styles.textColor = NETZ_COLORS.orangeDim;
+                data.cell.styles.fillColor = [253, 246, 220];
+              } else {
+                data.cell.styles.textColor = NETZ_COLORS.navy;
+                data.cell.styles.fillColor = NETZ_COLORS.bluePale;
+              }
+            }
+          }
+        });
+        y = doc.lastAutoTable.finalY + 6;
+      }
+
       // ===== Bloco financeiro =====
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
@@ -7597,11 +7938,11 @@ async function exportPDFDetalhado() {
         doc.text('FASES & MARCOS', margin, y);
         y += 4;
         const phaseRows = phases.map(p => [
-          p.kind === 'milestone' ? '◆' : '▸',
+          p.kind === 'milestone' ? 'M' : 'F',
           truncate(p.label, 40),
-          p.start ? fmtDate(p.start) : '—',
-          p.kind === 'task' && p.end ? fmtDate(p.end) : '—',
-          p.kind === 'task' && p.start && p.end ? (dateToDays(p.end) - dateToDays(p.start)) + 'd' : '—',
+          p.start ? fmtDate(p.start) : '-',
+          p.kind === 'task' && p.end ? fmtDate(p.end) : '-',
+          p.kind === 'task' && p.start && p.end ? (dateToDays(p.end) - dateToDays(p.start)) + 'd' : '-',
           PHASE_STATUS_LABELS[p.status] || p.status,
         ]);
         doc.autoTable({
@@ -7645,14 +7986,14 @@ async function exportPDFDetalhado() {
           // Linha de categoria (faz papel de subheader)
           ckRows.push([{ content: cat.toUpperCase(), colSpan: 5, styles: { fillColor: NETZ_COLORS.navy, textColor: [255,255,255], fontStyle: 'bold', fontSize: 7 } }]);
           byCat[cat].forEach(it => {
-            const statusTxt = it.status === 'concluido' ? '✓ Concluído' :
-                             it.status === 'andamento' ? '● Em andamento' :
-                             it.status === 'na' ? '— N/A' : '○ Pendente';
+            const statusTxt = it.status === 'concluido' ? 'CONCLUIDO' :
+                             it.status === 'andamento' ? 'EM ANDAMENTO' :
+                             it.status === 'na' ? 'N/A' : 'PENDENTE';
             ckRows.push([
               it.num,
               truncate(it.texto, 80),
-              it.area || '—',
-              it.responsavel || '—',
+              it.area || '-',
+              it.responsavel || '-',
               statusTxt,
             ]);
           });
@@ -7668,18 +8009,24 @@ async function exportPDFDetalhado() {
             0: { cellWidth: 12, fontStyle: 'bold', halign: 'center' },
             2: { cellWidth: 18 },
             3: { cellWidth: 22 },
-            4: { cellWidth: 28 },
+            4: { cellWidth: 28, halign: 'center', fontStyle: 'bold', fontSize: 7 },
           },
           margin: { left: margin, right: margin },
           didParseCell: (data) => {
-            // Formatação por status
+            // Formatação por status (badge colorido)
             if (data.column.index === 4 && data.section === 'body') {
-              const txt = data.cell.raw;
-              if (typeof txt === 'string') {
-                if (txt.startsWith('✓')) data.cell.styles.textColor = NETZ_COLORS.green;
-                else if (txt.startsWith('●')) data.cell.styles.textColor = NETZ_COLORS.amber;
-                else if (txt.startsWith('—')) data.cell.styles.textColor = NETZ_COLORS.textMute;
-                else data.cell.styles.textColor = NETZ_COLORS.textMute;
+              const txt = String(data.cell.raw || '');
+              if (txt === 'CONCLUIDO') {
+                data.cell.styles.textColor = NETZ_COLORS.green;
+                data.cell.styles.fillColor = NETZ_COLORS.greenBg;
+              } else if (txt === 'EM ANDAMENTO') {
+                data.cell.styles.textColor = NETZ_COLORS.amber;
+                data.cell.styles.fillColor = [253, 246, 220];
+              } else if (txt === 'N/A') {
+                data.cell.styles.textColor = NETZ_COLORS.textMute;
+              } else if (txt === 'PENDENTE') {
+                data.cell.styles.textColor = NETZ_COLORS.navy;
+                data.cell.styles.fillColor = NETZ_COLORS.bluePale;
               }
             }
           }
@@ -7694,12 +8041,39 @@ async function exportPDFDetalhado() {
         doc.setTextColor(...NETZ_COLORS.orangeDim);
         doc.text('CHECKLIST ADICIONAL', margin, y);
         y += 4;
-        const rows = customCk.map(c => [c.done ? '✓' : '○', truncate(c.texto, 100)]);
+        const rows = customCk.map(c => [
+          c.done ? 'OK' : '-',
+          truncate(c.texto, 80),
+          c.responsavel || '-',
+          c.prazo ? fmtDate(c.prazo) : '-'
+        ]);
         doc.autoTable({
           startY: y, body: rows,
-          styles: { fontSize: 8, cellPadding: 1.2, lineColor: NETZ_COLORS.border, lineWidth: 0.1 },
-          columnStyles: { 0: { cellWidth: 6, halign: 'center' } },
+          styles: { fontSize: 8, cellPadding: 1.5, lineColor: NETZ_COLORS.border, lineWidth: 0.1 },
+          columnStyles: {
+            0: { cellWidth: 12, halign: 'center', fontStyle: 'bold' },
+            1: { cellWidth: 'auto' },
+            2: { cellWidth: 32 },
+            3: { cellWidth: 22, halign: 'right' }
+          },
           margin: { left: margin, right: margin },
+          didParseCell: (data) => {
+            if (data.column.index === 0 && data.section === 'body') {
+              const v = String(data.cell.raw);
+              if (v === 'OK') {
+                data.cell.styles.textColor = NETZ_COLORS.green;
+                data.cell.styles.fillColor = NETZ_COLORS.greenBg;
+              } else {
+                data.cell.styles.textColor = NETZ_COLORS.textMute;
+              }
+            }
+            if (data.column.index === 1 && data.section === 'body') {
+              const status = String(data.row.cells[0].raw);
+              if (status === 'OK') {
+                data.cell.styles.textColor = NETZ_COLORS.textMute;
+              }
+            }
+          }
         });
         y = doc.lastAutoTable.finalY + 5;
       }
@@ -7712,7 +8086,7 @@ async function exportPDFDetalhado() {
         doc.setTextColor(...NETZ_COLORS.orangeDim);
         doc.text('PRÓXIMOS PASSOS', margin, y);
         y += 4;
-        const rows = steps.map(s => ['→', truncate(s.texto, 110)]);
+        const rows = steps.map(s => ['>', truncate(s.texto, 110)]);
         doc.autoTable({
           startY: y, body: rows,
           styles: { fontSize: 8, cellPadding: 1.2, lineColor: NETZ_COLORS.border, lineWidth: 0.1 },
