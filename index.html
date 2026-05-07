@@ -309,7 +309,10 @@
     padding: 10px 14px; border-radius: 6px;
     font-size: 12px; box-shadow: var(--shadow-lg);
     z-index: 1000; pointer-events: none;
-    max-width: 320px; line-height: 1.5;
+    max-width: 360px;
+    max-height: 80vh;
+    overflow-y: auto;
+    line-height: 1.5;
     border-left: 3px solid var(--orange);
   }
   .chart-tooltip strong {
@@ -1242,6 +1245,66 @@
 
   /* ===== Kanban ===== */
   .kanban-toolbar { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+
+  /* Header de seção com toggle ao lado */
+  .section-header-with-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 28px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+
+  /* Toggle "ocultar liquidadas" */
+  .hide-liquidated-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+    margin-left: auto;
+  }
+  .hide-liquidated-toggle input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .hide-liquidated-toggle .toggle-track {
+    display: inline-block;
+    width: 34px;
+    height: 18px;
+    background: var(--border);
+    border-radius: 12px;
+    position: relative;
+    transition: background 0.18s;
+    flex-shrink: 0;
+  }
+  .hide-liquidated-toggle .toggle-thumb {
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 14px; height: 14px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    transition: left 0.18s;
+  }
+  .hide-liquidated-toggle input:checked + .toggle-track {
+    background: var(--orange);
+  }
+  .hide-liquidated-toggle input:checked + .toggle-track .toggle-thumb {
+    left: 18px;
+  }
+  .hide-liquidated-toggle .toggle-label {
+    font-size: 12px;
+    color: var(--text-mute);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .hide-liquidated-toggle:hover .toggle-label {
+    color: var(--text);
+  }
   .search-input {
     flex: 1; min-width: 240px; max-width: 380px;
     padding: 9px 14px;
@@ -2694,7 +2757,14 @@
         </div>
       </div>
 
-      <h2 class="section-title">Operações em Pipeline</h2>
+      <div class="section-header-with-toggle">
+        <h2 class="section-title" style="margin: 0;">Operações em Pipeline</h2>
+        <label class="hide-liquidated-toggle">
+          <input type="checkbox" id="toggleHideLiquidatedOverview" onchange="setHideLiquidated(this.checked)">
+          <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          <span class="toggle-label">ocultar liquidadas</span>
+        </label>
+      </div>
       <div class="ops-cards" id="opsCards"></div>
     </section>
 
@@ -2702,6 +2772,11 @@
     <section class="panel" id="panel-kanban">
       <div class="kanban-toolbar">
         <input type="text" class="search-input" id="searchKanban" placeholder="Buscar por nome, cliente ou responsável…" oninput="renderKanban()">
+        <label class="hide-liquidated-toggle">
+          <input type="checkbox" id="toggleHideLiquidatedKanban" onchange="setHideLiquidated(this.checked)">
+          <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          <span class="toggle-label">ocultar liquidadas</span>
+        </label>
       </div>
       <div class="kanban" id="kanban"></div>
     </section>
@@ -3656,6 +3731,7 @@ function renderAll() {
   renderGantt();
   renderWeeklyReport();
   renderLogs();
+  syncHideLiquidatedToggles();
 }
 
 function populateRespList() {
@@ -3680,6 +3756,10 @@ state.dashFilter = { period: 'ytd', tipo: '', status: '', resp: '', cliente: '' 
 state.revenueFilter = 'all'; // 'pipeline' (apenas em estruturação), 'liquidated' (apenas liquidadas), 'all' (tudo)
 // Filtro de período dos gráficos mensais (Receita, Volume, Aportes) — independente do dashFilter
 state.chartsFilter = { mode: '12m', from: null, to: null };
+// Toggle: ocultar operações já liquidadas na Visão Geral e Kanban (persiste em localStorage)
+state.hideLiquidated = (() => {
+  try { return localStorage.getItem('netz_hideLiquidated') === '1'; } catch(e) { return false; }
+})();
 
 function populateDashFilters() {
   const ops = state.operations;
@@ -3780,15 +3860,11 @@ function chartTooltipShow(e, payload) {
   if (payload.title) html += `<strong>${escapeHtml(payload.title)}</strong>`;
   if (payload.total !== undefined) html += `<div class="tt-total">${payload.total}</div>`;
   if (payload.ops && payload.ops.length) {
-    const shown = payload.ops.slice(0, 6);
-    html += `<ul class="tt-list">${shown.map(op => `
+    html += `<ul class="tt-list">${payload.ops.map(op => `
       <li>
         <span class="tt-name">${escapeHtml(op.nome)}</span>
         <span class="tt-val">${escapeHtml(op.valTxt)}</span>
       </li>`).join('')}</ul>`;
-    if (payload.ops.length > shown.length) {
-      html += `<div class="tt-more">+ ${payload.ops.length - shown.length} outras</div>`;
-    }
   } else if (payload.empty) {
     html += `<div style="font-size:11px; color:var(--text-soft); font-style:italic;">Nenhuma operação</div>`;
   }
@@ -4274,15 +4350,11 @@ function chartTooltipShowMulti(e, payload) {
       html += `<div style="font-size:10px; font-weight:600; color:${sec.color}; letter-spacing:0.06em; margin-bottom:2px;">${sec.label}</div>`;
       html += `<div class="tt-total" style="font-size:14px;">${sec.total}</div>`;
       if (sec.ops && sec.ops.length) {
-        const shown = sec.ops.slice(0, 5);
-        html += `<ul class="tt-list">${shown.map(op => `
+        html += `<ul class="tt-list">${sec.ops.map(op => `
           <li>
             <span class="tt-name">${escapeHtml(op.nome)}</span>
             <span class="tt-val">${escapeHtml(op.valTxt)}</span>
           </li>`).join('')}</ul>`;
-        if (sec.ops.length > shown.length) {
-          html += `<div class="tt-more">+ ${sec.ops.length - shown.length} outras</div>`;
-        }
       }
     });
   }
@@ -4662,6 +4734,29 @@ function renderTipoChart() {
 }
 
 // Pizza por tipo de receita (estruturação, consultoria, gestão, legal, tech)
+// Liga/desliga o filtro de ocultar operações já liquidadas
+// (afeta cards da Visão Geral e colunas do Kanban)
+function setHideLiquidated(hide) {
+  state.hideLiquidated = !!hide;
+  try { localStorage.setItem('netz_hideLiquidated', hide ? '1' : '0'); } catch(e) {}
+  // Sincroniza ambos os checkboxes
+  const cb1 = document.getElementById('toggleHideLiquidatedOverview');
+  const cb2 = document.getElementById('toggleHideLiquidatedKanban');
+  if (cb1) cb1.checked = hide;
+  if (cb2) cb2.checked = hide;
+  // Re-renderiza onde o filtro afeta
+  renderOpsCards();
+  renderKanban();
+}
+
+// Inicializa os checkboxes na primeira renderização
+function syncHideLiquidatedToggles() {
+  const cb1 = document.getElementById('toggleHideLiquidatedOverview');
+  const cb2 = document.getElementById('toggleHideLiquidatedKanban');
+  if (cb1) cb1.checked = state.hideLiquidated;
+  if (cb2) cb2.checked = state.hideLiquidated;
+}
+
 function setRevenueFilter(mode) {
   state.revenueFilter = mode;
   renderRevenueTypeChart();
@@ -4896,12 +4991,20 @@ function renderTimeByStageChart() {
 
 // ===== Op cards (Visão Geral) =====
 function renderOpsCards() {
-  const ops = [...getFilteredOps()].sort((a,b) =>
+  let opsFiltered = getFilteredOps();
+  // Filtro: ocultar liquidadas se ativado
+  if (state.hideLiquidated) {
+    opsFiltered = opsFiltered.filter(o => !isOperationConcluida(o));
+  }
+  const ops = [...opsFiltered].sort((a,b) =>
     (STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status)) || (calcProgressoTempo(b) - calcProgressoTempo(a))
   );
   const wrap = document.getElementById('opsCards');
   if (!ops.length) {
-    wrap.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1;"><h3>Nenhuma operação ${state.operations.length > 0 ? 'corresponde aos filtros' : 'cadastrada'}</h3><p>${state.operations.length > 0 ? 'Ajuste os filtros acima ou' : 'Clique em "Nova Operação" para começar'}</p></div>`;
+    const msg = state.hideLiquidated && state.operations.length > 0
+      ? 'Todas as operações filtradas estão liquidadas. Desmarque "ocultar liquidadas" para vê-las.'
+      : (state.operations.length > 0 ? 'Ajuste os filtros acima' : 'Clique em "Nova Operação" para começar');
+    wrap.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1;"><h3>Nenhuma operação ${state.operations.length > 0 ? 'corresponde aos filtros' : 'cadastrada'}</h3><p>${msg}</p></div>`;
     return;
   }
   wrap.innerHTML = ops.map(o => {
@@ -4961,7 +5064,11 @@ function renderKanban() {
     (o.responsavel||'').toLowerCase().includes(search)
   );
   const wrap = document.getElementById('kanban');
-  wrap.innerHTML = STATUS_ORDER.map(s => {
+  // Quando ocultar liquidadas: pula a coluna 'liquidacao' completamente
+  const visibleStatuses = state.hideLiquidated
+    ? STATUS_ORDER.filter(s => s !== 'liquidacao')
+    : STATUS_ORDER;
+  wrap.innerHTML = visibleStatuses.map(s => {
     let cards = filtered.filter(o => o.status === s);
     // Para "Em liquidação": ordenar por data de liquidação (mais recente primeiro)
     if (s === 'liquidacao') {
