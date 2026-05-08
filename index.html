@@ -6046,15 +6046,21 @@ async function sendReportNow() {
   if (!confirm(`Enviar o relatório de hoje para ${enabled.length} destinatário(s) ativos agora?`)) return;
 
   showToast('Enviando…');
+  console.log(`[reports] Iniciando envio para ${enabled.length} destinatário(s)`);
   let okCount = 0, errCount = 0;
   for (const sub of enabled) {
+    console.log(`[reports] → ${sub.responsavel} <${sub.email}>`);
     try {
       const html = buildDailyReportHTML(sub.responsavel);
-      const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-report`, {
+      console.log(`[reports]   HTML gerado: ${html.length} chars`);
+      const url = `${SUPABASE_URL}/functions/v1/send-report`;
+      console.log(`[reports]   POST ${url}`);
+      const resp = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'apikey': SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({
           to: sub.email,
@@ -6062,10 +6068,15 @@ async function sendReportNow() {
           html
         })
       });
+      console.log(`[reports]   resposta status: ${resp.status}`);
       const body = await resp.json().catch(() => ({}));
-      if (!resp.ok) throw new Error(body.error || `HTTP ${resp.status}`);
+      console.log(`[reports]   resposta body:`, body);
+      if (!resp.ok) {
+        const errMsg = body.error || body.detail?.message || `HTTP ${resp.status}`;
+        throw new Error(errMsg);
+      }
       okCount++;
-      // Log do envio
+      console.log(`[reports]   ✓ enviado`);
       await sb.from('report_send_logs').insert({
         data_relatorio: todayStr(),
         responsavel: sub.responsavel,
@@ -6073,6 +6084,7 @@ async function sendReportNow() {
       });
     } catch (e) {
       errCount++;
+      console.error(`[reports]   ✗ erro:`, e);
       await sb.from('report_send_logs').insert({
         data_relatorio: todayStr(),
         responsavel: sub.responsavel,
@@ -6081,6 +6093,7 @@ async function sendReportNow() {
       });
     }
   }
+  console.log(`[reports] Finalizado: ${okCount} ok, ${errCount} erro(s)`);
   showToast(`Concluído: ${okCount} enviado(s), ${errCount} erro(s)`, errCount > 0);
   await loadReportLogs();
 }
