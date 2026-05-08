@@ -5757,11 +5757,11 @@ function openSubscriberModal(id) {
   document.getElementById('subEmail').value = sub?.email || '';
   document.getElementById('subEnabled').checked = sub ? sub.enabled : true;
   document.getElementById('subDeleteBtn').style.display = sub ? 'inline-block' : 'none';
-  document.getElementById('modalSubscriberOverlay').classList.add('open');
+  document.getElementById('modalSubscriberOverlay').classList.add('active');
 }
 
 function closeSubscriberModal() {
-  document.getElementById('modalSubscriberOverlay').classList.remove('open');
+  document.getElementById('modalSubscriberOverlay').classList.remove('active');
   state.editingSubscriberId = null;
 }
 
@@ -6031,11 +6031,11 @@ function showReportPreview() {
   const html = buildDailyReportHTML('[Nome do destinatário]');
   const iframe = document.getElementById('reportPreviewFrame');
   iframe.srcdoc = html;
-  document.getElementById('modalReportPreviewOverlay').classList.add('open');
+  document.getElementById('modalReportPreviewOverlay').classList.add('active');
 }
 
 function closeReportPreview() {
-  document.getElementById('modalReportPreviewOverlay').classList.remove('open');
+  document.getElementById('modalReportPreviewOverlay').classList.remove('active');
 }
 
 async function sendReportNow() {
