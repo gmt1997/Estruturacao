@@ -1257,6 +1257,134 @@
     flex-wrap: wrap;
   }
 
+  /* ===== Aba Relatórios ===== */
+  .reports-header {
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 12px;
+    margin-bottom: 20px;
+  }
+  .reports-actions {
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .reports-info-card {
+    display: flex; gap: 12px;
+    padding: 14px 16px;
+    background: var(--blue-light);
+    border-left: 3px solid var(--navy);
+    border-radius: 6px;
+    margin-bottom: 24px;
+  }
+  .reports-info-icon {
+    font-size: 18px; flex-shrink: 0;
+  }
+  .reports-info-text {
+    font-size: 12px; line-height: 1.6; color: var(--text);
+  }
+  .reports-subtitle {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0 0 12px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .subscribers-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    min-height: 100px;
+  }
+  .subscriber-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all 0.18s;
+    position: relative;
+  }
+  .subscriber-card:hover {
+    border-color: var(--orange);
+    box-shadow: var(--shadow-sm);
+  }
+  .subscriber-card.disabled {
+    opacity: 0.55;
+    background: var(--blue-pale);
+  }
+  .subscriber-card-name {
+    font-weight: 600;
+    color: var(--navy);
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+  .subscriber-card-email {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text-mute);
+    margin-bottom: 8px;
+    word-break: break-all;
+  }
+  .subscriber-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+  .subscriber-status.on {
+    background: rgba(46, 125, 91, 0.1);
+    color: var(--green);
+  }
+  .subscriber-status.off {
+    background: rgba(90, 103, 133, 0.12);
+    color: var(--text-mute);
+  }
+  .subscriber-status .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor;
+  }
+  .reports-log {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .report-log-row {
+    display: grid;
+    grid-template-columns: 100px 1fr auto auto;
+    gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+    font-size: 12px;
+  }
+  .report-log-row:last-child { border-bottom: none; }
+  .report-log-row .when {
+    color: var(--text-mute);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+  }
+  .report-log-row .who {
+    color: var(--text);
+    font-weight: 500;
+  }
+  .report-log-row .pill-status {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+  .pill-status.ok { background: rgba(46, 125, 91, 0.1); color: var(--green); }
+  .pill-status.err { background: rgba(201, 59, 59, 0.1); color: var(--red); }
+
   /* Toggle "ocultar liquidadas" */
   .hide-liquidated-toggle {
     display: inline-flex;
@@ -2618,6 +2746,7 @@
       <button class="tab" data-tab="table">Tabela</button>
       <button class="tab" data-tab="gantt">Gantt</button>
       <button class="tab" data-tab="weekly">Semana</button>
+      <button class="tab" data-tab="reports">Relatórios</button>
       <button class="tab" data-tab="audit">Auditoria</button>
     </nav>
   </header>
@@ -2866,6 +2995,41 @@
       <div class="weekly-content" id="weeklyContent"></div>
     </section>
 
+    <!-- RELATÓRIOS -->
+    <section class="panel" id="panel-reports">
+      <div class="reports-header">
+        <h2 class="section-title" style="margin: 0;">Relatórios Diários por Email</h2>
+        <div class="reports-actions">
+          <button class="btn-secondary" onclick="showReportPreview()">👁️ Pré-visualizar</button>
+          <button class="btn-secondary" onclick="sendReportNow()">📧 Enviar agora</button>
+          <button class="btn-primary" onclick="openSubscriberModal()">+ Adicionar destinatário</button>
+        </div>
+      </div>
+
+      <div class="reports-info-card">
+        <div class="reports-info-icon">ℹ️</div>
+        <div class="reports-info-text">
+          <strong>Como funciona:</strong> os destinatários cadastrados recebem todo dia útil às 8h um email com:
+          (1) operações que tiveram alterações nas últimas 24h, (2) andamento de cada operação ativa,
+          (3) tarefas atrasadas e próximas, (4) riscos abertos e (5) snapshot dos KPIs do pipeline.
+          O envio é feito por uma <strong>Edge Function no Supabase</strong> agendada via cron.
+        </div>
+      </div>
+
+      <h3 class="reports-subtitle">Destinatários</h3>
+      <div class="subscribers-list" id="subscribersList">
+        <div class="empty-state" style="grid-column: 1 / -1; padding: 40px;">
+          <h3>Nenhum destinatário cadastrado</h3>
+          <p>Clique em "+ Adicionar destinatário" para começar</p>
+        </div>
+      </div>
+
+      <h3 class="reports-subtitle" style="margin-top: 32px;">Histórico de envios</h3>
+      <div class="reports-log" id="reportsLog">
+        <div style="color: var(--text-mute); font-size: 12px; padding: 12px; text-align: center;">Nenhum envio registrado</div>
+      </div>
+    </section>
+
     <!-- AUDITORIA -->
     <section class="panel" id="panel-audit">
       <h2 class="section-title">Histórico de alterações</h2>
@@ -2877,6 +3041,62 @@
     <span class="conn-status"></span>
     <span class="mono">Netz Solution</span> · Pipeline Manager · Sincronizado em tempo real
   </footer>
+</div>
+
+<!-- ===== MODAL SUBSCRIBER (relatório diário) ===== -->
+<div class="modal-overlay" id="modalSubscriberOverlay">
+  <div class="modal" style="max-width: 480px;">
+    <div class="modal-head">
+      <h2 id="modalSubscriberTitle">Novo destinatário</h2>
+      <button class="modal-close" onclick="closeSubscriberModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-section">
+        <div class="form-row">
+          <div class="form-field">
+            <label>Nome / Responsável</label>
+            <input type="text" id="subNome" placeholder="Ex: Gabriel" autocomplete="off">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Email</label>
+            <input type="email" id="subEmail" placeholder="gabriel@netzsolution.com.br" autocomplete="off">
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="hide-liquidated-toggle" style="margin-left: 0;">
+            <input type="checkbox" id="subEnabled" checked>
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            <span class="toggle-label">Ativo (recebe relatório diário)</span>
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-danger" id="subDeleteBtn" onclick="deleteSubscriber()" style="display:none;">Excluir</button>
+      <div style="flex: 1;"></div>
+      <button class="btn-secondary" onclick="closeSubscriberModal()">Cancelar</button>
+      <button class="btn-primary" onclick="saveSubscriber()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL PREVIEW DO RELATÓRIO ===== -->
+<div class="modal-overlay" id="modalReportPreviewOverlay">
+  <div class="modal" style="max-width: 800px;">
+    <div class="modal-head">
+      <h2>Pré-visualização do relatório diário</h2>
+      <button class="modal-close" onclick="closeReportPreview()">×</button>
+    </div>
+    <div class="modal-body" style="padding: 0;">
+      <iframe id="reportPreviewFrame" style="width: 100%; height: 70vh; border: none; background: #f5f7fb;"></iframe>
+    </div>
+    <div class="modal-foot">
+      <div style="flex: 1; font-size: 11px; color: var(--text-mute);">Esta é a visão exata do email que será enviado aos destinatários ativos.</div>
+      <button class="btn-secondary" onclick="closeReportPreview()">Fechar</button>
+    </div>
+  </div>
 </div>
 
 <!-- ===== MODAL ===== -->
@@ -3674,6 +3894,10 @@ document.querySelectorAll('.tab').forEach(t => {
     t.classList.add('active');
     document.getElementById('panel-' + t.dataset.tab).classList.add('active');
     if (t.dataset.tab === 'audit') loadLogs().then(renderLogs);
+    if (t.dataset.tab === 'reports') {
+      loadSubscribers();
+      loadReportLogs();
+    }
     renderAll();
   });
 });
@@ -5442,6 +5666,423 @@ function exportWeeklyReport() {
   const filename = `Relatorio-Semanal-${mondayStr}.xlsx`;
   XLSX.writeFile(wb, filename);
   showToast(`Excel gerado · ${rows.length} tarefa(s)`);
+}
+
+// ============================================
+// RELATÓRIOS DIÁRIOS POR EMAIL
+// ============================================
+
+state.subscribers = [];
+state.reportLogs = [];
+state.editingSubscriberId = null;
+
+async function loadSubscribers() {
+  try {
+    const { data, error } = await sb.from('report_subscribers').select('*').order('responsavel');
+    if (error) throw error;
+    state.subscribers = data || [];
+    renderSubscribers();
+  } catch (e) {
+    console.warn('[reports] subscribers load fail', e);
+    state.subscribers = [];
+    renderSubscribers();
+  }
+}
+
+async function loadReportLogs() {
+  try {
+    const { data, error } = await sb.from('report_send_logs')
+      .select('*')
+      .order('enviado_em', { ascending: false })
+      .limit(30);
+    if (error) throw error;
+    state.reportLogs = data || [];
+    renderReportLogs();
+  } catch (e) {
+    console.warn('[reports] logs load fail', e);
+    state.reportLogs = [];
+    renderReportLogs();
+  }
+}
+
+function renderSubscribers() {
+  const wrap = document.getElementById('subscribersList');
+  if (!wrap) return;
+  if (!state.subscribers.length) {
+    wrap.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1; padding: 40px;">
+      <h3>Nenhum destinatário cadastrado</h3>
+      <p>Clique em "+ Adicionar destinatário" para começar</p>
+    </div>`;
+    return;
+  }
+  wrap.innerHTML = state.subscribers.map(s => `
+    <div class="subscriber-card ${s.enabled ? '' : 'disabled'}" onclick="openSubscriberModal(${s.id})">
+      <div class="subscriber-card-name">${escapeHtml(s.responsavel)}</div>
+      <div class="subscriber-card-email">${escapeHtml(s.email)}</div>
+      <span class="subscriber-status ${s.enabled ? 'on' : 'off'}">
+        <span class="dot"></span>${s.enabled ? 'Ativo' : 'Desativado'}
+      </span>
+    </div>
+  `).join('');
+}
+
+function renderReportLogs() {
+  const wrap = document.getElementById('reportsLog');
+  if (!wrap) return;
+  if (!state.reportLogs.length) {
+    wrap.innerHTML = `<div style="color: var(--text-mute); font-size: 12px; padding: 12px; text-align: center;">Nenhum envio registrado</div>`;
+    return;
+  }
+  wrap.innerHTML = state.reportLogs.map(l => {
+    const dt = new Date(l.enviado_em);
+    const when = dt.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const isOk = l.status === 'enviado';
+    return `
+      <div class="report-log-row">
+        <span class="when">${when}</span>
+        <span class="who">${escapeHtml(l.responsavel)}</span>
+        <span class="when">${l.data_relatorio}</span>
+        <span class="pill-status ${isOk ? 'ok' : 'err'}">${isOk ? 'enviado' : 'erro'}</span>
+      </div>
+      ${l.error_msg ? `<div style="font-size: 10px; color: var(--red); padding: 0 14px 10px;">${escapeHtml(l.error_msg)}</div>` : ''}
+    `;
+  }).join('');
+}
+
+function openSubscriberModal(id) {
+  state.editingSubscriberId = id || null;
+  const sub = id ? state.subscribers.find(s => s.id === id) : null;
+  document.getElementById('modalSubscriberTitle').textContent = sub ? 'Editar destinatário' : 'Novo destinatário';
+  document.getElementById('subNome').value = sub?.responsavel || '';
+  document.getElementById('subEmail').value = sub?.email || '';
+  document.getElementById('subEnabled').checked = sub ? sub.enabled : true;
+  document.getElementById('subDeleteBtn').style.display = sub ? 'inline-block' : 'none';
+  document.getElementById('modalSubscriberOverlay').classList.add('open');
+}
+
+function closeSubscriberModal() {
+  document.getElementById('modalSubscriberOverlay').classList.remove('open');
+  state.editingSubscriberId = null;
+}
+
+async function saveSubscriber() {
+  const responsavel = document.getElementById('subNome').value.trim();
+  const email = document.getElementById('subEmail').value.trim();
+  const enabled = document.getElementById('subEnabled').checked;
+  if (!responsavel) return showToast('Informe o nome', true);
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showToast('Email inválido', true);
+
+  try {
+    const payload = { responsavel, email, enabled, atualizado_em: new Date().toISOString() };
+    if (state.editingSubscriberId) {
+      const { error } = await sb.from('report_subscribers').update(payload).eq('id', state.editingSubscriberId);
+      if (error) throw error;
+      showToast('Destinatário atualizado');
+    } else {
+      const { error } = await sb.from('report_subscribers').insert(payload);
+      if (error) throw error;
+      showToast('Destinatário cadastrado');
+    }
+    closeSubscriberModal();
+    await loadSubscribers();
+  } catch (e) {
+    showToast('Erro: ' + (e.message || 'falha ao salvar'), true);
+  }
+}
+
+async function deleteSubscriber() {
+  if (!state.editingSubscriberId) return;
+  if (!confirm('Excluir este destinatário?')) return;
+  try {
+    const { error } = await sb.from('report_subscribers').delete().eq('id', state.editingSubscriberId);
+    if (error) throw error;
+    showToast('Destinatário removido');
+    closeSubscriberModal();
+    await loadSubscribers();
+  } catch (e) {
+    showToast('Erro: ' + (e.message || 'falha'), true);
+  }
+}
+
+// ===== Geração do conteúdo do relatório (HTML) =====
+function buildDailyReportHTML(targetName) {
+  const today = todayStr();
+  const yest = new Date(); yest.setDate(yest.getDate() - 1);
+  const yestStr = yest.toISOString().slice(0, 10);
+
+  const ops = state.operations;
+  const todayD = dateToDays(today);
+
+  // Operações alteradas nas últimas 24h
+  const recent = ops.filter(o => {
+    const updated = (o.atualizado_em || '').slice(0, 10);
+    return updated >= yestStr;
+  }).sort((a, b) => (b.atualizado_em || '').localeCompare(a.atualizado_em || ''));
+
+  // Operações ativas (não liquidadas, não stand)
+  const active = ops.filter(o => !isOperationConcluida(o) && o.status !== 'stand');
+
+  // Tarefas atrasadas + próximas (7 dias) — agregadas de todos
+  const allTasks = [];
+  ops.forEach(o => {
+    (o.checklist || []).forEach(c => {
+      if (!c.prazo || !c.texto) return;
+      const isDone = c.num ? (c.status === 'concluido' || c.status === 'na') : c.done;
+      if (isDone) return;
+      const days = dateToDays(c.prazo) - todayD;
+      if (days <= 7) {
+        allTasks.push({
+          op: o.nome,
+          texto: (c.num ? c.num + ' ' : '') + c.texto,
+          prazo: c.prazo,
+          responsavel: c.responsavel,
+          days
+        });
+      }
+    });
+  });
+  allTasks.sort((a, b) => a.prazo.localeCompare(b.prazo));
+
+  // Riscos abertos
+  const allRisks = [];
+  ops.forEach(o => {
+    (o.risks || []).forEach(r => {
+      if (r.status === 'mitigado' || r.status === 'fechado') return;
+      allRisks.push({ op: o.nome, ...r });
+    });
+  });
+
+  // KPIs do pipeline
+  const pipelineOps = ops.filter(o => !isOperationConcluida(o) && o.status !== 'stand');
+  const totalVol = pipelineOps.reduce((s, o) => s + (Number(o.valor) || 0), 0);
+  const totalRev = pipelineOps.reduce((s, o) => s + (Number(o.receita) || 0), 0);
+  const liquidatedYTD = ops.filter(o => o.data_liquidacao && o.data_liquidacao.slice(0, 4) === today.slice(0, 4));
+  const revYTD = liquidatedYTD.reduce((s, o) => s + (Number(o.receita_realizada) || Number(o.receita) || 0), 0);
+  const volYTD = liquidatedYTD.reduce((s, o) => s + (Number(o.volume_liquidado) || Number(o.valor) || 0), 0);
+
+  const ymd = today.split('-').reverse().join('/');
+
+  // Estilos inline (compatibilidade com clientes de email)
+  const css = {
+    body: 'margin:0;padding:0;background:#f5f7fb;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#0E1B3D;',
+    container: 'max-width:680px;margin:0 auto;background:#ffffff;',
+    header: 'background:#001B5C;padding:24px 32px;color:#ffffff;',
+    headerTitle: 'margin:0;font-size:20px;font-weight:700;letter-spacing:-0.01em;',
+    headerSub: 'margin:6px 0 0 0;font-size:12px;color:#B1C6E5;letter-spacing:0.04em;text-transform:uppercase;',
+    section: 'padding:20px 32px;border-bottom:1px solid #E4F3FF;',
+    sectionTitle: 'margin:0 0 14px 0;font-size:11px;font-weight:700;color:#FF965A;letter-spacing:0.08em;text-transform:uppercase;',
+    kpiGrid: 'display:table;width:100%;border-collapse:collapse;',
+    kpiCell: 'display:table-cell;width:25%;padding:8px 12px;border-right:1px solid #E4F3FF;vertical-align:top;',
+    kpiLabel: 'font-size:9px;color:#5A6785;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;margin-bottom:4px;',
+    kpiValue: 'font-size:18px;font-weight:700;color:#001B5C;',
+    opRow: 'padding:10px 0;border-bottom:1px solid #F0F6FC;',
+    opName: 'font-weight:600;color:#001B5C;font-size:14px;',
+    opMeta: 'font-size:11px;color:#5A6785;margin-top:3px;',
+    pill: 'display:inline-block;padding:2px 8px;border-radius:3px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-right:6px;',
+    progress: 'background:#E4F3FF;height:6px;border-radius:3px;overflow:hidden;margin-top:6px;',
+    progressBar: 'height:100%;background:#FF965A;',
+    footer: 'padding:20px 32px;background:#F0F6FC;text-align:center;font-size:10px;color:#5A6785;',
+    taskRow: 'padding:8px 0;border-bottom:1px solid #F0F6FC;font-size:12px;',
+    riskRow: 'padding:10px 12px;background:#FFF6EB;border-left:3px solid #FF965A;border-radius:4px;margin-bottom:8px;font-size:12px;',
+  };
+
+  // KPIs
+  const kpiBlock = `
+    <table style="${css.kpiGrid}" cellspacing="0" cellpadding="0">
+      <tr>
+        <td style="${css.kpiCell}">
+          <div style="${css.kpiLabel}">Pipeline ativo</div>
+          <div style="${css.kpiValue}">${pipelineOps.length}</div>
+        </td>
+        <td style="${css.kpiCell}">
+          <div style="${css.kpiLabel}">Volume Pipeline</div>
+          <div style="${css.kpiValue}">${fmtBRLshort(totalVol)}</div>
+        </td>
+        <td style="${css.kpiCell}">
+          <div style="${css.kpiLabel}">Receita YTD</div>
+          <div style="${css.kpiValue}">${fmtBRLshort(revYTD)}</div>
+        </td>
+        <td style="${css.kpiCell.replace('border-right:1px solid #E4F3FF;','')}">
+          <div style="${css.kpiLabel}">Volume YTD</div>
+          <div style="${css.kpiValue}">${fmtBRLshort(volYTD)}</div>
+        </td>
+      </tr>
+    </table>
+  `;
+
+  // Operações alteradas (últimas 24h)
+  const recentBlock = recent.length === 0
+    ? `<div style="font-size:12px;color:#5A6785;font-style:italic;">Nenhuma operação foi alterada nas últimas 24h.</div>`
+    : recent.slice(0, 12).map(o => {
+        const tempo = calcProgressoTempo(o);
+        const dias = daysUntil(o.data_prevista);
+        const diasTxt = o.data_liquidacao ? '✓ liquidada' : (dias < 0 ? `${Math.abs(dias)}d atrasado` : dias === 0 ? 'vence hoje' : `${dias}d restantes`);
+        return `
+          <div style="${css.opRow}">
+            <div style="${css.opName}">${escapeHtml(o.nome)} <span style="font-weight:400;color:#5A6785;font-size:11px;">· ${escapeHtml(o.cliente || '')}</span></div>
+            <div style="${css.opMeta}">
+              <span style="${css.pill};background:#E4F3FF;color:#001B5C;">${STATUS_LABELS[o.status] || o.status}</span>
+              <span style="${css.pill};background:${o.tipo === 'FIDC' ? '#001B5C' : (o.tipo === 'CR' ? '#FF965A' : '#15326C')};color:#ffffff;">${o.tipo || '—'}</span>
+              <strong style="color:#001B5C;">${fmtBRL(o.valor)}</strong>
+              · ${diasTxt}
+              ${o.responsavel ? `· <span style="color:#5A6785;">${escapeHtml(o.responsavel)}</span>` : ''}
+            </div>
+            <div style="${css.progress}"><div style="${css.progressBar};width:${Math.min(100, tempo)}%;"></div></div>
+          </div>
+        `;
+      }).join('');
+
+  // Operações ativas (resumo enxuto)
+  const activeBlock = active.length === 0
+    ? `<div style="font-size:12px;color:#5A6785;font-style:italic;">Nenhuma operação ativa no momento.</div>`
+    : active.slice(0, 15).map(o => {
+        const tempo = calcProgressoTempo(o);
+        const ckNetz = calcProgressoChecklistNetz(o);
+        const dias = daysUntil(o.data_prevista);
+        const diasTxt = dias < 0 ? `<span style="color:#C93B3B;">${Math.abs(dias)}d atrasado</span>` : dias === 0 ? 'hoje' : `${dias}d`;
+        return `
+          <div style="${css.opRow}">
+            <div style="${css.opName}">${escapeHtml(o.nome)}</div>
+            <div style="${css.opMeta}">
+              <span style="${css.pill};background:#E4F3FF;color:#001B5C;">${STATUS_LABELS[o.status] || o.status}</span>
+              ${diasTxt} · tempo ${tempo}% ${ckNetz !== null ? `· checklist ${ckNetz}%` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+  // Tarefas próximas
+  const tasksBlock = allTasks.length === 0
+    ? `<div style="font-size:12px;color:#5A6785;font-style:italic;">Sem tarefas atrasadas ou nos próximos 7 dias.</div>`
+    : allTasks.slice(0, 20).map(t => {
+        const badge = t.days < 0 ? `<span style="${css.pill};background:#FCE6E6;color:#C93B3B;">ATRASO ${Math.abs(t.days)}d</span>`
+                    : t.days === 0 ? `<span style="${css.pill};background:#FFF1E5;color:#FF965A;">HOJE</span>`
+                    : `<span style="${css.pill};background:#E4F3FF;color:#001B5C;">+${t.days}d</span>`;
+        return `
+          <div style="${css.taskRow}">
+            ${badge}
+            <strong>${escapeHtml(t.texto)}</strong>
+            <div style="font-size:10px;color:#5A6785;margin-top:3px;">
+              ${escapeHtml(t.op)} ${t.responsavel ? '· ' + escapeHtml(t.responsavel) : ''} · ${fmtDate(t.prazo)}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+  // Riscos
+  const risksBlock = allRisks.length === 0
+    ? `<div style="font-size:12px;color:#5A6785;font-style:italic;">Nenhum risco aberto no momento.</div>`
+    : allRisks.slice(0, 10).map(r => `
+        <div style="${css.riskRow}">
+          <strong>${escapeHtml(r.titulo || r.descricao || 'Risco')}</strong>
+          <div style="font-size:10px;color:#5A6785;margin-top:4px;">
+            ${escapeHtml(r.op)} ${r.responsavel ? '· ' + escapeHtml(r.responsavel) : ''}
+          </div>
+        </div>
+      `).join('');
+
+  // Monta o HTML
+  return `<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Relatório Diário Netz · ${ymd}</title></head>
+<body style="${css.body}">
+  <div style="${css.container}">
+    <div style="${css.header}">
+      <h1 style="${css.headerTitle}">NETZ SOLUTION</h1>
+      <p style="${css.headerSub}">Relatório Diário · ${ymd}${targetName ? ' · para ' + escapeHtml(targetName) : ''}</p>
+    </div>
+
+    <div style="${css.section}">
+      <h3 style="${css.sectionTitle}">📊 Snapshot do Pipeline</h3>
+      ${kpiBlock}
+    </div>
+
+    <div style="${css.section}">
+      <h3 style="${css.sectionTitle}">🔄 Alterações nas últimas 24h (${recent.length})</h3>
+      ${recentBlock}
+      ${recent.length > 12 ? `<div style="font-size:11px;color:#5A6785;margin-top:8px;font-style:italic;">+ ${recent.length - 12} outras alterações</div>` : ''}
+    </div>
+
+    <div style="${css.section}">
+      <h3 style="${css.sectionTitle}">⏳ Tarefas atrasadas e próximas (${allTasks.length})</h3>
+      ${tasksBlock}
+      ${allTasks.length > 20 ? `<div style="font-size:11px;color:#5A6785;margin-top:8px;font-style:italic;">+ ${allTasks.length - 20} outras tarefas</div>` : ''}
+    </div>
+
+    <div style="${css.section}">
+      <h3 style="${css.sectionTitle}">⚠️ Riscos abertos (${allRisks.length})</h3>
+      ${risksBlock}
+    </div>
+
+    <div style="${css.section}">
+      <h3 style="${css.sectionTitle}">📋 Operações ativas (${active.length})</h3>
+      ${activeBlock}
+      ${active.length > 15 ? `<div style="font-size:11px;color:#5A6785;margin-top:8px;font-style:italic;">+ ${active.length - 15} outras operações ativas</div>` : ''}
+    </div>
+
+    <div style="${css.footer}">
+      <strong>Netz Solution · Pipeline Manager</strong><br>
+      Para alterar suas preferências, fale com o time.
+    </div>
+  </div>
+</body></html>`;
+}
+
+function showReportPreview() {
+  const html = buildDailyReportHTML('[Nome do destinatário]');
+  const iframe = document.getElementById('reportPreviewFrame');
+  iframe.srcdoc = html;
+  document.getElementById('modalReportPreviewOverlay').classList.add('open');
+}
+
+function closeReportPreview() {
+  document.getElementById('modalReportPreviewOverlay').classList.remove('open');
+}
+
+async function sendReportNow() {
+  const enabled = state.subscribers.filter(s => s.enabled);
+  if (enabled.length === 0) {
+    return showToast('Nenhum destinatário ativo cadastrado', true);
+  }
+  if (!confirm(`Enviar o relatório de hoje para ${enabled.length} destinatário(s) ativos agora?`)) return;
+
+  showToast('Enviando…');
+  let okCount = 0, errCount = 0;
+  for (const sub of enabled) {
+    try {
+      const html = buildDailyReportHTML(sub.responsavel);
+      const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-report`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          to: sub.email,
+          name: sub.responsavel,
+          html
+        })
+      });
+      const body = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(body.error || `HTTP ${resp.status}`);
+      okCount++;
+      // Log do envio
+      await sb.from('report_send_logs').insert({
+        data_relatorio: todayStr(),
+        responsavel: sub.responsavel,
+        status: 'enviado'
+      });
+    } catch (e) {
+      errCount++;
+      await sb.from('report_send_logs').insert({
+        data_relatorio: todayStr(),
+        responsavel: sub.responsavel,
+        status: 'erro',
+        error_msg: String(e.message || e).slice(0, 500)
+      });
+    }
+  }
+  showToast(`Concluído: ${okCount} enviado(s), ${errCount} erro(s)`, errCount > 0);
+  await loadReportLogs();
 }
 
 function renderLogs() {
