@@ -5823,51 +5823,60 @@ async function buildDailyReportHTML(targetName, aiSummary) {
   const tasksToday = [];          // pendentes/em andamento com prazo == hoje
   const tasksPending = [];        // pendentes/em andamento com prazo < hoje (atrasadas) ou prazo > hoje próximas
 
+  // Helpers de classificação:
+  // - "concluída ontem/hoje": usa o campo `concluido_em` se existir, senão prazo recente
+  // - "para hoje": prazo = hoje E não concluída
+  // - "pendentes": prazo passado ou próximos 14 dias E não concluída
+
   ops.forEach(o => {
     (o.checklist || []).forEach(c => {
       if (!c.texto) return;
       const isDone = c.num ? (c.status === 'concluido' || c.status === 'na') : c.done;
+      const taskBase = {
+        op: o.nome,
+        opId: o.id,
+        opStatus: o.status,
+        texto: (c.num ? c.num + ' ' : '') + c.texto,
+        responsavel: c.responsavel || o.responsavel,
+        prazo: c.prazo,
+        categoria: c.categoria
+      };
 
-      // Concluídas ontem: usamos um proxy — se a operação foi atualizada nas últimas 24h E o item está concluído,
-      // consideramos como tarefa "feita recentemente" (próxima do real)
       if (isDone) {
-        const updated = (o.atualizado_em || '').slice(0, 10);
-        if (updated >= yestStr) {
-          tasksDoneYesterday.push({
-            op: o.nome,
-            opId: o.id,
-            opStatus: o.status,
-            texto: (c.num ? c.num + ' ' : '') + c.texto,
-            responsavel: c.responsavel || o.responsavel,
-            prazo: c.prazo,
-            categoria: c.categoria
-          });
+        // Critérios pra contar como "concluída recentemente":
+        //  (a) tem campo concluido_em e é >= ontem
+        //  (b) sem concluido_em mas tem prazo nos últimos 7 dias (proxy razoável)
+        //  (c) sem concluido_em nem prazo, mas a OPERAÇÃO foi atualizada nas últimas 24h
+        const concluidoEm = (c.concluido_em || '').slice(0, 10);
+        const opUpdated = (o.atualizado_em || '').slice(0, 10);
+        const prazoStr = c.prazo || '';
+
+        let countAsRecent = false;
+        if (concluidoEm && concluidoEm >= yestStr) {
+          countAsRecent = true;
+        } else if (prazoStr) {
+          // Prazo nos últimos 7 dias = provável conclusão recente
+          const prazoDays = dateToDays(prazoStr) - todayD;
+          if (prazoDays >= -7 && prazoDays <= 0) countAsRecent = true;
+        } else if (opUpdated && opUpdated >= yestStr) {
+          countAsRecent = true;
         }
-        return;
+
+        if (countAsRecent) {
+          tasksDoneYesterday.push(taskBase);
+        }
+        return; // tarefas concluídas não vão pra "hoje" nem "pendentes"
       }
 
-      // Pendentes com prazo
-      if (!c.prazo) {
-        // pendentes sem prazo entram no "pendentes" geral só se categoria principal
-        return;
-      }
+      // Não concluída — precisa ter prazo pra entrar nas outras categorias
+      if (!c.prazo) return;
       const days = dateToDays(c.prazo) - todayD;
+      const taskWithDays = { ...taskBase, days };
 
       if (days === 0) {
-        tasksToday.push({
-          op: o.nome, opId: o.id, opStatus: o.status,
-          texto: (c.num ? c.num + ' ' : '') + c.texto,
-          responsavel: c.responsavel || o.responsavel,
-          prazo: c.prazo, categoria: c.categoria, days
-        });
+        tasksToday.push(taskWithDays);
       } else if (days < 0 || days <= 14) {
-        // Atrasadas (days < 0) + próximas 14 dias
-        tasksPending.push({
-          op: o.nome, opId: o.id, opStatus: o.status,
-          texto: (c.num ? c.num + ' ' : '') + c.texto,
-          responsavel: c.responsavel || o.responsavel,
-          prazo: c.prazo, categoria: c.categoria, days
-        });
+        tasksPending.push(taskWithDays);
       }
     });
   });
@@ -5878,42 +5887,64 @@ async function buildDailyReportHTML(targetName, aiSummary) {
   tasksDoneYesterday.sort((a, b) => (a.op || '').localeCompare(b.op || ''));
 
   // ===== Andamento por operação (observações + log de alterações) =====
-  // Operações com atividade nas últimas 24h
-  const recent = ops.filter(o => {
-    const updated = (o.atualizado_em || '').slice(0, 10);
-    return updated >= yestStr;
-  }).sort((a, b) => (b.atualizado_em || '').localeCompare(a.atualizado_em || ''));
+  // Operações com atividade: pega TODAS as operações ativas e depois filtra
+  // por (a) observação preenchida, (b) log nas últimas 24h, (c) tarefa concluída/criada recente
+  // Não usa apenas atualizado_em pq esse campo nem sempre é tocado quando só um sub-item muda
 
-  // Para cada uma, juntar logs das últimas 24h
-  const recentWithLogs = recent.map(o => {
-    const opLogs = (state.logs || []).filter(l => {
-      if (l.operacao_id !== o.id) return false;
-      const lDate = (l.data || '').slice(0, 10);
-      return lDate >= yestStr;
-    });
+  // Mapeia logs por operação
+  const logsByOp = {};
+  (state.logs || []).forEach(l => {
+    const lDate = (l.data || '').slice(0, 10);
+    if (lDate < yestStr) return;
+    const opId = l.operacao_id || l.operation_id;
+    if (!opId) return;
+    (logsByOp[opId] = logsByOp[opId] || []).push(l);
+  });
 
-    // Resumir alterações em texto curto
-    const changeSummaries = opLogs.map(l => {
-      if (!l.campos_alterados) return l.acao || 'alteração';
-      const fields = Object.keys(l.campos_alterados);
-      if (fields.length === 0) return l.acao || 'alteração';
-      return fields.map(f => {
-        const [from, to] = l.campos_alterados[f];
-        if (f === 'status') return `status: ${STATUS_LABELS[from] || from} → ${STATUS_LABELS[to] || to}`;
-        if (f === 'valor' || f === 'receita' || f === 'volume_liquidado') return `${f}: ${fmtBRLshort(from)} → ${fmtBRLshort(to)}`;
-        if (f === 'data_prevista' || f === 'data_inicio' || f === 'data_liquidacao') return `${f}: ${from || '—'} → ${to || '—'}`;
-        if (typeof from === 'string' && from.length > 30) return `${f} atualizado`;
-        if (typeof to === 'string' && to.length > 30) return `${f} atualizado`;
-        return `${f}: ${from || '—'} → ${to || '—'}`;
-      }).join(' · ');
-    });
+  // Mapeia ops com tarefa concluída recente
+  const opsWithRecentTask = new Set();
+  tasksDoneYesterday.forEach(t => opsWithRecentTask.add(t.opId));
 
-    return {
-      op: o,
-      observacoes: (o.obs || '').trim(),
-      changes: changeSummaries
-    };
-  }).filter(x => x.observacoes || x.changes.length > 0);
+  // Operações que devem aparecer no andamento:
+  // - tem observação não vazia
+  // - tem log das últimas 24h
+  // - foi atualizada nas últimas 24h
+  // - tem tarefa concluída recentemente
+  const recentWithLogs = ops
+    .filter(o => {
+      if (isOperationConcluida(o) && o.status !== 'liquidacao') return false; // ops finalizadas há tempos não importam
+      const hasObs = (o.obs || '').trim().length > 0;
+      const hasLogs = !!logsByOp[o.id];
+      const wasUpdated = (o.atualizado_em || '').slice(0, 10) >= yestStr;
+      const hasRecentTask = opsWithRecentTask.has(o.id);
+      return hasObs || hasLogs || wasUpdated || hasRecentTask;
+    })
+    .map(o => {
+      const opLogs = logsByOp[o.id] || [];
+
+      // Resumir alterações em texto curto
+      const changeSummaries = opLogs.map(l => {
+        if (!l.campos_alterados) return l.acao || 'alteração';
+        const fields = Object.keys(l.campos_alterados);
+        if (fields.length === 0) return l.acao || 'alteração';
+        return fields.map(f => {
+          const [from, to] = l.campos_alterados[f];
+          if (f === 'status') return `status: ${STATUS_LABELS[from] || from} → ${STATUS_LABELS[to] || to}`;
+          if (f === 'valor' || f === 'receita' || f === 'volume_liquidado') return `${f}: ${fmtBRLshort(from)} → ${fmtBRLshort(to)}`;
+          if (f === 'data_prevista' || f === 'data_inicio' || f === 'data_liquidacao') return `${f}: ${from || '—'} → ${to || '—'}`;
+          if (typeof from === 'string' && from.length > 30) return `${f} atualizado`;
+          if (typeof to === 'string' && to.length > 30) return `${f} atualizado`;
+          return `${f}: ${from || '—'} → ${to || '—'}`;
+        }).join(' · ');
+      });
+
+      return {
+        op: o,
+        observacoes: (o.obs || '').trim(),
+        changes: changeSummaries
+      };
+    })
+    .sort((a, b) => (b.op.atualizado_em || '').localeCompare(a.op.atualizado_em || ''));
 
   // ===== Estilos inline (compatível com clientes de email) =====
   const css = {
@@ -6097,24 +6128,47 @@ async function generateAISummary() {
     const ops = state.operations;
 
     // Agrega dados de forma compacta para o prompt
-    const recentOps = ops.filter(o => (o.atualizado_em || '').slice(0, 10) >= yestStr);
+    // Usa mesma lógica da função buildDailyReportHTML (mais permissiva que apenas atualizado_em)
     const overdueTasks = [];
     const todayTasks = [];
     const doneTasks = [];
+    const opsWithRecentTaskAi = new Set();
 
     ops.forEach(o => {
       (o.checklist || []).forEach(c => {
         if (!c.texto) return;
         const isDone = c.num ? (c.status === 'concluido' || c.status === 'na') : c.done;
-        if (isDone && (o.atualizado_em || '').slice(0, 10) >= yestStr) {
-          doneTasks.push(`${o.nome}: ${c.texto}`);
+
+        if (isDone) {
+          const concluidoEm = (c.concluido_em || '').slice(0, 10);
+          const opUpdated = (o.atualizado_em || '').slice(0, 10);
+          const prazoStr = c.prazo || '';
+          let countAsRecent = false;
+          if (concluidoEm && concluidoEm >= yestStr) countAsRecent = true;
+          else if (prazoStr) {
+            const prazoDays = dateToDays(prazoStr) - todayD;
+            if (prazoDays >= -7 && prazoDays <= 0) countAsRecent = true;
+          } else if (opUpdated && opUpdated >= yestStr) countAsRecent = true;
+          if (countAsRecent) {
+            doneTasks.push(`${o.nome}: ${c.texto}`);
+            opsWithRecentTaskAi.add(o.id);
+          }
           return;
         }
+
         if (!c.prazo) return;
         const days = dateToDays(c.prazo) - todayD;
         if (days < 0) overdueTasks.push(`${o.nome}: ${c.texto} (atrasada ${Math.abs(days)}d)`);
         else if (days === 0) todayTasks.push(`${o.nome}: ${c.texto}`);
       });
+    });
+
+    // Operações relevantes: atualizadas, com obs, ou com tarefa concluída recente
+    const recentOps = ops.filter(o => {
+      if (isOperationConcluida(o) && o.status !== 'liquidacao') return false;
+      const wasUpdated = (o.atualizado_em || '').slice(0, 10) >= yestStr;
+      const hasObs = (o.obs || '').trim().length > 0;
+      return wasUpdated || hasObs || opsWithRecentTaskAi.has(o.id);
     });
 
     const opsContext = recentOps.slice(0, 15).map(o => {
