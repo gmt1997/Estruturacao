@@ -3356,19 +3356,19 @@
 
 <!-- ===== MODAL PROJETO ===== -->
 <div class="modal-overlay" id="modalProjectOverlay">
-  <div class="modal" style="max-width: 640px;">
+  <div class="modal" style="max-width: 720px;">
     <div class="modal-head">
       <h2 id="modalProjectTitle">Novo projeto</h2>
       <button class="modal-close" onclick="closeProjectModal()">×</button>
     </div>
     <div class="modal-body">
       <div class="form-section">
-        <div class="form-row">
-          <div class="form-field" style="flex: 2;">
+        <div class="form-grid">
+          <div class="field span2">
             <label>Nome do projeto</label>
             <input type="text" id="projNome" placeholder="Ex: Implementar conector BCB" autocomplete="off">
           </div>
-          <div class="form-field" style="flex: 1; min-width: 120px;">
+          <div class="field">
             <label>Prioridade</label>
             <select id="projPrioridade">
               <option value="baixa">Baixa</option>
@@ -3377,14 +3377,12 @@
               <option value="urgente">Urgente</option>
             </select>
           </div>
-        </div>
 
-        <div class="form-row">
-          <div class="form-field">
+          <div class="field span2">
             <label>Responsável</label>
             <input type="text" id="projResponsavel" placeholder="Ex: Gabriel" autocomplete="off" list="respList">
           </div>
-          <div class="form-field" style="flex: 1; min-width: 140px;">
+          <div class="field">
             <label>Status</label>
             <select id="projStatus">
               <option value="backlog">Backlog</option>
@@ -3394,28 +3392,22 @@
               <option value="concluido">Concluído</option>
             </select>
           </div>
-        </div>
 
-        <div class="form-row">
-          <div class="form-field">
+          <div class="field">
             <label>Data de início</label>
             <input type="date" id="projDataInicio">
           </div>
-          <div class="form-field">
+          <div class="field span2">
             <label>Prazo</label>
             <input type="date" id="projDataPrevista">
           </div>
-        </div>
 
-        <div class="form-row">
-          <div class="form-field">
+          <div class="field full">
             <label>Descrição</label>
             <textarea id="projDescricao" rows="3" placeholder="Contexto, objetivo, observações…"></textarea>
           </div>
-        </div>
 
-        <div class="form-row">
-          <div class="form-field">
+          <div class="field full">
             <label>Tags <span style="font-weight:400; color:var(--text-mute); font-size:11px;">(separe por vírgula ou Enter)</span></label>
             <div class="tag-input-wrap">
               <div class="tag-chips" id="projTagChips"></div>
