@@ -1263,6 +1263,229 @@
     flex-wrap: wrap; gap: 12px;
     margin-bottom: 20px;
   }
+
+  /* ===== Aba Projetos ===== */
+  .projects-header {
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 12px;
+    margin-bottom: 20px;
+  }
+  .projects-actions {
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  }
+
+  /* Cards de projeto reusam .kanban-card mas têm acentos por prioridade */
+  .kanban-card.prio-urgente { border-left-color: #C93B3B !important; }
+  .kanban-card.prio-alta    { border-left-color: #FF965A !important; }
+  .kanban-card.prio-media   { border-left-color: #2E7D5B !important; }
+  .kanban-card.prio-baixa   { border-left-color: #9CA3B5 !important; }
+
+  .proj-prio-badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 7px;
+    border-radius: 3px;
+    margin-right: 6px;
+  }
+  .proj-prio-badge.urgente { background: rgba(201, 59, 59, 0.12); color: #C93B3B; }
+  .proj-prio-badge.alta    { background: rgba(255, 150, 90, 0.15); color: #B57E2E; }
+  .proj-prio-badge.media   { background: rgba(46, 125, 91, 0.12); color: #2E7D5B; }
+  .proj-prio-badge.baixa   { background: rgba(90, 103, 133, 0.12); color: #5A6785; }
+
+  .proj-checklist-mini {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--text-mute);
+    margin-top: 6px;
+  }
+  .proj-checklist-mini-bar {
+    flex: 1;
+    height: 4px;
+    background: var(--blue-light);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .proj-checklist-mini-fill {
+    height: 100%;
+    background: var(--orange);
+    border-radius: 2px;
+  }
+  .proj-desc-preview {
+    font-size: 11px;
+    color: var(--text-mute);
+    margin-top: 6px;
+    line-height: 1.4;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  /* Tags no card */
+  .proj-card-tags {
+    display: flex; flex-wrap: wrap; gap: 4px;
+    margin-top: 8px;
+  }
+  .proj-tag-chip {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 10px;
+    background: var(--blue-light);
+    color: var(--navy);
+    letter-spacing: 0.02em;
+  }
+
+  /* Tags no modal — input estilo "chips" */
+  .tag-input-wrap {
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 8px;
+    background: #fff;
+    min-height: 36px;
+    transition: border-color 0.18s;
+  }
+  .tag-input-wrap:focus-within {
+    border-color: var(--orange);
+  }
+  .tag-chips {
+    display: flex; flex-wrap: wrap; gap: 5px;
+  }
+  .tag-chip-editable {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 12px;
+    background: var(--blue-light);
+    color: var(--navy);
+  }
+  .tag-chip-editable .tag-remove {
+    cursor: pointer;
+    color: var(--text-mute);
+    font-weight: 700;
+    line-height: 1;
+    padding: 0 2px;
+    border-radius: 50%;
+  }
+  .tag-chip-editable .tag-remove:hover {
+    color: var(--red);
+    background: rgba(201, 59, 59, 0.1);
+  }
+  .tag-input-wrap input[type="text"] {
+    flex: 1; min-width: 100px;
+    border: none !important;
+    outline: none !important;
+    padding: 4px 4px !important;
+    background: transparent !important;
+    font-size: 12px !important;
+  }
+  .tag-suggestions {
+    display: flex; flex-wrap: wrap; gap: 5px;
+    margin-top: 8px;
+    font-size: 11px;
+  }
+  .tag-suggestion-label {
+    font-size: 10px;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-right: 4px;
+    align-self: center;
+  }
+  .tag-suggestion-pill {
+    cursor: pointer;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    background: #F0F6FC;
+    color: var(--text-mute);
+    border: 1px dashed var(--border);
+    transition: all 0.15s;
+  }
+  .tag-suggestion-pill:hover {
+    background: var(--blue-light);
+    color: var(--navy);
+    border-style: solid;
+  }
+
+  /* Timeline de comentários */
+  .proj-comment-compose {
+    display: flex; gap: 8px;
+    margin-bottom: 14px;
+    align-items: stretch;
+  }
+  .proj-comment-compose input[type="text"] {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+    background: #fff;
+  }
+  .proj-timeline {
+    max-height: 320px;
+    overflow-y: auto;
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+  }
+  .proj-timeline-item {
+    position: relative;
+    padding: 10px 12px 10px 28px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    background: #fff;
+    border: 1px solid var(--border);
+  }
+  .proj-timeline-item::before {
+    content: '';
+    position: absolute;
+    left: 10px; top: 14px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--orange);
+  }
+  .proj-timeline-item.sistema {
+    background: var(--blue-light);
+    border-color: var(--blue-pale);
+  }
+  .proj-timeline-item.sistema::before {
+    background: var(--navy);
+  }
+  .proj-timeline-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 4px;
+    font-size: 11px;
+  }
+  .proj-timeline-autor {
+    font-weight: 600;
+    color: var(--navy);
+  }
+  .proj-timeline-when {
+    color: var(--text-mute);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+  }
+  .proj-timeline-text {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text);
+    word-wrap: break-word;
+  }
+  .proj-timeline-item.sistema .proj-timeline-text {
+    color: var(--navy);
+    font-style: italic;
+  }
+  .proj-timeline-empty {
+    text-align: center;
+    padding: 24px;
+    color: var(--text-mute);
+    font-size: 12px;
+    font-style: italic;
+  }
   .reports-actions {
     display: flex; gap: 8px; flex-wrap: wrap;
   }
@@ -2746,6 +2969,7 @@
       <button class="tab" data-tab="table">Tabela</button>
       <button class="tab" data-tab="gantt">Gantt</button>
       <button class="tab" data-tab="weekly">Semana</button>
+      <button class="tab" data-tab="projects">Projetos</button>
       <button class="tab" data-tab="reports">Relatórios</button>
       <button class="tab" data-tab="audit">Auditoria</button>
     </nav>
@@ -2995,6 +3219,36 @@
       <div class="weekly-content" id="weeklyContent"></div>
     </section>
 
+    <!-- PROJETOS (gestão paralela às operações) -->
+    <section class="panel" id="panel-projects">
+      <div class="projects-header">
+        <h2 class="section-title" style="margin: 0;">Projetos & To-dos</h2>
+        <div class="projects-actions">
+          <input type="text" class="search-input" id="searchProjects" placeholder="Buscar projeto, responsável…" oninput="renderProjectsKanban()" style="max-width: 280px;">
+          <select class="filter-select" id="projectsFilterResp" onchange="renderProjectsKanban()">
+            <option value="">Todos responsáveis</option>
+          </select>
+          <select class="filter-select" id="projectsFilterPrio" onchange="renderProjectsKanban()">
+            <option value="">Todas prioridades</option>
+            <option value="urgente">Urgente</option>
+            <option value="alta">Alta</option>
+            <option value="media">Média</option>
+            <option value="baixa">Baixa</option>
+          </select>
+          <select class="filter-select" id="projectsFilterTag" onchange="renderProjectsKanban()">
+            <option value="">Todas tags</option>
+          </select>
+          <label class="hide-liquidated-toggle" style="margin-left: 0;">
+            <input type="checkbox" id="hideDoneProjects" onchange="renderProjectsKanban()">
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            <span class="toggle-label">ocultar concluídos</span>
+          </label>
+          <button class="btn-primary" onclick="openProjectModal()">+ Novo projeto</button>
+        </div>
+      </div>
+      <div class="kanban" id="projectsKanban"></div>
+    </section>
+
     <!-- RELATÓRIOS -->
     <section class="panel" id="panel-reports">
       <div class="reports-header">
@@ -3096,6 +3350,113 @@
     <div class="modal-foot">
       <div style="flex: 1; font-size: 11px; color: var(--text-mute);">Esta é a visão exata do email que será enviado aos destinatários ativos.</div>
       <button class="btn-secondary" onclick="closeReportPreview()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL PROJETO ===== -->
+<div class="modal-overlay" id="modalProjectOverlay">
+  <div class="modal" style="max-width: 640px;">
+    <div class="modal-head">
+      <h2 id="modalProjectTitle">Novo projeto</h2>
+      <button class="modal-close" onclick="closeProjectModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-section">
+        <div class="form-row">
+          <div class="form-field" style="flex: 2;">
+            <label>Nome do projeto</label>
+            <input type="text" id="projNome" placeholder="Ex: Implementar conector BCB" autocomplete="off">
+          </div>
+          <div class="form-field" style="flex: 1; min-width: 120px;">
+            <label>Prioridade</label>
+            <select id="projPrioridade">
+              <option value="baixa">Baixa</option>
+              <option value="media" selected>Média</option>
+              <option value="alta">Alta</option>
+              <option value="urgente">Urgente</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label>Responsável</label>
+            <input type="text" id="projResponsavel" placeholder="Ex: Gabriel" autocomplete="off" list="respList">
+          </div>
+          <div class="form-field" style="flex: 1; min-width: 140px;">
+            <label>Status</label>
+            <select id="projStatus">
+              <option value="backlog">Backlog</option>
+              <option value="planejado">Planejado</option>
+              <option value="andamento">Em andamento</option>
+              <option value="aguardando">Aguardando</option>
+              <option value="concluido">Concluído</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label>Data de início</label>
+            <input type="date" id="projDataInicio">
+          </div>
+          <div class="form-field">
+            <label>Prazo</label>
+            <input type="date" id="projDataPrevista">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label>Descrição</label>
+            <textarea id="projDescricao" rows="3" placeholder="Contexto, objetivo, observações…"></textarea>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label>Tags <span style="font-weight:400; color:var(--text-mute); font-size:11px;">(separe por vírgula ou Enter)</span></label>
+            <div class="tag-input-wrap">
+              <div class="tag-chips" id="projTagChips"></div>
+              <input type="text" id="projTagInput" placeholder="Adicionar tag…" autocomplete="off"
+                onkeydown="onTagInputKeyDown(event)" onblur="commitTagInput()">
+            </div>
+            <div id="projTagSuggestions" class="tag-suggestions"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">
+          <span>Checklist de tarefas</span>
+          <div class="form-section-title-actions">
+            <button type="button" class="phase-template-btn" onclick="addProjectChecklistItem()">+ Item</button>
+          </div>
+        </div>
+        <div id="projChecklist" class="checklist-list"></div>
+      </div>
+
+      <div class="form-section" id="projCommentsSection" style="display:none;">
+        <div class="form-section-title">
+          <span>Comentários & Timeline</span>
+          <div class="form-section-title-actions">
+            <span style="font-size: 11px; color: var(--text-mute);" id="projCommentsCount">0 atualizações</span>
+          </div>
+        </div>
+        <div class="proj-comment-compose">
+          <input type="text" id="projCommentAutor" placeholder="Seu nome" style="max-width:160px;" autocomplete="off">
+          <input type="text" id="projCommentText" placeholder="Escrever comentário…" onkeydown="if(event.key==='Enter')addProjectComment()">
+          <button type="button" class="btn-primary" style="padding:6px 14px;" onclick="addProjectComment()">Comentar</button>
+        </div>
+        <div id="projCommentsTimeline" class="proj-timeline"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-danger" id="projDeleteBtn" onclick="deleteProject()" style="display:none;">Excluir</button>
+      <div style="flex: 1;"></div>
+      <button class="btn-secondary" onclick="closeProjectModal()">Cancelar</button>
+      <button class="btn-primary" onclick="saveProject()">Salvar</button>
     </div>
   </div>
 </div>
@@ -3898,6 +4259,9 @@ document.querySelectorAll('.tab').forEach(t => {
     if (t.dataset.tab === 'reports') {
       loadSubscribers();
       loadReportLogs();
+    }
+    if (t.dataset.tab === 'projects') {
+      loadProjects();
     }
     renderAll();
   });
@@ -5367,6 +5731,751 @@ async function kanbanDrop(e) {
   }
 }
 
+// ============================================
+// PROJETOS (gestão de to-dos paralela)
+// ============================================
+
+state.projects = [];
+state.editingProjectId = null;
+
+const PROJECT_STATUSES = ['backlog', 'planejado', 'andamento', 'aguardando', 'concluido'];
+const PROJECT_STATUS_LABELS = {
+  backlog: 'Backlog',
+  planejado: 'Planejado',
+  andamento: 'Em andamento',
+  aguardando: 'Aguardando',
+  concluido: 'Concluído'
+};
+const PROJECT_PRIO_LABELS = {
+  urgente: 'Urgente',
+  alta: 'Alta',
+  media: 'Média',
+  baixa: 'Baixa'
+};
+
+async function loadProjects() {
+  try {
+    const { data, error } = await sb.from('projects').select('*').order('atualizado_em', { ascending: false });
+    if (error) throw error;
+    state.projects = data || [];
+    populateProjectsFilters();
+    // Carrega contagem de comentários em paralelo (não bloqueia)
+    loadAllCommentCounts().then(() => renderProjectsKanban());
+    renderProjectsKanban();
+  } catch (e) {
+    console.warn('[projects] load fail', e);
+    state.projects = [];
+    renderProjectsKanban();
+  }
+}
+
+function populateProjectsFilters() {
+  const sel = document.getElementById('projectsFilterResp');
+  if (!sel) return;
+  const cur = sel.value;
+  const resps = new Set();
+  state.projects.forEach(p => {
+    if (p.responsavel) p.responsavel.split(/[·,\/]/).map(s => s.trim()).filter(Boolean).forEach(r => resps.add(r));
+  });
+  sel.innerHTML = '<option value="">Todos responsáveis</option>' +
+    [...resps].sort().map(r => `<option value="${escapeAttr(r)}">${escapeHtml(r)}</option>`).join('');
+  sel.value = cur;
+
+  // Tags
+  const selTag = document.getElementById('projectsFilterTag');
+  if (selTag) {
+    const curTag = selTag.value;
+    const tags = new Set();
+    state.projects.forEach(p => {
+      (p.tags || []).forEach(t => { if (t) tags.add(t); });
+    });
+    selTag.innerHTML = '<option value="">Todas tags</option>' +
+      [...tags].sort().map(t => `<option value="${escapeAttr(t)}">${escapeHtml(t)}</option>`).join('');
+    selTag.value = curTag;
+  }
+}
+
+// Retorna conjunto único de tags já usadas em qualquer projeto
+function getAllUsedTags() {
+  const s = new Set();
+  state.projects.forEach(p => (p.tags || []).forEach(t => t && s.add(t)));
+  return [...s].sort();
+}
+
+function renderProjectsKanban() {
+  const wrap = document.getElementById('projectsKanban');
+  if (!wrap) return;
+
+  const search = (document.getElementById('searchProjects')?.value || '').toLowerCase();
+  const fResp = document.getElementById('projectsFilterResp')?.value || '';
+  const fPrio = document.getElementById('projectsFilterPrio')?.value || '';
+  const fTag = document.getElementById('projectsFilterTag')?.value || '';
+  const hideDone = document.getElementById('hideDoneProjects')?.checked;
+
+  const filtered = state.projects.filter(p => {
+    if (search) {
+      const tagsStr = (p.tags || []).join(' ');
+      const hay = (p.nome + ' ' + (p.responsavel || '') + ' ' + (p.descricao || '') + ' ' + tagsStr).toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    if (fResp && !(p.responsavel || '').includes(fResp)) return false;
+    if (fPrio && p.prioridade !== fPrio) return false;
+    if (fTag && !(p.tags || []).includes(fTag)) return false;
+    return true;
+  });
+
+  const visibleStatuses = hideDone
+    ? PROJECT_STATUSES.filter(s => s !== 'concluido')
+    : PROJECT_STATUSES;
+
+  wrap.innerHTML = visibleStatuses.map(s => {
+    let cards = filtered.filter(p => p.status === s);
+    // Concluídos: mais recentes primeiro
+    if (s === 'concluido') {
+      cards.sort((a, b) => (b.data_conclusao || b.atualizado_em || '').localeCompare(a.data_conclusao || a.atualizado_em || ''));
+    } else {
+      // Outros: ordena por prioridade (urgente > alta > media > baixa) e prazo
+      const prioRank = { urgente: 0, alta: 1, media: 2, baixa: 3 };
+      cards.sort((a, b) => {
+        const pa = prioRank[a.prioridade] ?? 4;
+        const pb = prioRank[b.prioridade] ?? 4;
+        if (pa !== pb) return pa - pb;
+        const da = a.data_prevista || '9999-12-31';
+        const db = b.data_prevista || '9999-12-31';
+        return da.localeCompare(db);
+      });
+    }
+
+    return `<div class="kanban-col" data-pstatus="${s}"
+        ondragover="projectDragOver(event)"
+        ondragleave="projectDragLeave(event)"
+        ondrop="projectDrop(event)">
+      <div class="kanban-col-head">
+        <span class="kanban-col-title">${PROJECT_STATUS_LABELS[s]}</span>
+        <span class="kanban-col-count">${cards.length}</span>
+      </div>
+      <div class="kanban-col-cards">
+        ${cards.map(p => renderProjectCard(p)).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderProjectCard(p) {
+  const checklist = p.checklist || [];
+  const total = checklist.length;
+  const done = checklist.filter(c => c.done).length;
+  const pct = total > 0 ? Math.round(done / total * 100) : 0;
+  const today = todayStr();
+  const prazoTxt = p.data_prevista
+    ? (p.data_prevista < today && p.status !== 'concluido'
+        ? `<span style="color:var(--red);font-weight:600;">${fmtDate(p.data_prevista)} ⚠</span>`
+        : fmtDate(p.data_prevista))
+    : '—';
+  const tags = p.tags || [];
+  const commentsCount = (state.projectCommentsByProj || {})[p.id]?.length || 0;
+  return `
+    <div class="kanban-card prio-${p.prioridade || 'media'}" draggable="true" data-pid="${p.id}"
+      ondragstart="projectDragStart(event)"
+      ondragend="projectDragEnd(event)"
+      onclick="openProjectModal(${p.id})">
+      <div class="kc-name">
+        <span class="proj-prio-badge ${p.prioridade || 'media'}">${PROJECT_PRIO_LABELS[p.prioridade] || 'Média'}</span>
+        ${escapeHtml(p.nome)}
+      </div>
+      ${p.descricao ? `<div class="proj-desc-preview">${escapeHtml(p.descricao)}</div>` : ''}
+      ${tags.length > 0 ? `
+        <div class="proj-card-tags">
+          ${tags.slice(0, 5).map(t => `<span class="proj-tag-chip">#${escapeHtml(t)}</span>`).join('')}
+          ${tags.length > 5 ? `<span class="proj-tag-chip">+${tags.length - 5}</span>` : ''}
+        </div>
+      ` : ''}
+      <div class="kc-row" style="margin-top:8px;">
+        <span class="kc-resp">${escapeHtml(p.responsavel || '—')}</span>
+        <span style="display:flex;align-items:center;gap:6px;">
+          ${commentsCount > 0 ? `<span class="mono" style="font-size:10px;color:var(--text-mute);" title="${commentsCount} atualizações">💬 ${commentsCount}</span>` : ''}
+          <span class="mono" style="font-size:10px;">${prazoTxt}</span>
+        </span>
+      </div>
+      ${total > 0 ? `
+        <div class="proj-checklist-mini">
+          <span class="mono">${done}/${total}</span>
+          <div class="proj-checklist-mini-bar"><div class="proj-checklist-mini-fill" style="width:${pct}%"></div></div>
+          <span class="mono" style="font-size:10px;">${pct}%</span>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+// ===== Drag & Drop projetos =====
+let draggedProjectId = null;
+function projectDragStart(e) {
+  draggedProjectId = e.currentTarget.dataset.pid;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.stopPropagation();
+}
+function projectDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.kanban-col').forEach(c => c.classList.remove('drag-over'));
+}
+function projectDragOver(e) {
+  if (!draggedProjectId) return;
+  e.preventDefault();
+  e.currentTarget.classList.add('drag-over');
+}
+function projectDragLeave(e) {
+  e.currentTarget.classList.remove('drag-over');
+}
+async function projectDrop(e) {
+  e.preventDefault();
+  if (!draggedProjectId) return;
+  const newStatus = e.currentTarget.dataset.pstatus;
+  const proj = state.projects.find(p => String(p.id) === String(draggedProjectId));
+  e.currentTarget.classList.remove('drag-over');
+  if (!proj || proj.status === newStatus) return;
+  const oldStatus = proj.status;
+  proj.status = newStatus;
+  // Se foi pra concluído, marca data_conclusao
+  const payload = { status: newStatus };
+  if (newStatus === 'concluido' && !proj.data_conclusao) {
+    proj.data_conclusao = todayStr();
+    payload.data_conclusao = proj.data_conclusao;
+  } else if (oldStatus === 'concluido' && newStatus !== 'concluido') {
+    proj.data_conclusao = null;
+    payload.data_conclusao = null;
+  }
+  renderProjectsKanban();
+  const { error } = await sb.from('projects').update(payload).eq('id', proj.id);
+  if (error) {
+    proj.status = oldStatus;
+    renderProjectsKanban();
+    showToast('Erro: ' + error.message, true);
+  } else {
+    showToast(`"${proj.nome}" → ${PROJECT_STATUS_LABELS[newStatus]}`);
+  }
+}
+
+// ===== Modal de projeto =====
+async function openProjectModal(id) {
+  state.editingProjectId = id || null;
+  const proj = id ? state.projects.find(p => String(p.id) === String(id)) : null;
+  document.getElementById('modalProjectTitle').textContent = proj ? 'Editar projeto' : 'Novo projeto';
+  document.getElementById('projNome').value = proj?.nome || '';
+  document.getElementById('projDescricao').value = proj?.descricao || '';
+  document.getElementById('projResponsavel').value = proj?.responsavel || '';
+  document.getElementById('projStatus').value = proj?.status || 'backlog';
+  document.getElementById('projPrioridade').value = proj?.prioridade || 'media';
+  document.getElementById('projDataInicio').value = proj?.data_inicio || '';
+  document.getElementById('projDataPrevista').value = proj?.data_prevista || '';
+  document.getElementById('projDeleteBtn').style.display = proj ? 'inline-block' : 'none';
+
+  // Estado original (pra detectar mudanças no save)
+  state.editingProjectOriginal = proj ? {
+    responsavel: proj.responsavel || '',
+    status: proj.status || 'backlog',
+    nome: proj.nome || ''
+  } : null;
+
+  // Renderiza checklist
+  renderProjectChecklist(proj?.checklist || []);
+
+  // Renderiza tags
+  state.editingProjectTags = [...(proj?.tags || [])];
+  renderProjectTags();
+  renderTagSuggestions();
+  document.getElementById('projTagInput').value = '';
+
+  // Comentários só fazem sentido pra projetos já criados
+  const commentsSection = document.getElementById('projCommentsSection');
+  if (proj) {
+    commentsSection.style.display = '';
+    document.getElementById('projCommentText').value = '';
+    await loadProjectComments(proj.id);
+    renderProjectComments();
+  } else {
+    commentsSection.style.display = 'none';
+  }
+
+  document.getElementById('modalProjectOverlay').classList.add('active');
+}
+
+function closeProjectModal() {
+  document.getElementById('modalProjectOverlay').classList.remove('active');
+  state.editingProjectId = null;
+  state.editingProjectTags = [];
+  state.editingProjectOriginal = null;
+}
+
+function renderProjectChecklist(items) {
+  const wrap = document.getElementById('projChecklist');
+  wrap.innerHTML = items.map((it, idx) => `
+    <div class="checklist-item ${it.done ? 'done' : ''}" data-idx="${idx}">
+      <input type="checkbox" ${it.done ? 'checked' : ''} onchange="toggleProjectChecklistItem(${idx}, this.checked)">
+      <input type="text" value="${escapeAttr(it.texto || '')}" placeholder="Descrição da tarefa" oninput="updateProjectChecklistField(${idx}, 'texto', this.value)">
+      <input type="text" value="${escapeAttr(it.responsavel || '')}" placeholder="resp." style="max-width:90px;" oninput="updateProjectChecklistField(${idx}, 'responsavel', this.value)">
+      <input type="date" value="${it.prazo || ''}" style="max-width:140px;" onchange="updateProjectChecklistField(${idx}, 'prazo', this.value)">
+      <button type="button" class="ck-del" onclick="removeProjectChecklistItem(${idx})">×</button>
+    </div>
+  `).join('');
+}
+
+function getProjectChecklistFromDOM() {
+  // Reconstrói a partir do DOM (para preservar edições não salvas no state)
+  const rows = document.querySelectorAll('#projChecklist .checklist-item');
+  return [...rows].map(r => ({
+    texto: r.querySelector('input[type="text"]').value,
+    responsavel: r.querySelectorAll('input[type="text"]')[1].value,
+    prazo: r.querySelector('input[type="date"]').value,
+    done: r.querySelector('input[type="checkbox"]').checked,
+    concluido_em: r.querySelector('input[type="checkbox"]').checked ? (r.dataset.concluidoEm || todayStr()) : null
+  })).filter(c => c.texto.trim());
+}
+
+function addProjectChecklistItem() {
+  const cur = getProjectChecklistFromDOM();
+  cur.push({ texto: '', responsavel: '', prazo: '', done: false });
+  renderProjectChecklist(cur);
+  // Foca o último input
+  setTimeout(() => {
+    const inputs = document.querySelectorAll('#projChecklist .checklist-item input[type="text"]');
+    if (inputs.length) inputs[inputs.length - 2].focus();
+  }, 10);
+}
+
+function removeProjectChecklistItem(idx) {
+  const cur = getProjectChecklistFromDOM();
+  cur.splice(idx, 1);
+  renderProjectChecklist(cur);
+}
+
+function toggleProjectChecklistItem(idx, checked) {
+  const row = document.querySelectorAll('#projChecklist .checklist-item')[idx];
+  if (!row) return;
+  if (checked) {
+    row.classList.add('done');
+    row.dataset.concluidoEm = todayStr();
+  } else {
+    row.classList.remove('done');
+    delete row.dataset.concluidoEm;
+  }
+}
+
+function updateProjectChecklistField(idx, field, value) {
+  // Update é só no DOM; ao salvar, reconstruímos do DOM
+  // Nada a fazer aqui - getProjectChecklistFromDOM já lê do DOM
+}
+
+async function saveProject() {
+  // Commit tag pendente no input
+  commitTagInput();
+
+  const nome = document.getElementById('projNome').value.trim();
+  if (!nome) return showToast('Informe o nome do projeto', true);
+
+  const payload = {
+    nome,
+    descricao: document.getElementById('projDescricao').value.trim() || null,
+    responsavel: document.getElementById('projResponsavel').value.trim() || null,
+    status: document.getElementById('projStatus').value,
+    prioridade: document.getElementById('projPrioridade').value,
+    data_inicio: document.getElementById('projDataInicio').value || null,
+    data_prevista: document.getElementById('projDataPrevista').value || null,
+    checklist: getProjectChecklistFromDOM(),
+    tags: state.editingProjectTags || [],
+  };
+
+  // Se status = concluido e ainda não tem data_conclusao, define hoje
+  if (payload.status === 'concluido') {
+    const existing = state.editingProjectId
+      ? state.projects.find(p => String(p.id) === String(state.editingProjectId))
+      : null;
+    payload.data_conclusao = existing?.data_conclusao || todayStr();
+  } else {
+    payload.data_conclusao = null;
+  }
+
+  // Captura mudanças relevantes para logs/notificações antes do save
+  const original = state.editingProjectOriginal;
+  const isNew = !state.editingProjectId;
+  const sysLogs = []; // {tipo, texto, autor}
+  let assignedTo = null; // se nova atribuição, para enviar email
+
+  if (isNew) {
+    sysLogs.push({ tipo: 'sistema', texto: `Projeto criado por ${payload.responsavel || 'usuário'}.` });
+    if (payload.responsavel) assignedTo = { responsavel: payload.responsavel, isNew: true };
+  } else if (original) {
+    // Mudou responsável
+    if ((payload.responsavel || '') !== (original.responsavel || '')) {
+      if (payload.responsavel) {
+        sysLogs.push({ tipo: 'sistema', texto: `Atribuído para ${payload.responsavel}${original.responsavel ? ` (era ${original.responsavel})` : ''}.` });
+        assignedTo = { responsavel: payload.responsavel, prevResp: original.responsavel, isNew: false };
+      } else {
+        sysLogs.push({ tipo: 'sistema', texto: `Atribuição removida (era ${original.responsavel}).` });
+      }
+    }
+    // Mudou status
+    if (payload.status !== original.status) {
+      sysLogs.push({ tipo: 'sistema', texto: `Status: ${PROJECT_STATUS_LABELS[original.status] || original.status} → ${PROJECT_STATUS_LABELS[payload.status] || payload.status}.` });
+    }
+  }
+
+  try {
+    let projId;
+    if (state.editingProjectId) {
+      const { error } = await sb.from('projects').update(payload).eq('id', state.editingProjectId);
+      if (error) throw error;
+      projId = state.editingProjectId;
+      showToast('Projeto atualizado');
+    } else {
+      const { data, error } = await sb.from('projects').insert(payload).select().single();
+      if (error) throw error;
+      projId = data.id;
+      state.editingProjectId = projId;
+      showToast('Projeto criado');
+    }
+
+    // Insere logs de sistema (timeline)
+    if (sysLogs.length > 0 && projId) {
+      const rows = sysLogs.map(l => ({ project_id: projId, tipo: l.tipo, texto: l.texto, autor: 'Sistema' }));
+      await sb.from('project_comments').insert(rows).then(() => {}, e => console.warn('[projects] log sistema fail', e));
+    }
+
+    // Notificação por email se houve atribuição
+    if (assignedTo) {
+      try {
+        await notifyAssignment(projId, payload, assignedTo);
+      } catch (e) {
+        console.warn('[projects] notify fail (segue mesmo assim):', e);
+      }
+    }
+
+    closeProjectModal();
+    await loadProjects();
+  } catch (e) {
+    showToast('Erro: ' + (e.message || 'falha ao salvar'), true);
+  }
+}
+
+async function deleteProject() {
+  if (!state.editingProjectId) return;
+  if (!confirm('Excluir este projeto? Esta ação não pode ser desfeita.')) return;
+  try {
+    const { error } = await sb.from('projects').delete().eq('id', state.editingProjectId);
+    if (error) throw error;
+    showToast('Projeto excluído');
+    closeProjectModal();
+    await loadProjects();
+  } catch (e) {
+    showToast('Erro: ' + (e.message || 'falha'), true);
+  }
+}
+
+// ============================================
+// PROJETOS · TAGS (input com chips)
+// ============================================
+state.editingProjectTags = [];
+
+function renderProjectTags() {
+  const wrap = document.getElementById('projTagChips');
+  if (!wrap) return;
+  wrap.innerHTML = (state.editingProjectTags || []).map((t, i) => `
+    <span class="tag-chip-editable">
+      #${escapeHtml(t)}
+      <span class="tag-remove" onclick="removeProjectTag(${i})" title="Remover">×</span>
+    </span>
+  `).join('');
+}
+
+function renderTagSuggestions() {
+  const wrap = document.getElementById('projTagSuggestions');
+  if (!wrap) return;
+  const allTags = getAllUsedTags();
+  const cur = new Set(state.editingProjectTags || []);
+  const avail = allTags.filter(t => !cur.has(t));
+  if (avail.length === 0) {
+    wrap.innerHTML = '';
+    return;
+  }
+  wrap.innerHTML = `<span class="tag-suggestion-label">Sugestões:</span>` +
+    avail.slice(0, 15).map(t => `
+      <span class="tag-suggestion-pill" onclick="addProjectTag('${escapeAttr(t)}')">#${escapeHtml(t)}</span>
+    `).join('');
+}
+
+function addProjectTag(raw) {
+  const tag = (raw || '').trim().toLowerCase().replace(/^#/, '').replace(/\s+/g, '-');
+  if (!tag) return;
+  if (!state.editingProjectTags) state.editingProjectTags = [];
+  if (state.editingProjectTags.includes(tag)) return;
+  state.editingProjectTags.push(tag);
+  renderProjectTags();
+  renderTagSuggestions();
+  document.getElementById('projTagInput').value = '';
+}
+
+function removeProjectTag(idx) {
+  if (!state.editingProjectTags) return;
+  state.editingProjectTags.splice(idx, 1);
+  renderProjectTags();
+  renderTagSuggestions();
+}
+
+function onTagInputKeyDown(e) {
+  const input = e.target;
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    if (input.value.trim()) addProjectTag(input.value);
+  } else if (e.key === 'Backspace' && input.value === '' && state.editingProjectTags.length > 0) {
+    // Remove a última tag se backspace em input vazio
+    state.editingProjectTags.pop();
+    renderProjectTags();
+    renderTagSuggestions();
+  }
+}
+
+function commitTagInput() {
+  const input = document.getElementById('projTagInput');
+  if (!input) return;
+  const val = input.value.trim();
+  if (val) {
+    addProjectTag(val);
+  }
+}
+
+// ============================================
+// PROJETOS · COMENTÁRIOS / TIMELINE
+// ============================================
+state.projectCommentsByProj = {};
+
+async function loadProjectComments(projectId) {
+  try {
+    const { data, error } = await sb.from('project_comments')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('criado_em', { ascending: false });
+    if (error) throw error;
+    state.projectCommentsByProj[projectId] = data || [];
+  } catch (e) {
+    console.warn('[projects] load comments fail', e);
+    state.projectCommentsByProj[projectId] = [];
+  }
+}
+
+// Carrega contagens de comentários pra todos os projetos (usado nos cards)
+async function loadAllCommentCounts() {
+  try {
+    const { data, error } = await sb.from('project_comments')
+      .select('project_id');
+    if (error) throw error;
+    const counts = {};
+    (data || []).forEach(c => {
+      counts[c.project_id] = (counts[c.project_id] || 0) + 1;
+    });
+    // Atualiza state.projectCommentsByProj com arrays vazios placeholders só pra exibir contagem
+    Object.keys(counts).forEach(pid => {
+      if (!state.projectCommentsByProj[pid]) {
+        state.projectCommentsByProj[pid] = new Array(counts[pid]); // só pra .length funcionar
+      }
+    });
+  } catch (e) {
+    console.warn('[projects] counts fail', e);
+  }
+}
+
+function renderProjectComments() {
+  const wrap = document.getElementById('projCommentsTimeline');
+  const count = document.getElementById('projCommentsCount');
+  if (!wrap) return;
+  const comments = (state.projectCommentsByProj[state.editingProjectId] || []).filter(c => c && c.texto);
+  count.textContent = `${comments.length} ${comments.length === 1 ? 'atualização' : 'atualizações'}`;
+  if (comments.length === 0) {
+    wrap.innerHTML = '<div class="proj-timeline-empty">Nenhum comentário ou atualização registrada.</div>';
+    return;
+  }
+  wrap.innerHTML = comments.map(c => {
+    const dt = new Date(c.criado_em);
+    const when = dt.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    return `
+      <div class="proj-timeline-item ${c.tipo === 'sistema' ? 'sistema' : ''}">
+        <div class="proj-timeline-head">
+          <span class="proj-timeline-autor">${escapeHtml(c.autor || 'Anônimo')}</span>
+          <span class="proj-timeline-when">${when}</span>
+        </div>
+        <div class="proj-timeline-text">${escapeHtml(c.texto)}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function addProjectComment() {
+  if (!state.editingProjectId) return showToast('Salve o projeto primeiro pra poder comentar', true);
+  const autor = document.getElementById('projCommentAutor').value.trim();
+  const texto = document.getElementById('projCommentText').value.trim();
+  if (!texto) return;
+  if (!autor) {
+    document.getElementById('projCommentAutor').focus();
+    return showToast('Informe seu nome', true);
+  }
+
+  try {
+    const { error } = await sb.from('project_comments').insert({
+      project_id: state.editingProjectId,
+      autor,
+      texto,
+      tipo: 'comentario'
+    });
+    if (error) throw error;
+    document.getElementById('projCommentText').value = '';
+    await loadProjectComments(state.editingProjectId);
+    renderProjectComments();
+    renderProjectsKanban(); // atualiza contador no card
+  } catch (e) {
+    showToast('Erro ao comentar: ' + e.message, true);
+  }
+}
+
+// ============================================
+// PROJETOS · NOTIFICAÇÃO POR EMAIL (Brevo)
+// ============================================
+// Envia email quando alguém é atribuído a um projeto
+async function notifyAssignment(projectId, payload, assigned) {
+  // Procura email do destinatário na tabela report_subscribers (mesmo onde estão emails do relatório diário)
+  const respNames = (assigned.responsavel || '').split(/[·,\/]/).map(s => s.trim()).filter(Boolean);
+  if (respNames.length === 0) return;
+
+  // Carrega subscribers ativos
+  let subs = state.subscribers || [];
+  if (subs.length === 0) {
+    try {
+      const { data, error } = await sb.from('report_subscribers').select('*').eq('enabled', true);
+      if (error) throw error;
+      subs = data || [];
+    } catch (e) {
+      console.warn('[notify] sem subscribers carregados', e);
+      return;
+    }
+  } else {
+    subs = subs.filter(s => s.enabled);
+  }
+
+  // Mapa nome → email (case-insensitive)
+  const emailByName = {};
+  subs.forEach(s => {
+    if (s.responsavel) emailByName[s.responsavel.toLowerCase()] = { email: s.email, nome: s.responsavel };
+  });
+
+  // Para cada nome de responsável, tenta achar email
+  const targets = [];
+  respNames.forEach(name => {
+    const match = emailByName[name.toLowerCase()];
+    if (match) targets.push(match);
+  });
+
+  if (targets.length === 0) {
+    console.log('[notify] responsável(eis) sem email cadastrado em "Relatórios → Destinatários":', respNames);
+    return;
+  }
+
+  // Monta HTML do email
+  const html = buildAssignmentEmailHTML(payload, assigned);
+
+  // Envia para cada destinatário
+  for (const t of targets) {
+    try {
+      const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-report`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'apikey': SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          to: t.email,
+          name: t.nome,
+          html,
+          subject: `📌 Projeto atribuído: ${payload.nome}`
+        })
+      });
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}));
+        throw new Error(body.error || `HTTP ${resp.status}`);
+      }
+      console.log(`[notify] email enviado para ${t.nome} <${t.email}>`);
+    } catch (e) {
+      console.warn(`[notify] falha enviando para ${t.nome}:`, e);
+    }
+  }
+  showToast(`Notificação enviada para ${targets.map(t => t.nome).join(', ')}`);
+}
+
+function buildAssignmentEmailHTML(payload, assigned) {
+  const prioColor = { urgente: '#C93B3B', alta: '#FF965A', media: '#2E7D5B', baixa: '#5A6785' }[payload.prioridade] || '#5A6785';
+  const prazoTxt = payload.data_prevista ? new Date(payload.data_prevista).toLocaleDateString('pt-BR') : 'sem prazo definido';
+  const isNew = assigned.isNew;
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f5f7fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0E1B3D;">
+  <div style="max-width:600px;margin:0 auto;background:#ffffff;">
+    <div style="background:#001B5C;padding:24px 32px;color:#ffffff;">
+      <div style="font-size:11px;color:#B1C6E5;letter-spacing:0.04em;text-transform:uppercase;margin-bottom:4px;">Netz Solution · Notificação</div>
+      <h1 style="margin:0;font-size:20px;font-weight:700;">📌 Projeto ${isNew ? 'criado e atribuído' : 'atribuído'} a você</h1>
+    </div>
+
+    <div style="padding:24px 32px;">
+      <h2 style="margin:0 0 6px 0;font-size:18px;color:#001B5C;">${escapeHtml(payload.nome)}</h2>
+      <div style="margin-bottom:18px;">
+        <span style="display:inline-block;padding:3px 10px;border-radius:3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;background:${prioColor};color:#fff;">${PROJECT_PRIO_LABELS[payload.prioridade] || 'Média'}</span>
+        <span style="display:inline-block;padding:3px 10px;border-radius:3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;background:#E4F3FF;color:#001B5C;margin-left:4px;">${PROJECT_STATUS_LABELS[payload.status] || payload.status}</span>
+      </div>
+
+      ${payload.descricao ? `
+        <div style="background:#F0F6FC;border-left:3px solid #001B5C;padding:12px 16px;border-radius:0 6px 6px 0;margin-bottom:18px;font-size:13px;line-height:1.6;color:#0E1B3D;">
+          ${escapeHtml(payload.descricao)}
+        </div>
+      ` : ''}
+
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:18px;">
+        <tr>
+          <td style="padding:8px 0;color:#5A6785;width:120px;">Prazo:</td>
+          <td style="padding:8px 0;color:#0E1B3D;font-weight:500;">${prazoTxt}</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;color:#5A6785;border-top:1px solid #F0F6FC;">Responsável:</td>
+          <td style="padding:8px 0;color:#0E1B3D;font-weight:500;border-top:1px solid #F0F6FC;">${escapeHtml(assigned.responsavel)}${assigned.prevResp ? ` <span style="color:#5A6785;font-weight:400;">(era ${escapeHtml(assigned.prevResp)})</span>` : ''}</td>
+        </tr>
+        ${(payload.tags || []).length > 0 ? `
+          <tr>
+            <td style="padding:8px 0;color:#5A6785;border-top:1px solid #F0F6FC;">Tags:</td>
+            <td style="padding:8px 0;border-top:1px solid #F0F6FC;">
+              ${payload.tags.map(t => `<span style="display:inline-block;background:#E4F3FF;color:#001B5C;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;margin-right:4px;">#${escapeHtml(t)}</span>`).join('')}
+            </td>
+          </tr>
+        ` : ''}
+      </table>
+
+      ${(payload.checklist || []).length > 0 ? `
+        <div style="font-size:11px;color:#5A6785;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;margin-bottom:10px;">Tarefas (${payload.checklist.length})</div>
+        ${payload.checklist.slice(0, 10).map(c => `
+          <div style="font-size:12px;padding:6px 0;border-bottom:1px solid #F0F6FC;color:${c.done ? '#5A6785' : '#0E1B3D'};${c.done ? 'text-decoration:line-through;' : ''}">
+            ${c.done ? '✓' : '○'} ${escapeHtml(c.texto)}
+            ${c.prazo ? `<span style="color:#5A6785;font-size:10px;margin-left:6px;">${new Date(c.prazo).toLocaleDateString('pt-BR')}</span>` : ''}
+          </div>
+        `).join('')}
+        ${payload.checklist.length > 10 ? `<div style="font-size:11px;color:#5A6785;font-style:italic;padding:6px 0;">+ ${payload.checklist.length - 10} tarefa(s)</div>` : ''}
+      ` : ''}
+    </div>
+
+    <div style="padding:16px 32px;background:#F0F6FC;text-align:center;font-size:11px;color:#5A6785;">
+      <strong>Netz Solution · Pipeline Manager</strong><br>
+      Acesse o app pra ver detalhes e atualizar status.
+    </div>
+  </div>
+</body></html>`;
+}
+
 // ===== Tabela =====
 function renderTable() {
   const search = (document.getElementById('searchTable').value || '').toLowerCase();
@@ -5878,6 +6987,47 @@ async function buildDailyReportHTML(targetName, aiSummary) {
       } else if (days < 0 || days <= 14) {
         tasksPending.push(taskWithDays);
       }
+    });
+  });
+
+  // ===== Adicionar tarefas dos PROJETOS =====
+  // Recarrega projects se ainda não está em memória
+  if (!state.projects || state.projects.length === 0) {
+    try { await loadProjects(); } catch (e) {}
+  }
+  (state.projects || []).forEach(proj => {
+    if (proj.status === 'concluido') return; // pula projetos concluídos
+    (proj.checklist || []).forEach(c => {
+      if (!c.texto) return;
+      const taskBase = {
+        op: `📌 ${proj.nome}`, // prefixo pra distinguir de op
+        opId: 'proj-' + proj.id,
+        opStatus: proj.status,
+        texto: c.texto,
+        responsavel: c.responsavel || proj.responsavel,
+        prazo: c.prazo,
+        categoria: (proj.tags || []).join(', ') || 'projeto',
+        isProject: true
+      };
+
+      if (c.done) {
+        const concluidoEm = (c.concluido_em || '').slice(0, 10);
+        const prazoStr = c.prazo || '';
+        const projUpdated = (proj.atualizado_em || '').slice(0, 10);
+        let countAsRecent = false;
+        if (concluidoEm && concluidoEm >= yestStr) countAsRecent = true;
+        else if (prazoStr) {
+          const prazoDays = dateToDays(prazoStr) - todayD;
+          if (prazoDays >= -7 && prazoDays <= 0) countAsRecent = true;
+        } else if (projUpdated && projUpdated >= yestStr) countAsRecent = true;
+        if (countAsRecent) tasksDoneYesterday.push(taskBase);
+        return;
+      }
+      if (!c.prazo) return;
+      const days = dateToDays(c.prazo) - todayD;
+      const taskWithDays = { ...taskBase, days };
+      if (days === 0) tasksToday.push(taskWithDays);
+      else if (days < 0 || days <= 14) tasksPending.push(taskWithDays);
     });
   });
 
