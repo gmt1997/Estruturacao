@@ -1910,6 +1910,12 @@
     cursor: pointer; font-weight: 500;
   }
   .phase-template-btn:hover { background: var(--blue-pale); }
+  .phase-template-btn.active {
+    background: var(--orange);
+    color: #fff;
+    border-color: var(--orange);
+  }
+  .phase-template-btn.active:hover { background: var(--orange-dim); }
   .ck-clear-btn {
     background: rgba(201, 59, 59, 0.08);
     color: var(--red);
@@ -3648,11 +3654,16 @@
       <div class="form-section">
         <div class="form-section-title">
           <span>Checklist Customizado</span>
-          <button class="add-item-btn" onclick="addChecklist()">+ adicionar etapa</button>
+          <div class="form-section-title-actions">
+            <button type="button" class="phase-template-btn" id="checklistSortBtn" onclick="toggleChecklistSort()" title="Ordenar por prazo">
+              <span id="checklistSortLabel">Ordem manual</span>
+            </button>
+            <button class="add-item-btn" onclick="addChecklist()">+ adicionar etapa</button>
+          </div>
         </div>
         <div id="checklistContainer"></div>
         <div style="font-size: 11px; color: var(--text-mute); margin-top: 6px;">
-          Etapas adicionais específicas dessa operação.
+          Etapas adicionais específicas dessa operação. Use o botão "Ordenar por prazo" para reorganizar.
         </div>
       </div>
 
@@ -7859,6 +7870,8 @@ function openModal(opId) {
   const customCk = allCk.filter(c => !c.num);
   renderChecklistTemplate(templateCk);
   renderChecklist(customCk);
+  // Reseta ordem do checklist para 'manual' ao abrir modal
+  setChecklistSortMode('manual');
 
   renderSteps(op.steps || []);
   renderRisks(op.risks || []);
@@ -8889,9 +8902,94 @@ function getChecklist() {
     prazo: el.querySelector('.ck-prazo').value || null
   }));
 }
-function addChecklist() { renderChecklist([...getChecklist(), { texto:'', done:false, responsavel:'', prazo:'' }]); refreshProgressIndicators(); }
+function addChecklist() { renderChecklist([...getChecklist(), { texto:'', done:false, responsavel:'', prazo:'' }]); refreshProgressIndicators(); updateChecklistSortLabel(); }
 function removeChecklist(i) { const it = getChecklist(); it.splice(i,1); renderChecklist(it); refreshProgressIndicators(); }
 function toggleChecklist() { renderChecklist(getChecklist()); refreshProgressIndicators(); }
+
+// ===== Ordenação do checklist customizado =====
+// Estado armazenado no DOM (data-attr) para sobreviver entre adições de item.
+// Ciclo: manual → asc → desc → manual
+const SORT_LABELS = { manual: 'Ordem manual', asc: 'Prazo ↑ (antigo→novo)', desc: 'Prazo ↓ (novo→antigo)' };
+const SORT_NEXT = { manual: 'asc', asc: 'desc', desc: 'manual' };
+
+function getChecklistSortMode() {
+  return document.getElementById('checklistSortBtn')?.dataset.sort || 'manual';
+}
+
+function setChecklistSortMode(mode) {
+  const btn = document.getElementById('checklistSortBtn');
+  if (!btn) return;
+  btn.dataset.sort = mode;
+  updateChecklistSortLabel();
+}
+
+function updateChecklistSortLabel() {
+  const mode = getChecklistSortMode();
+  const lbl = document.getElementById('checklistSortLabel');
+  if (lbl) lbl.textContent = SORT_LABELS[mode] || SORT_LABELS.manual;
+  // Visual: ativo quando não é manual
+  const btn = document.getElementById('checklistSortBtn');
+  if (btn) {
+    if (mode === 'manual') btn.classList.remove('active');
+    else btn.classList.add('active');
+  }
+}
+
+function sortChecklistItems(items, mode) {
+  if (mode === 'manual') return items;
+  const cp = [...items];
+  cp.sort((a, b) => {
+    const pa = a.prazo || '';
+    const pb = b.prazo || '';
+    // Itens sem prazo vão pro final em ambas as direções
+    if (!pa && !pb) return 0;
+    if (!pa) return 1;
+    if (!pb) return -1;
+    return mode === 'asc' ? pa.localeCompare(pb) : pb.localeCompare(pa);
+  });
+  return cp;
+}
+
+async function toggleChecklistSort() {
+  const curr = getChecklistSortMode();
+  const next = SORT_NEXT[curr] || 'asc';
+  setChecklistSortMode(next);
+
+  // Aplica ordenação visual imediatamente
+  const items = getChecklist();
+  const sorted = sortChecklistItems(items, next);
+  renderChecklist(sorted);
+  refreshProgressIndicators();
+  updateChecklistSortLabel();
+
+  // Salva no banco (se estamos editando uma op existente)
+  const opIdEl = document.getElementById('opId');
+  const opId = opIdEl?.value;
+  if (!opId || next === 'manual') return; // manual = não persiste reordenação
+
+  try {
+    // Combina checklist do template (numerados) + customizado (sem num) reordenado
+    const op = state.operations.find(o => String(o.id) === String(opId));
+    if (!op) return;
+    const allCk = op.checklist || [];
+    const templateCk = allCk.filter(c => c.num);
+    const customCkSorted = sorted; // já é o reordenado
+    const newChecklist = [...templateCk, ...customCkSorted];
+
+    const { error } = await sb.from('operations').update({
+      checklist: newChecklist,
+      atualizado_em: new Date().toISOString()
+    }).eq('id', opId);
+
+    if (error) throw error;
+    // Atualiza state local
+    op.checklist = newChecklist;
+    showToast(`Ordem salva: ${SORT_LABELS[next].toLowerCase()}`);
+  } catch (e) {
+    console.warn('[checklist-sort] erro ao salvar:', e);
+    showToast('Erro ao salvar ordem: ' + (e.message || 'falha'), true);
+  }
+}
 
 // ===== Steps & Risks =====
 function renderSteps(items) {
