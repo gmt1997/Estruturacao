@@ -1234,6 +1234,7 @@
     text-transform: uppercase; letter-spacing: 0.06em;
     font-family: 'IBM Plex Mono', monospace;
   }
+  .status-viabilidade  { background: #F5EDE2; color: #8B6B3F; }
   .status-mandatado    { background: #EEF2F8; color: #4A5878; }
   .status-kickoff      { background: #FFF4DC; color: var(--amber); }
   .status-estruturacao { background: var(--blue-light); color: var(--navy); }
@@ -3793,6 +3794,7 @@
         <div class="field">
           <label>Status</label>
           <select id="fStatus">
+            <option value="viabilidade">Análise de Viabilidade</option>
             <option value="mandatado">Mandatado</option>
             <option value="kickoff">Kick-Off</option>
             <option value="estruturacao">Estruturação</option>
@@ -4091,6 +4093,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // ============================================
 
 const STATUS_LABELS = {
+  viabilidade: 'Análise de Viabilidade',
   mandatado: 'Mandatado',
   kickoff: 'Kick-Off',
   estruturacao: 'Estruturação',
@@ -4100,8 +4103,9 @@ const STATUS_LABELS = {
   handover: 'Handover',
   stand: 'Stand-by'
 };
-const STATUS_ORDER = ['mandatado','kickoff','estruturacao','signoff','distribuicao','handover','liquidacao','stand'];
+const STATUS_ORDER = ['viabilidade','mandatado','kickoff','estruturacao','signoff','distribuicao','handover','liquidacao','stand'];
 const PHASE_STATUS_LABELS = {
+  viabilidade: 'Análise de Viabilidade',
   mandatado: 'Mandatado',
   kickoff: 'Kick-Off',
   estruturacao: 'Estruturação',
@@ -7339,11 +7343,60 @@ function weekShift(direction) {
   renderWeeklyReport();
 }
 
+// Toggle de tarefa direto da aba Semana (clica na bolinha)
+async function toggleWeeklyTask(opId, ckIdx) {
+  const op = state.operations.find(o => String(o.id) === String(opId));
+  if (!op) return;
+  const item = op.checklist?.[ckIdx];
+  if (!item) return;
+
+  const isTemplate = !!item.num;
+  const isCurrentlyDone = isTemplate
+    ? (item.status === 'concluido' || item.status === 'na')
+    : !!item.done;
+
+  // Inverte
+  if (isTemplate) {
+    item.status = isCurrentlyDone ? 'pendente' : 'concluido';
+  } else {
+    item.done = !isCurrentlyDone;
+  }
+
+  if (!isCurrentlyDone) {
+    item.concluido_em = todayStr();
+  } else {
+    delete item.concluido_em;
+  }
+
+  // Atualiza UI imediatamente
+  renderWeeklyReport();
+
+  try {
+    const { error } = await sb.from('operations').update({
+      checklist: op.checklist,
+      atualizado_em: new Date().toISOString()
+    }).eq('id', op.id);
+    if (error) throw error;
+    showToast(`Tarefa ${isCurrentlyDone ? 'reaberta' : 'concluída'} · ${op.nome}`);
+  } catch (e) {
+    // Reverte em caso de erro
+    if (isTemplate) {
+      item.status = isCurrentlyDone ? 'concluido' : 'pendente';
+    } else {
+      item.done = isCurrentlyDone;
+    }
+    if (isCurrentlyDone) item.concluido_em = todayStr();
+    else delete item.concluido_em;
+    renderWeeklyReport();
+    showToast('Erro: ' + e.message, true);
+  }
+}
+
 // Coleta todos os checklist customizados com prazo, com info da operação
 function collectChecklistTasks() {
   const tasks = [];
   state.operations.forEach(op => {
-    (op.checklist || []).forEach(ck => {
+    (op.checklist || []).forEach((ck, idx) => {
       // Apenas itens com prazo definido E texto preenchido
       if (!ck.prazo || !ck.texto) return;
 
@@ -7365,7 +7418,9 @@ function collectChecklistTasks() {
         categoria: ck.categoria || null,
         responsavel: (ck.responsavel || '').trim() || op.responsavel || 'Sem responsável',
         prazo: ck.prazo,
-        done: done
+        done: done,
+        ckIdx: idx,
+        source: 'op'
       });
     });
   });
@@ -7479,9 +7534,13 @@ function renderWeeklyReport() {
             const deadlineCls = t.done ? '' : (isLate ? 'late' : (isToday ? 'today' : ''));
             const deadlineLabel = isToday ? 'hoje' : fmtDate(t.prazo);
             return `
-              <div class="weekly-task-row" onclick="openModal('${t.opId}')">
-                <div class="weekly-task-status ${t.done ? 'done' : (isLate ? 'late' : '')}"></div>
-                <div class="weekly-task-text ${t.done ? 'done' : ''}">${escapeHtml(t.texto)}</div>
+              <div class="weekly-task-row">
+                <div class="weekly-task-status ${t.done ? 'done' : (isLate ? 'late' : '')}"
+                     onclick="event.stopPropagation(); toggleWeeklyTask('${t.opId}', ${t.ckIdx})"
+                     title="${t.done ? 'Desmarcar' : 'Marcar como concluída'}"></div>
+                <div class="weekly-task-text ${t.done ? 'done' : ''}"
+                     onclick="event.stopPropagation(); openModal('${t.opId}')"
+                     title="Abrir operação">${escapeHtml(t.texto)}</div>
                 <div class="weekly-task-op">
                   <span class="op-tipo-tag">${escapeHtml(t.opTipo)}</span>${escapeHtml(t.opNome)}
                 </div>
@@ -7890,6 +7949,7 @@ async function buildDailyReportHTML(targetName, aiSummary) {
   // Helper para badge de status da op
   const opStatusBadge = (status) => {
     const colorMap = {
+      'viabilidade': '#8B6B3F',
       'mandatado': '#001B5C', 'kickoff': '#FF965A', 'estruturacao': '#15326C',
       'signoff': '#6A4A8C', 'distribuicao': '#2E7D5B', 'handover': '#1F6088',
       'liquidacao': '#5A6785', 'stand': '#9CA3B5'
@@ -8566,7 +8626,7 @@ function openModal(opId) {
   closeAISummary();
 
   const op = isEdit ? state.operations.find(o => o.id === opId) : {
-    nome: '', tipo: 'FIDC', status: 'mandatado', cliente: '', responsavel: '',
+    nome: '', tipo: 'FIDC', status: 'viabilidade', cliente: '', responsavel: '',
     valor: '', receita: '', volume_liquidado: '', receita_realizada: '',
     progresso: 0, data_inicio: '', data_prevista: '', data_liquidacao: '',
     phases: [], checklist: [], steps: [], risks: [], obs: '', files: []
