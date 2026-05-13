@@ -1270,6 +1270,234 @@
     flex-wrap: wrap; gap: 12px;
     margin-bottom: 20px;
   }
+
+  /* ===== Aba Minhas Tarefas ===== */
+  .mytasks-header {
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 14px;
+    margin-bottom: 16px;
+  }
+  .mytasks-controls {
+    display: flex; gap: 18px; align-items: center; flex-wrap: wrap;
+  }
+  .mytasks-resp-label {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--text-mute); font-weight: 500;
+  }
+  .mytasks-resp-label select {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fff;
+    font-size: 13px;
+    color: var(--text);
+    min-width: 160px;
+    cursor: pointer;
+  }
+  .mytasks-resp-label select:focus {
+    outline: none;
+    border-color: var(--orange);
+  }
+  .mytasks-summary {
+    display: flex; gap: 14px;
+    font-size: 12px;
+    color: var(--text-mute);
+  }
+  .mytasks-summary strong { color: var(--navy); }
+  .mytasks-summary .ms-overdue strong { color: var(--red); }
+  .mytasks-summary .ms-today strong { color: var(--orange-dim); }
+
+  .mytasks-filter-chips {
+    display: flex; gap: 6px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .mytasks-chip {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    background: #fff;
+    border-radius: 16px;
+    font-size: 12px;
+    color: var(--text-mute);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .mytasks-chip:hover { border-color: var(--navy); color: var(--navy); }
+  .mytasks-chip.active {
+    background: var(--navy);
+    color: #fff;
+    border-color: var(--navy);
+  }
+
+  .mytasks-section {
+    margin-bottom: 22px;
+  }
+  .mytasks-section-head {
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+    padding: 10px 14px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 6px;
+  }
+  .mytasks-section-head:hover { border-color: var(--orange); }
+  .mytasks-section-head .left {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .mytasks-section-head h3 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .mytasks-section-head .count-pill {
+    background: var(--blue-light);
+    color: var(--navy);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .mytasks-section.overdue .mytasks-section-head h3 { color: var(--red); }
+  .mytasks-section.overdue .count-pill { background: rgba(201, 59, 59, 0.12); color: var(--red); }
+  .mytasks-section.today .mytasks-section-head h3 { color: var(--orange-dim); }
+  .mytasks-section.today .count-pill { background: rgba(255, 150, 90, 0.15); color: var(--orange-dim); }
+  .mytasks-section.upcoming .mytasks-section-head h3 { color: var(--navy); }
+  .mytasks-section.noPrazo .mytasks-section-head h3 { color: var(--text-mute); }
+  .mytasks-section.noPrazo .count-pill { background: var(--blue-pale); color: var(--text-mute); }
+
+  .mytasks-section .chev {
+    color: var(--text-mute);
+    font-size: 10px;
+    transition: transform 0.2s;
+  }
+  .mytasks-section.collapsed .chev { transform: rotate(-90deg); }
+  .mytasks-section.collapsed .mytasks-section-body { display: none; }
+
+  .mytasks-section-body { display: flex; flex-direction: column; gap: 4px; }
+
+  .mytask-day-group {
+    margin-top: 8px;
+  }
+  .mytask-day-label {
+    font-size: 10px;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    padding: 4px 12px;
+    margin-bottom: 4px;
+  }
+
+  .mytask-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    transition: all 0.12s;
+  }
+  .mytask-item:hover {
+    border-color: var(--orange);
+    box-shadow: 0 2px 6px rgba(0,27,92,0.06);
+  }
+  .mytask-item.done {
+    opacity: 0.55;
+    background: var(--blue-pale);
+  }
+  .mytask-item.done .mytask-text { text-decoration: line-through; }
+
+  .mytask-check {
+    width: 18px; height: 18px;
+    cursor: pointer;
+    flex-shrink: 0;
+    accent-color: var(--orange);
+  }
+  .mytask-content {
+    flex: 1; min-width: 0;
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .mytask-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.4;
+  }
+  .mytask-meta {
+    display: flex; gap: 10px; align-items: center;
+    font-size: 11px;
+    color: var(--text-mute);
+    flex-wrap: wrap;
+  }
+  .mytask-source-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    background: var(--blue-light);
+    color: var(--navy);
+  }
+  .mytask-source-badge.proj {
+    background: rgba(255, 150, 90, 0.12);
+    color: var(--orange-dim);
+  }
+  .mytask-cat {
+    font-size: 10px;
+    color: var(--text-mute);
+    background: var(--blue-pale);
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+  .mytask-prazo-badge {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .mytask-prazo-badge.overdue {
+    background: rgba(201, 59, 59, 0.12);
+    color: var(--red);
+  }
+  .mytask-prazo-badge.today {
+    background: rgba(255, 150, 90, 0.18);
+    color: var(--orange-dim);
+  }
+  .mytask-prazo-badge.upcoming {
+    background: var(--blue-light);
+    color: var(--navy);
+  }
+  .mytask-open-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-mute);
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.12s;
+    flex-shrink: 0;
+  }
+  .mytask-open-btn:hover {
+    border-color: var(--orange);
+    color: var(--orange);
+  }
+  .mytasks-empty-section {
+    padding: 20px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-mute);
+    font-style: italic;
+    background: var(--blue-pale);
+    border-radius: 6px;
+  }
   .projects-actions {
     display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
   }
@@ -1745,6 +1973,40 @@
   .kanban-card.dragging { opacity: 0.45; cursor: grabbing; }
   .kanban-col.drag-over { background: rgba(255,150,90,0.12); outline: 2px dashed var(--orange); outline-offset: -4px; }
   .kc-name { font-weight: 600; font-size: 13px; color: var(--navy); margin-bottom: 6px; line-height: 1.3; }
+
+  /* Sinal de saúde da operação (bolinha colorida nos cards) */
+  .health-dot {
+    display: inline-block;
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+    flex-shrink: 0;
+    position: relative;
+    top: -1px;
+    cursor: help;
+  }
+  .health-dot.health-verde {
+    background: #2E7D5B;
+    box-shadow: 0 0 0 2px rgba(46, 125, 91, 0.18);
+  }
+  .health-dot.health-amarelo {
+    background: #E5A82E;
+    box-shadow: 0 0 0 2px rgba(229, 168, 46, 0.18);
+  }
+  .health-dot.health-vermelho {
+    background: #C93B3B;
+    box-shadow: 0 0 0 2px rgba(201, 59, 59, 0.18);
+    animation: health-pulse 2s ease-in-out infinite;
+  }
+  .health-dot.health-cinza {
+    background: #B4BAC8;
+    box-shadow: 0 0 0 2px rgba(180, 186, 200, 0.18);
+  }
+  @keyframes health-pulse {
+    0%, 100% { box-shadow: 0 0 0 2px rgba(201, 59, 59, 0.18); }
+    50% { box-shadow: 0 0 0 4px rgba(201, 59, 59, 0.32); }
+  }
   .kc-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-mute); margin-bottom: 4px; }
   .kc-row .mono { font-family: 'IBM Plex Mono', monospace; }
   .kc-foot { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-soft);
@@ -2975,6 +3237,7 @@
       <button class="tab" data-tab="table">Tabela</button>
       <button class="tab" data-tab="gantt">Gantt</button>
       <button class="tab" data-tab="weekly">Semana</button>
+      <button class="tab" data-tab="mytasks">Minhas Tarefas</button>
       <button class="tab" data-tab="projects">Projetos</button>
       <button class="tab" data-tab="reports">Relatórios</button>
       <button class="tab" data-tab="audit">Auditoria</button>
@@ -3223,6 +3486,32 @@
 
       <div class="weekly-summary" id="weeklySummary"></div>
       <div class="weekly-content" id="weeklyContent"></div>
+    </section>
+
+    <!-- MINHAS TAREFAS (agregação por responsável) -->
+    <section class="panel" id="panel-mytasks">
+      <div class="mytasks-header">
+        <h2 class="section-title" style="margin: 0;">Minhas Tarefas</h2>
+        <div class="mytasks-controls">
+          <label class="mytasks-resp-label">
+            Visualizando como:
+            <select id="mytasksResp" onchange="renderMyTasks()"></select>
+          </label>
+          <div class="mytasks-summary" id="mytasksSummary"></div>
+        </div>
+      </div>
+
+      <div class="mytasks-filter-chips">
+        <button class="mytasks-chip active" data-source="all" onclick="setMyTasksSource('all')">Todas</button>
+        <button class="mytasks-chip" data-source="op" onclick="setMyTasksSource('op')">🏦 Operações</button>
+        <button class="mytasks-chip" data-source="proj" onclick="setMyTasksSource('proj')">📌 Projetos</button>
+      </div>
+
+      <div id="mytasksContainer">
+        <div class="empty-state" style="padding: 40px;">
+          <h3>Carregando…</h3>
+        </div>
+      </div>
     </section>
 
     <!-- PROJETOS (gestão paralela às operações) -->
@@ -4222,6 +4511,101 @@ function calcProgressoTempo(op) {
   return Math.round(((hoje - inicio) / (fim - inicio)) * 100);
 }
 
+// ===== Saúde da operação =====
+// Retorna { level: 'verde'|'amarelo'|'vermelho'|'cinza', label, reasons }
+// - cinza: liquidada ou stand-by (sem aplicação)
+// - vermelho: atraso ou checklist muito atrás do tempo
+// - amarelo: tempo ≈ checklist, mas com tarefas atrasadas OU riscos abertos
+// - verde: andamento saudável
+function calcOperationHealth(op) {
+  if (!op) return { level: 'cinza', label: '—', reasons: [] };
+  if (op.data_liquidacao || op.status === 'liquidacao') {
+    return { level: 'cinza', label: 'Liquidada', reasons: [] };
+  }
+  if (op.status === 'stand') {
+    return { level: 'cinza', label: 'Stand-by', reasons: [] };
+  }
+
+  const reasons = [];
+  let critical = 0;
+  let warnings = 0;
+
+  // Atraso
+  const dias = daysUntil(op.data_prevista);
+  if (dias < 0) {
+    critical++;
+    reasons.push(`${Math.abs(dias)}d atrasado`);
+  } else if (dias !== null && dias <= 7) {
+    warnings++;
+    reasons.push(`${dias}d até o prazo`);
+  }
+
+  // Gap entre tempo decorrido e checklist
+  const tempo = calcProgressoTempo(op);
+  const ckNetz = calcProgressoChecklistNetz(op);
+  if (ckNetz !== null && tempo > 30) {
+    const gap = tempo - ckNetz;
+    if (gap > 30) {
+      critical++;
+      reasons.push(`checklist ${gap}% atrás do tempo`);
+    } else if (gap > 15) {
+      warnings++;
+      reasons.push(`checklist ${gap}% atrás`);
+    }
+  }
+
+  // Tarefas atrasadas
+  const today = todayStr();
+  const todayD = dateToDays(today);
+  let overdueTasks = 0;
+  (op.checklist || []).forEach(c => {
+    if (!c.prazo) return;
+    const isDone = c.num ? (c.status === 'concluido' || c.status === 'na') : c.done;
+    if (isDone) return;
+    if (dateToDays(c.prazo) < todayD) overdueTasks++;
+  });
+  if (overdueTasks > 3) {
+    critical++;
+    reasons.push(`${overdueTasks} tarefas atrasadas`);
+  } else if (overdueTasks > 0) {
+    warnings++;
+    reasons.push(`${overdueTasks} tarefa${overdueTasks > 1 ? 's' : ''} atrasada${overdueTasks > 1 ? 's' : ''}`);
+  }
+
+  // Riscos abertos
+  const openRisks = (op.risks || []).filter(r => r.status !== 'mitigado' && r.status !== 'fechado').length;
+  if (openRisks > 2) {
+    critical++;
+    reasons.push(`${openRisks} riscos abertos`);
+  } else if (openRisks > 0) {
+    warnings++;
+    reasons.push(`${openRisks} risco${openRisks > 1 ? 's' : ''} aberto${openRisks > 1 ? 's' : ''}`);
+  }
+
+  // Sem atividade nos últimos 14 dias
+  if (op.atualizado_em) {
+    const lastUpdate = dateToDays(op.atualizado_em.slice(0, 10));
+    const daysSinceUpdate = todayD - lastUpdate;
+    if (daysSinceUpdate > 14) {
+      warnings++;
+      reasons.push(`sem atualização há ${daysSinceUpdate}d`);
+    }
+  }
+
+  let level, label;
+  if (critical > 0) {
+    level = 'vermelho';
+    label = 'Em risco';
+  } else if (warnings > 0) {
+    level = 'amarelo';
+    label = 'Atenção';
+  } else {
+    level = 'verde';
+    label = 'Saudável';
+  }
+  return { level, label, reasons };
+}
+
 // % do checklist Netz (template, 35 itens) — exclui N/A do denominador
 function calcProgressoChecklistNetz(op) {
   const items = (op.checklist || []).filter(c => c.num);  // só template
@@ -4265,6 +4649,9 @@ document.querySelectorAll('.tab').forEach(t => {
     }
     if (t.dataset.tab === 'projects') {
       loadProjects();
+    }
+    if (t.dataset.tab === 'mytasks') {
+      loadMyTasks();
     }
     renderAll();
   });
@@ -5629,9 +6016,18 @@ function renderOpsCards() {
     if (ckNetz !== null) ckBadges.push(`<span class="op-ck-badge" title="Checklist Netz"><span class="op-ck-dot" style="background:var(--orange);"></span>Netz ${ckNetz}%</span>`);
     if (ckCustom !== null) ckBadges.push(`<span class="op-ck-badge" title="Checklist Customizado"><span class="op-ck-dot" style="background:var(--green);"></span>Custom ${ckCustom}%</span>`);
 
+    // Sinal de saúde
+    const health = calcOperationHealth(o);
+    const healthTitle = health.reasons.length > 0
+      ? `${health.label}: ${health.reasons.join(' · ')}`
+      : health.label;
+
     return `<div class="op-card" onclick="openModal('${o.id}')">
       <div class="op-card-head">
-        <div class="op-name">${escapeHtml(o.nome)}</div>
+        <div class="op-name">
+          <span class="health-dot health-${health.level}" title="${escapeAttr(healthTitle)}"></span>
+          ${escapeHtml(o.nome)}
+        </div>
         <div class="op-tipo">${escapeHtml(o.tipo)}</div>
       </div>
       <div class="op-meta">
@@ -5682,11 +6078,18 @@ function renderKanban() {
       <div class="kanban-col-cards">
       ${cards.map(o => {
         const prog = calcProgressoTempo(o);
+        const health = calcOperationHealth(o);
+        const healthTitle = health.reasons.length > 0
+          ? `${health.label}: ${health.reasons.join(' · ')}`
+          : health.label;
         return `
         <div class="kanban-card" draggable="true" data-id="${o.id}"
           ondragstart="kanbanDragStart(event)" ondragend="kanbanDragEnd(event)"
           onclick="openModal('${o.id}')">
-          <div class="kc-name">${escapeHtml(o.nome)}</div>
+          <div class="kc-name">
+            <span class="health-dot health-${health.level}" title="${escapeAttr(healthTitle)}"></span>
+            ${escapeHtml(o.nome)}
+          </div>
           <div class="kc-row"><span>${escapeHtml(o.cliente || '—')}</span><span class="mono">${o.tipo}</span></div>
           <div class="kc-row"><span class="mono">${fmtBRLshort(o.valor)}</span><span>${o.data_prevista ? fmtDate(o.data_prevista) : '—'}</span></div>
           <div class="kc-foot">
@@ -5755,6 +6158,364 @@ const PROJECT_PRIO_LABELS = {
   media: 'Média',
   baixa: 'Baixa'
 };
+
+// ============================================
+// MINHAS TAREFAS (visão agregada por responsável)
+// ============================================
+
+state.myTasksFilter = { resp: null, source: 'all' };
+state.myTasksSectionCollapsed = {};
+
+function setMyTasksSource(src) {
+  state.myTasksFilter.source = src;
+  document.querySelectorAll('.mytasks-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.source === src);
+  });
+  renderMyTasks();
+}
+
+// Coleta todos os responsáveis únicos (de ops + projetos)
+function collectAllResponsaveis() {
+  const set = new Set();
+  state.operations.forEach(o => {
+    if (o.responsavel) o.responsavel.split(/[·,\/]/).map(s => s.trim()).filter(Boolean).forEach(r => set.add(r));
+    (o.checklist || []).forEach(c => {
+      if (c.responsavel) c.responsavel.split(/[·,\/]/).map(s => s.trim()).filter(Boolean).forEach(r => set.add(r));
+    });
+  });
+  (state.projects || []).forEach(p => {
+    if (p.responsavel) p.responsavel.split(/[·,\/]/).map(s => s.trim()).filter(Boolean).forEach(r => set.add(r));
+    (p.checklist || []).forEach(c => {
+      if (c.responsavel) c.responsavel.split(/[·,\/]/).map(s => s.trim()).filter(Boolean).forEach(r => set.add(r));
+    });
+  });
+  return [...set].sort();
+}
+
+// Tenta detectar responsável pelo email logado
+async function detectCurrentResponsavel() {
+  try {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user || !user.email) return null;
+    const email = user.email.toLowerCase();
+    // Pega a parte antes do @ — ex: gabriel.tavelin
+    const localPart = email.split('@')[0];
+    // Pega o primeiro nome — ex: gabriel
+    const firstName = localPart.split('.')[0].toLowerCase();
+
+    const all = collectAllResponsaveis();
+    // Tenta match case-insensitive contendo o primeiro nome
+    const match = all.find(r => r.toLowerCase().includes(firstName));
+    return match || null;
+  } catch (e) {
+    console.warn('[mytasks] detect resp fail', e);
+    return null;
+  }
+}
+
+function populateMyTasksResp() {
+  const sel = document.getElementById('mytasksResp');
+  if (!sel) return;
+  const all = collectAllResponsaveis();
+  const curr = state.myTasksFilter.resp || sel.value;
+  sel.innerHTML = '<option value="">— Todos —</option>' +
+    all.map(r => `<option value="${escapeAttr(r)}">${escapeHtml(r)}</option>`).join('');
+  if (curr && all.includes(curr)) sel.value = curr;
+  state.myTasksFilter.resp = sel.value || null;
+}
+
+// Verifica se uma tarefa pertence ao responsável (considera múltiplos resp separados por · / ,)
+function taskBelongsTo(taskResp, fallbackResp, targetResp) {
+  if (!targetResp) return true;
+  const resp = (taskResp || fallbackResp || '').toLowerCase();
+  if (!resp) return false;
+  const target = targetResp.toLowerCase();
+  return resp.split(/[·,\/]/).map(s => s.trim()).some(r => r === target);
+}
+
+// Constrói a lista de tarefas pendentes/atrasadas filtradas
+function buildMyTasksList() {
+  const targetResp = state.myTasksFilter.resp;
+  const source = state.myTasksFilter.source;
+  const today = todayStr();
+  const todayD = dateToDays(today);
+  const out = { overdue: [], today: [], upcoming: [], noPrazo: [] };
+
+  const pushTask = (t) => {
+    if (t.done) return;
+    if (!t.prazo) {
+      out.noPrazo.push(t);
+      return;
+    }
+    const days = dateToDays(t.prazo) - todayD;
+    t.days = days;
+    if (days < 0) out.overdue.push(t);
+    else if (days === 0) out.today.push(t);
+    else if (days <= 7) out.upcoming.push(t);
+    // Tarefas além de 7 dias ficam de fora do "Minhas Tarefas"
+  };
+
+  // Operações
+  if (source === 'all' || source === 'op') {
+    state.operations.forEach(op => {
+      if (isOperationConcluida(op) && op.status !== 'liquidacao') return;
+      (op.checklist || []).forEach((c, idx) => {
+        if (!c.texto) return;
+        const isDone = c.num ? (c.status === 'concluido' || c.status === 'na') : c.done;
+        if (isDone) return;
+        if (!taskBelongsTo(c.responsavel, op.responsavel, targetResp)) return;
+
+        pushTask({
+          source: 'op',
+          opId: op.id,
+          opNome: op.nome,
+          texto: (c.num ? c.num + ' ' : '') + c.texto,
+          prazo: c.prazo,
+          categoria: c.categoria || (c.num ? 'checklist Netz' : null),
+          responsavel: c.responsavel || op.responsavel,
+          itemRef: c,
+          ckIdx: idx,
+          isTemplate: !!c.num,
+        });
+      });
+    });
+  }
+
+  // Projetos
+  if (source === 'all' || source === 'proj') {
+    (state.projects || []).forEach(proj => {
+      if (proj.status === 'concluido') return;
+      (proj.checklist || []).forEach((c, idx) => {
+        if (!c.texto) return;
+        if (c.done) return;
+        if (!taskBelongsTo(c.responsavel, proj.responsavel, targetResp)) return;
+
+        pushTask({
+          source: 'proj',
+          projId: proj.id,
+          opNome: proj.nome,
+          texto: c.texto,
+          prazo: c.prazo,
+          categoria: (proj.tags || []).join(', ') || null,
+          responsavel: c.responsavel || proj.responsavel,
+          itemRef: c,
+          ckIdx: idx,
+        });
+      });
+    });
+  }
+
+  // Ordenações dentro de cada seção
+  out.overdue.sort((a, b) => a.days - b.days); // mais atrasada primeiro
+  out.today.sort((a, b) => (a.opNome || '').localeCompare(b.opNome || ''));
+  out.upcoming.sort((a, b) => a.days - b.days); // mais próxima primeiro
+  out.noPrazo.sort((a, b) => (a.opNome || '').localeCompare(b.opNome || ''));
+
+  return out;
+}
+
+function getDayLabel(daysAhead) {
+  if (daysAhead === 1) return 'Amanhã';
+  const dt = new Date();
+  dt.setDate(dt.getDate() + daysAhead);
+  const diasSemana = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+  const dia = diasSemana[dt.getDay()];
+  return `${dia} ${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function renderMyTasks() {
+  const sel = document.getElementById('mytasksResp');
+  if (sel) state.myTasksFilter.resp = sel.value || null;
+
+  const tasks = buildMyTasksList();
+  const total = tasks.overdue.length + tasks.today.length + tasks.upcoming.length + tasks.noPrazo.length;
+
+  // Summary
+  const sumWrap = document.getElementById('mytasksSummary');
+  if (sumWrap) {
+    sumWrap.innerHTML = `
+      <span><strong>${total}</strong> tarefa${total !== 1 ? 's' : ''}</span>
+      ${tasks.overdue.length > 0 ? `<span class="ms-overdue"><strong>${tasks.overdue.length}</strong> atrasada${tasks.overdue.length !== 1 ? 's' : ''}</span>` : ''}
+      ${tasks.today.length > 0 ? `<span class="ms-today"><strong>${tasks.today.length}</strong> hoje</span>` : ''}
+    `;
+  }
+
+  const cont = document.getElementById('mytasksContainer');
+  if (!cont) return;
+
+  if (total === 0) {
+    cont.innerHTML = `
+      <div class="empty-state" style="padding: 60px 20px;">
+        <h3>Nenhuma tarefa pendente 🎉</h3>
+        <p>${state.myTasksFilter.resp
+          ? `${escapeHtml(state.myTasksFilter.resp)} está em dia! Sem tarefas atrasadas ou nos próximos 7 dias.`
+          : 'Selecione um responsável ou aguarde tarefas serem cadastradas.'}</p>
+      </div>
+    `;
+    return;
+  }
+
+  cont.innerHTML = `
+    ${renderMyTasksSection('overdue', '🔴 Atrasadas', tasks.overdue)}
+    ${renderMyTasksSection('today', '🟠 Hoje', tasks.today)}
+    ${renderMyTasksSection('upcoming', '🔵 Próximos 7 dias', tasks.upcoming, true)}
+    ${renderMyTasksSection('noPrazo', '⚪ Sem prazo', tasks.noPrazo)}
+  `;
+}
+
+function renderMyTasksSection(key, title, items, groupByDay) {
+  const collapsed = state.myTasksSectionCollapsed[key] ? 'collapsed' : '';
+  let bodyHtml = '';
+
+  if (items.length === 0) {
+    bodyHtml = `<div class="mytasks-empty-section">Sem tarefas nessa categoria.</div>`;
+  } else if (groupByDay) {
+    // Agrupa por dia (1, 2, 3... dias adiante)
+    const groups = {};
+    items.forEach(t => {
+      const key = t.days;
+      (groups[key] = groups[key] || []).push(t);
+    });
+    bodyHtml = Object.keys(groups)
+      .sort((a, b) => Number(a) - Number(b))
+      .map(d => `
+        <div class="mytask-day-group">
+          <div class="mytask-day-label">${getDayLabel(Number(d))}</div>
+          ${groups[d].map(renderMyTaskItem).join('')}
+        </div>
+      `).join('');
+  } else {
+    bodyHtml = items.map(renderMyTaskItem).join('');
+  }
+
+  return `
+    <div class="mytasks-section ${key} ${collapsed}">
+      <div class="mytasks-section-head" onclick="toggleMyTasksSection('${key}')">
+        <div class="left">
+          <span class="chev">▼</span>
+          <h3>${title}</h3>
+        </div>
+        <span class="count-pill">${items.length}</span>
+      </div>
+      <div class="mytasks-section-body">${bodyHtml}</div>
+    </div>
+  `;
+}
+
+function renderMyTaskItem(t) {
+  const sourceIcon = t.source === 'op' ? '🏦' : '📌';
+  const sourceClass = t.source === 'proj' ? 'proj' : '';
+  let prazoBadge = '';
+  if (t.prazo) {
+    const cls = t.days < 0 ? 'overdue' : t.days === 0 ? 'today' : 'upcoming';
+    const label = t.days < 0 ? `${Math.abs(t.days)}d ATRASO` : t.days === 0 ? 'HOJE' : `${fmtDate(t.prazo)}`;
+    prazoBadge = `<span class="mytask-prazo-badge ${cls}">${label}</span>`;
+  }
+  const openHandler = t.source === 'op'
+    ? `openModal(${t.opId})`
+    : `openProjectModal(${t.projId})`;
+  // Identificador único para o checkbox
+  const checkId = `${t.source}-${t.opId || t.projId}-${t.ckIdx}`;
+  return `
+    <div class="mytask-item" data-key="${checkId}">
+      <input type="checkbox" class="mytask-check" onchange="onMyTaskToggle(event, '${t.source}', ${t.opId || t.projId}, ${t.ckIdx})">
+      <div class="mytask-content">
+        <div class="mytask-text">${escapeHtml(t.texto)}</div>
+        <div class="mytask-meta">
+          <span class="mytask-source-badge ${sourceClass}">${sourceIcon} ${escapeHtml(t.opNome)}</span>
+          ${t.categoria ? `<span class="mytask-cat">${escapeHtml(t.categoria)}</span>` : ''}
+          ${prazoBadge}
+          ${t.responsavel ? `<span style="font-size: 10px;">${escapeHtml(t.responsavel)}</span>` : ''}
+        </div>
+      </div>
+      <button class="mytask-open-btn" onclick="${openHandler}">abrir →</button>
+    </div>
+  `;
+}
+
+function toggleMyTasksSection(key) {
+  state.myTasksSectionCollapsed[key] = !state.myTasksSectionCollapsed[key];
+  renderMyTasks();
+}
+
+// Marca tarefa como concluída direto pela tela de Minhas Tarefas
+async function onMyTaskToggle(event, source, parentId, ckIdx) {
+  const checked = event.target.checked;
+  if (!checked) return; // só lidamos com marcar como done aqui
+
+  if (source === 'op') {
+    const op = state.operations.find(o => String(o.id) === String(parentId));
+    if (!op) return;
+    const item = op.checklist[ckIdx];
+    if (!item) return;
+    // Marca como done (suporta tanto numerados Netz quanto custom)
+    if (item.num) {
+      item.status = 'concluido';
+    } else {
+      item.done = true;
+    }
+    item.concluido_em = todayStr();
+
+    try {
+      const { error } = await sb.from('operations').update({
+        checklist: op.checklist,
+        atualizado_em: new Date().toISOString()
+      }).eq('id', op.id);
+      if (error) throw error;
+      showToast(`Tarefa concluída · ${op.nome}`);
+      renderMyTasks();
+    } catch (e) {
+      // Reverte
+      if (item.num) item.status = 'pendente';
+      else item.done = false;
+      delete item.concluido_em;
+      showToast('Erro: ' + e.message, true);
+      renderMyTasks();
+    }
+  } else if (source === 'proj') {
+    const proj = state.projects.find(p => String(p.id) === String(parentId));
+    if (!proj) return;
+    const item = (proj.checklist || [])[ckIdx];
+    if (!item) return;
+    item.done = true;
+    item.concluido_em = todayStr();
+
+    try {
+      const { error } = await sb.from('projects').update({
+        checklist: proj.checklist
+      }).eq('id', proj.id);
+      if (error) throw error;
+      showToast(`Tarefa concluída · ${proj.nome}`);
+      renderMyTasks();
+    } catch (e) {
+      item.done = false;
+      delete item.concluido_em;
+      showToast('Erro: ' + e.message, true);
+      renderMyTasks();
+    }
+  }
+}
+
+// Carrega aba: garante projetos carregados + detecta responsável + render
+async function loadMyTasks() {
+  // Garante que tem projetos carregados
+  if (!state.projects || state.projects.length === 0) {
+    try { await loadProjects(); } catch (e) {}
+  }
+  populateMyTasksResp();
+
+  // Detecta responsável pelo email logado (só na primeira vez)
+  if (!state.myTasksDetected) {
+    const detected = await detectCurrentResponsavel();
+    if (detected) {
+      const sel = document.getElementById('mytasksResp');
+      if (sel) sel.value = detected;
+      state.myTasksFilter.resp = detected;
+    }
+    state.myTasksDetected = true;
+  }
+  renderMyTasks();
+}
 
 async function loadProjects() {
   try {
