@@ -10,6 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <style>
   :root {
@@ -4021,11 +4022,11 @@
           <div class="field full">
             <label>Documentos (PDFs) <span style="font-weight:400; color:var(--text-mute); font-size:11px;">(arraste aqui ou clique para selecionar)</span></label>
             <div class="ana-dropzone" id="anaDropzone" onclick="document.getElementById('anaFileInput').click()">
-              <input type="file" id="anaFileInput" multiple accept="application/pdf" style="display:none;" onchange="onAnaFilesSelected(event)">
+              <input type="file" id="anaFileInput" multiple accept="application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,.xlsx,.xls,.csv" style="display:none;" onchange="onAnaFilesSelected(event)">
               <div class="ana-dropzone-content">
                 <div class="ana-dropzone-icon">📎</div>
-                <div class="ana-dropzone-text">Arraste PDFs aqui ou clique para selecionar</div>
-                <div class="ana-dropzone-sub">Term sheet, balanço, regulamento, contrato de cessão, análise de carteira…</div>
+                <div class="ana-dropzone-text">Arraste arquivos aqui ou clique para selecionar</div>
+                <div class="ana-dropzone-sub">PDFs (term sheet, balanço, regulamento) ou planilhas Excel/CSV (análise de carteira, fluxo de caixa)</div>
               </div>
             </div>
             <div id="anaFilesList" class="ana-files-list"></div>
@@ -7106,8 +7107,15 @@ async function onAnaFilesSelected(event) {
 
 async function addAnaFile(file) {
   if (!file) return;
-  if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-    showToast(`"${file.name}" não é PDF — ignorado`, true);
+  const name = file.name.toLowerCase();
+  const isPdf = file.type === 'application/pdf' || name.endsWith('.pdf');
+  const isXlsx = name.endsWith('.xlsx') || name.endsWith('.xls') ||
+    file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+    file.type === 'application/vnd.ms-excel';
+  const isCsv = name.endsWith('.csv') || file.type === 'text/csv';
+
+  if (!isPdf && !isXlsx && !isCsv) {
+    showToast(`"${file.name}" não é formato suportado (PDF, XLSX, XLS, CSV) — ignorado`, true);
     return;
   }
   // Limite de 30MB por arquivo
@@ -7115,20 +7123,68 @@ async function addAnaFile(file) {
     showToast(`"${file.name}" excede 30MB — ignorado`, true);
     return;
   }
-  // Converte pra base64
-  const base64 = await new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result).split(',')[1]);
-    r.onerror = () => reject(new Error('Falha ao ler arquivo'));
-    r.readAsDataURL(file);
-  });
-  state.anaPendingFiles.push({
-    name: file.name,
-    base64,
-    mediaType: 'application/pdf',
-    size: file.size
-  });
-  renderAnaFilesList();
+
+  // PDFs vão como documento base64 pra API
+  if (isPdf) {
+    const base64 = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result).split(',')[1]);
+      r.onerror = () => reject(new Error('Falha ao ler arquivo'));
+      r.readAsDataURL(file);
+    });
+    state.anaPendingFiles.push({
+      name: file.name,
+      base64,
+      mediaType: 'application/pdf',
+      size: file.size,
+      kind: 'pdf'
+    });
+    renderAnaFilesList();
+    return;
+  }
+
+  // Excel/CSV: a API Anthropic não aceita Excel nativamente.
+  // Converte para texto/markdown estruturado e envia como parte do textContext.
+  if (!window.XLSX) {
+    showToast('Biblioteca SheetJS não carregada — recarregue a página', true);
+    return;
+  }
+
+  try {
+    showToast(`Lendo "${file.name}"…`);
+    const arrayBuffer = await file.arrayBuffer();
+    const wb = window.XLSX.read(arrayBuffer, { type: 'array' });
+
+    // Converte cada aba pra texto tabular (com cabeçalhos)
+    const sheetTexts = wb.SheetNames.map(sheetName => {
+      const sheet = wb.Sheets[sheetName];
+      // CSV é mais legível pra o modelo do que JSON
+      const csv = window.XLSX.utils.sheet_to_csv(sheet, {
+        FS: '|', // separador pipe
+        blankrows: false,
+      });
+      // Limita cada aba a 200 linhas (evita estourar tokens)
+      const lines = csv.split('\n');
+      const truncated = lines.length > 200;
+      const text = lines.slice(0, 200).join('\n');
+      return `### Aba: ${sheetName}${truncated ? ` (mostrando 200 de ${lines.length} linhas)` : ''}\n\n${text}`;
+    });
+
+    const fullText = `## Planilha: ${file.name}\n\n${sheetTexts.join('\n\n')}`;
+
+    state.anaPendingFiles.push({
+      name: file.name,
+      textContent: fullText, // <- conteúdo já convertido
+      mediaType: 'text/plain',
+      size: file.size,
+      kind: 'spreadsheet'
+    });
+    renderAnaFilesList();
+    showToast(`"${file.name}" convertido pra texto — ${wb.SheetNames.length} aba(s) extraída(s)`);
+  } catch (e) {
+    console.error('[analyses] erro ao ler planilha:', e);
+    showToast(`Erro ao ler "${file.name}": ${e.message}`, true);
+  }
 }
 
 function removeAnaFile(idx) {
@@ -7139,14 +7195,17 @@ function removeAnaFile(idx) {
 function renderAnaFilesList() {
   const wrap = document.getElementById('anaFilesList');
   if (!wrap) return;
-  wrap.innerHTML = state.anaPendingFiles.map((f, i) => `
+  wrap.innerHTML = state.anaPendingFiles.map((f, i) => {
+    const icon = f.kind === 'spreadsheet' ? '📊' : '📄';
+    const tag = f.kind === 'spreadsheet' ? '<span style="font-size:9px; background:#E4F3FF; color:#001B5C; padding:2px 6px; border-radius:3px; font-weight:600; margin-right:6px;">CONVERTIDO</span>' : '';
+    return `
     <div class="ana-file-item">
-      <span class="ana-file-icon">📄</span>
-      <span class="ana-file-name">${escapeHtml(f.name)}</span>
+      <span class="ana-file-icon">${icon}</span>
+      <span class="ana-file-name">${tag}${escapeHtml(f.name)}</span>
       <span class="ana-file-size">${(f.size / 1024).toFixed(0)} KB</span>
       <button class="ana-file-remove" onclick="removeAnaFile(${i})" title="Remover">×</button>
     </div>
-  `).join('');
+  `;}).join('');
 }
 
 async function generateAnalysis() {
@@ -7176,11 +7235,23 @@ async function generateAnalysis() {
   }, 1000);
 
   try {
-    const documents = state.anaPendingFiles.map(f => ({
-      name: f.name,
-      base64: f.base64,
-      mediaType: f.mediaType
-    }));
+    // Separa: PDFs vão como documents (base64), planilhas vão concatenadas ao textContext
+    const documents = state.anaPendingFiles
+      .filter(f => f.kind === 'pdf')
+      .map(f => ({ name: f.name, base64: f.base64, mediaType: f.mediaType }));
+
+    const spreadsheetTexts = state.anaPendingFiles
+      .filter(f => f.kind === 'spreadsheet')
+      .map(f => f.textContent)
+      .filter(Boolean);
+
+    // Monta contexto final: descrição do usuário + planilhas convertidas
+    let finalContext = contexto;
+    if (spreadsheetTexts.length > 0) {
+      finalContext = (finalContext ? finalContext + '\n\n' : '') +
+        '# DADOS DAS PLANILHAS ANEXADAS\n\n' +
+        spreadsheetTexts.join('\n\n---\n\n');
+    }
 
     const resp = await fetch(`${SUPABASE_URL}/functions/v1/analyze-document`, {
       method: 'POST',
@@ -7191,7 +7262,7 @@ async function generateAnalysis() {
       },
       body: JSON.stringify({
         documents,
-        textContext: contexto,
+        textContext: finalContext,
         promptExtra: promptExtra,
       })
     });
@@ -7352,15 +7423,16 @@ async function exportAnalysisPDF() {
   const a = state.analyses.find(x => String(x.id) === String(state.editingAnalysisId));
   if (!a) return;
 
-  if (!window.jspdf) {
-    return showToast('Biblioteca PDF não carregada — recarregue a página', true);
+  if (!window.jspdf || !window.html2canvas) {
+    return showToast('Bibliotecas PDF não carregadas — recarregue a página (Ctrl+Shift+R)', true);
   }
 
   showToast('Gerando PDF…');
 
-  // Cria um container offscreen com o HTML formatado pra renderizar com html2canvas
+  // Container offscreen mas RENDERIZADO (html2canvas precisa de layout real)
   const wrap = document.createElement('div');
-  wrap.style.cssText = 'position:absolute; left:-9999px; top:0; width:680px; background:#fff; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; color:#0E1B3D; padding:0;';
+  wrap.style.cssText = 'position:fixed; left:0; top:0; width:794px; background:#fff; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; color:#0E1B3D; padding:0; z-index:-1; opacity:0; pointer-events:none;';
+  // Largura A4 a 96dpi ≈ 794px
 
   const dt = new Date(a.criado_em);
   const when = dt.toLocaleString('pt-BR');
@@ -7368,71 +7440,108 @@ async function exportAnalysisPDF() {
   const tipoLabel = a.tipo_operacao ? ANA_TIPO_LABELS[a.tipo_operacao] || a.tipo_operacao : '—';
 
   wrap.innerHTML = `
-    <div style="background:#001B5C; color:#fff; padding:24px 32px;">
-      <div style="font-size:11px; color:#B1C6E5; letter-spacing:0.06em; text-transform:uppercase; margin-bottom:4px;">NETZ SOLUTION · ANÁLISE DE PRÉ-VIABILIDADE</div>
-      <h1 style="margin:0; font-size:22px; font-family:'Fraunces',serif; font-weight:600; letter-spacing:-0.01em;">${escapeHtml(a.titulo)}</h1>
+    <div style="background:#001B5C; color:#fff; padding:28px 36px;">
+      <div style="font-size:12px; color:#B1C6E5; letter-spacing:0.06em; text-transform:uppercase; margin-bottom:6px;">NETZ SOLUTION · ANÁLISE DE PRÉ-VIABILIDADE</div>
+      <h1 style="margin:0; font-size:24px; font-weight:600; letter-spacing:-0.01em; line-height:1.3;">${escapeHtml(a.titulo)}</h1>
     </div>
-    <div style="padding:18px 32px; background:#F0F6FC; border-bottom:1px solid #DCE3EE; font-size:11px; color:#5A6785;">
-      ${a.empresa ? `<div style="font-weight:600; color:#001B5C; font-size:13px; margin-bottom:6px;">${escapeHtml(a.empresa)}</div>` : ''}
-      <div>
+    <div style="padding:20px 36px; background:#F0F6FC; border-bottom:1px solid #DCE3EE; font-size:12px; color:#5A6785;">
+      ${a.empresa ? `<div style="font-weight:600; color:#001B5C; font-size:14px; margin-bottom:8px;">${escapeHtml(a.empresa)}</div>` : ''}
+      <div style="line-height:1.6;">
         <strong style="color:#001B5C;">Tipo:</strong> ${escapeHtml(tipoLabel)}
-        ${opLink ? ` · <strong style="color:#001B5C;">Operação:</strong> ${escapeHtml(opLink.nome)}` : ''}
-        · <strong style="color:#001B5C;">Gerado em:</strong> ${when}
+        ${opLink ? `&nbsp;·&nbsp;<strong style="color:#001B5C;">Operação:</strong> ${escapeHtml(opLink.nome)}` : ''}
+        &nbsp;·&nbsp;<strong style="color:#001B5C;">Gerado em:</strong> ${when}
       </div>
     </div>
-    <div style="padding:28px 32px; font-size:12px; line-height:1.7;" class="memo-pdf-body">
+    <div style="padding:32px 36px; font-size:13px; line-height:1.7;" class="memo-pdf-body">
       ${sanitizeMemoHTML(a.memorando)}
     </div>
-    <div style="padding:14px 32px; background:#F0F6FC; border-top:1px solid #DCE3EE; text-align:center; font-size:9px; color:#5A6785;">
+    <div style="padding:18px 36px; background:#F0F6FC; border-top:1px solid #DCE3EE; text-align:center; font-size:10px; color:#5A6785;">
       Documento confidencial · Netz Solution · Análise gerada por IA (${escapeHtml(a.modelo || 'Claude Opus')})<br>
       Esta análise é uma pré-viabilidade indicativa — não substitui due diligence completa
     </div>
   `;
 
-  // Aplica estilos inline em h2/h3/blockquotes
   const style = document.createElement('style');
   style.textContent = `
-    .memo-pdf-body h2 { color:#001B5C; font-size:14px; font-weight:700; margin:18px 0 8px 0; padding-bottom:6px; border-bottom:2px solid #FF965A; font-family:'Fraunces',serif; }
+    .memo-pdf-body h2 { color:#001B5C; font-size:15px; font-weight:700; margin:18px 0 10px 0; padding-bottom:6px; border-bottom:2px solid #FF965A; }
     .memo-pdf-body h2:first-child { margin-top:0; }
-    .memo-pdf-body h3 { color:#001B5C; font-size:12px; font-weight:600; margin:12px 0 6px 0; }
-    .memo-pdf-body p { margin:0 0 8px 0; }
+    .memo-pdf-body h3 { color:#001B5C; font-size:13px; font-weight:600; margin:14px 0 8px 0; }
+    .memo-pdf-body p { margin:0 0 10px 0; }
     .memo-pdf-body strong { color:#001B5C; font-weight:600; }
-    .memo-pdf-body ul, .memo-pdf-body ol { padding-left:18px; margin:6px 0; }
-    .memo-pdf-body li { margin-bottom:4px; }
-    .memo-pdf-body table { width:100%; border-collapse:collapse; margin:10px 0; font-size:10px; }
-    .memo-pdf-body th, .memo-pdf-body td { padding:6px 8px; text-align:left; border-bottom:1px solid #DCE3EE; }
-    .memo-pdf-body th { background:#E4F3FF; color:#001B5C; font-weight:600; text-transform:uppercase; font-size:9px; letter-spacing:0.05em; }
-    .memo-pdf-body .memo-flag-verde { padding:12px 16px; border-radius:6px; margin:14px 0; font-weight:600; border-left:4px solid #2E7D5B; background:rgba(46,125,91,0.08); color:#1E5A40; }
-    .memo-pdf-body .memo-flag-amarelo { padding:12px 16px; border-radius:6px; margin:14px 0; font-weight:600; border-left:4px solid #E5A82E; background:rgba(229,168,46,0.10); color:#8B6420; }
-    .memo-pdf-body .memo-flag-vermelho { padding:12px 16px; border-radius:6px; margin:14px 0; font-weight:600; border-left:4px solid #C93B3B; background:rgba(201,59,59,0.08); color:#8B2A2A; }
-    .memo-pdf-body .memo-info { background:#E4F3FF; padding:8px 12px; border-radius:5px; border-left:3px solid #001B5C; font-size:11px; margin:8px 0; }
-    .memo-pdf-body .memo-warn { background:rgba(255,150,90,0.10); padding:8px 12px; border-radius:5px; border-left:3px solid #FF965A; font-size:11px; margin:8px 0; }
+    .memo-pdf-body ul, .memo-pdf-body ol { padding-left:20px; margin:8px 0; }
+    .memo-pdf-body li { margin-bottom:5px; }
+    .memo-pdf-body table { width:100%; border-collapse:collapse; margin:12px 0; font-size:11px; }
+    .memo-pdf-body th, .memo-pdf-body td { padding:8px 10px; text-align:left; border-bottom:1px solid #DCE3EE; }
+    .memo-pdf-body th { background:#E4F3FF; color:#001B5C; font-weight:600; text-transform:uppercase; font-size:10px; letter-spacing:0.05em; }
+    .memo-pdf-body .memo-flag-verde { padding:14px 18px; border-radius:6px; margin:16px 0; font-weight:600; border-left:4px solid #2E7D5B; background:rgba(46,125,91,0.08); color:#1E5A40; }
+    .memo-pdf-body .memo-flag-amarelo { padding:14px 18px; border-radius:6px; margin:16px 0; font-weight:600; border-left:4px solid #E5A82E; background:rgba(229,168,46,0.10); color:#8B6420; }
+    .memo-pdf-body .memo-flag-vermelho { padding:14px 18px; border-radius:6px; margin:16px 0; font-weight:600; border-left:4px solid #C93B3B; background:rgba(201,59,59,0.08); color:#8B2A2A; }
+    .memo-pdf-body .memo-info { background:#E4F3FF; padding:10px 14px; border-radius:5px; border-left:3px solid #001B5C; font-size:12px; margin:10px 0; }
+    .memo-pdf-body .memo-warn { background:rgba(255,150,90,0.10); padding:10px 14px; border-radius:5px; border-left:3px solid #FF965A; font-size:12px; margin:10px 0; }
   `;
   wrap.appendChild(style);
   document.body.appendChild(wrap);
 
   try {
-    // Usa o jsPDF html() que internamente usa html2canvas
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-    await doc.html(wrap, {
-      callback: (d) => {
-        const safe = (a.titulo || 'analise').replace(/[^a-zA-Z0-9-_]/g, '_').slice(0, 60);
-        d.save(`Netz_PreViabilidade_${safe}.pdf`);
-        showToast('PDF gerado');
-      },
-      x: 0, y: 0,
-      width: 210,
-      windowWidth: 680,
-      html2canvas: { scale: 0.5, useCORS: true, logging: false },
-      autoPaging: 'text',
-      margin: [0, 0, 0, 0],
+    // Aguarda render
+    await new Promise(r => setTimeout(r, 100));
+
+    // Captura o container inteiro como imagem
+    const canvas = await window.html2canvas(wrap, {
+      scale: 2, // alta resolução
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+      windowWidth: 794,
+      width: 794,
     });
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+
+    // A4: 210mm × 297mm
+    const pdfW = 210;
+    const pdfH = 297;
+    const ratio = canvas.width / pdfW; // px per mm
+    const fullH = canvas.height / ratio; // altura total em mm
+
+    if (fullH <= pdfH) {
+      // Cabe numa página só
+      doc.addImage(imgData, 'JPEG', 0, 0, pdfW, fullH);
+    } else {
+      // Múltiplas páginas — recorta o canvas em pedaços de altura pdfH
+      const pageHeightPx = Math.floor(pdfH * ratio);
+      let yOffset = 0;
+      let isFirst = true;
+      while (yOffset < canvas.height) {
+        if (!isFirst) doc.addPage();
+        isFirst = false;
+        const sliceHeightPx = Math.min(pageHeightPx, canvas.height - yOffset);
+
+        // Cria canvas temporário com o pedaço
+        const tmp = document.createElement('canvas');
+        tmp.width = canvas.width;
+        tmp.height = sliceHeightPx;
+        const tmpCtx = tmp.getContext('2d');
+        tmpCtx.fillStyle = '#ffffff';
+        tmpCtx.fillRect(0, 0, tmp.width, tmp.height);
+        tmpCtx.drawImage(canvas, 0, yOffset, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx);
+        const sliceData = tmp.toDataURL('image/jpeg', 0.92);
+        const sliceHeightMm = sliceHeightPx / ratio;
+        doc.addImage(sliceData, 'JPEG', 0, 0, pdfW, sliceHeightMm);
+        yOffset += pageHeightPx;
+      }
+    }
+
+    const safe = (a.titulo || 'analise').replace(/[^a-zA-Z0-9-_]/g, '_').slice(0, 60);
+    doc.save(`Netz_PreViabilidade_${safe}.pdf`);
+    showToast('PDF gerado');
   } catch (e) {
     console.error('[analyses] PDF erro:', e);
     showToast('Erro ao gerar PDF: ' + e.message, true);
   } finally {
-    setTimeout(() => wrap.remove(), 100);
+    setTimeout(() => wrap.remove(), 200);
   }
 }
 
