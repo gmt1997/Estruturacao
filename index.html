@@ -1272,6 +1272,297 @@
     margin-bottom: 20px;
   }
 
+  /* ===== Aba Análises IA ===== */
+  .analyses-header {
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 12px;
+    margin-bottom: 20px;
+  }
+  .analyses-actions {
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  }
+  .analyses-info-card {
+    display: flex; gap: 12px;
+    padding: 14px 16px;
+    background: var(--blue-light);
+    border-left: 3px solid var(--navy);
+    border-radius: 6px;
+    margin-bottom: 24px;
+  }
+  .analyses-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+  }
+  .analysis-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.18s;
+    position: relative;
+    overflow: hidden;
+  }
+  .analysis-card:hover {
+    border-color: var(--orange);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+  .analysis-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    background: var(--text-mute);
+  }
+  .analysis-card.flag-verde::before { background: #2E7D5B; }
+  .analysis-card.flag-amarelo::before { background: #E5A82E; }
+  .analysis-card.flag-vermelho::before { background: #C93B3B; }
+  .analysis-card-head {
+    display: flex; justify-content: space-between; align-items: start;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .analysis-card-title {
+    font-weight: 600;
+    color: var(--navy);
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  .analysis-flag-badge {
+    flex-shrink: 0;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .analysis-flag-badge.verde { background: rgba(46, 125, 91, 0.12); color: #2E7D5B; }
+  .analysis-flag-badge.amarelo { background: rgba(229, 168, 46, 0.15); color: #B57E2E; }
+  .analysis-flag-badge.vermelho { background: rgba(201, 59, 59, 0.12); color: #C93B3B; }
+  .analysis-flag-badge.na { background: var(--blue-pale); color: var(--text-mute); }
+  .analysis-card-meta {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    font-size: 11px;
+    color: var(--text-mute);
+    margin-bottom: 10px;
+  }
+  .analysis-card-meta .tipo-pill {
+    background: var(--blue-light);
+    color: var(--navy);
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .analysis-card-empresa {
+    font-size: 12px;
+    color: var(--text);
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+  .analysis-card-when {
+    font-size: 10px;
+    color: var(--text-mute);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .analysis-card-op-link {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10px;
+    color: var(--orange-dim);
+    margin-top: 6px;
+    font-weight: 500;
+  }
+
+  /* Dropzone de arquivos */
+  .ana-dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.18s;
+    background: #fff;
+  }
+  .ana-dropzone:hover, .ana-dropzone.drag-over {
+    border-color: var(--orange);
+    background: #FFF8F3;
+  }
+  .ana-dropzone-icon {
+    font-size: 28px;
+    margin-bottom: 6px;
+    opacity: 0.6;
+  }
+  .ana-dropzone-text {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 3px;
+  }
+  .ana-dropzone-sub {
+    font-size: 11px;
+    color: var(--text-mute);
+  }
+  .ana-files-list {
+    display: flex; flex-direction: column; gap: 6px;
+    margin-top: 10px;
+  }
+  .ana-file-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px;
+    background: var(--blue-pale);
+    border: 1px solid var(--blue-light);
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  .ana-file-icon { font-size: 16px; }
+  .ana-file-name { flex: 1; color: var(--text); font-weight: 500; }
+  .ana-file-size { font-size: 10px; color: var(--text-mute); font-family: 'IBM Plex Mono', monospace; }
+  .ana-file-remove {
+    background: transparent; border: none;
+    color: var(--text-mute); cursor: pointer;
+    font-size: 18px; line-height: 1;
+    padding: 0 4px;
+  }
+  .ana-file-remove:hover { color: var(--red); }
+
+  /* Visualização do memorando */
+  .ana-view-header {
+    padding: 20px 28px;
+    background: var(--blue-pale);
+    border-bottom: 1px solid var(--border);
+  }
+  .ana-view-meta-row {
+    display: flex; gap: 14px; flex-wrap: wrap;
+    font-size: 11px;
+    color: var(--text-mute);
+    margin-top: 6px;
+  }
+  .ana-view-meta-row strong { color: var(--navy); font-weight: 600; }
+
+  .memo-content {
+    padding: 32px 40px;
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.7;
+    max-height: 65vh;
+    overflow-y: auto;
+  }
+  .memo-content h2 {
+    color: var(--navy);
+    font-size: 17px;
+    font-weight: 700;
+    margin: 28px 0 14px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--orange);
+    font-family: 'Fraunces', serif;
+  }
+  .memo-content h2:first-child { margin-top: 0; }
+  .memo-content h3 {
+    color: var(--navy);
+    font-size: 14px;
+    font-weight: 600;
+    margin: 18px 0 8px 0;
+  }
+  .memo-content p { margin: 0 0 12px 0; }
+  .memo-content strong { color: var(--navy); font-weight: 600; }
+  .memo-content ul, .memo-content ol { padding-left: 22px; margin: 10px 0; }
+  .memo-content li { margin-bottom: 6px; line-height: 1.6; }
+  .memo-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 12px;
+  }
+  .memo-content th, .memo-content td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .memo-content th {
+    background: var(--blue-light);
+    color: var(--navy);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+  }
+
+  /* Flags coloridas (conclusão e inline) */
+  .memo-content .memo-flag-verde,
+  .memo-content .memo-flag-amarelo,
+  .memo-content .memo-flag-vermelho {
+    padding: 14px 18px;
+    border-radius: 8px;
+    margin: 18px 0;
+    font-weight: 600;
+    border-left: 4px solid;
+  }
+  .memo-content .memo-flag-verde {
+    background: rgba(46, 125, 91, 0.08);
+    border-color: #2E7D5B;
+    color: #1E5A40;
+  }
+  .memo-content .memo-flag-amarelo {
+    background: rgba(229, 168, 46, 0.10);
+    border-color: #E5A82E;
+    color: #8B6420;
+  }
+  .memo-content .memo-flag-vermelho {
+    background: rgba(201, 59, 59, 0.08);
+    border-color: #C93B3B;
+    color: #8B2A2A;
+  }
+  .memo-content .memo-info {
+    background: var(--blue-light);
+    padding: 10px 14px;
+    border-radius: 6px;
+    border-left: 3px solid var(--navy);
+    font-size: 13px;
+    margin: 10px 0;
+  }
+  .memo-content .memo-warn {
+    background: rgba(255, 150, 90, 0.10);
+    padding: 10px 14px;
+    border-radius: 6px;
+    border-left: 3px solid var(--orange);
+    font-size: 13px;
+    margin: 10px 0;
+  }
+
+  /* Loading overlay durante geração */
+  .ana-loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.92);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 14px;
+    z-index: 100;
+    border-radius: 8px;
+  }
+  .ana-loading-spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--blue-light);
+    border-top-color: var(--orange);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .ana-loading-text {
+    color: var(--navy);
+    font-weight: 500;
+    font-size: 13px;
+  }
+  .ana-loading-sub {
+    color: var(--text-mute);
+    font-size: 11px;
+  }
+
   /* ===== Aba Minhas Tarefas ===== */
   .mytasks-header {
     display: flex; justify-content: space-between; align-items: center;
@@ -3240,6 +3531,7 @@
       <button class="tab" data-tab="weekly">Semana</button>
       <button class="tab" data-tab="mytasks">Minhas Tarefas</button>
       <button class="tab" data-tab="projects">Projetos</button>
+      <button class="tab" data-tab="analyses">Análises IA</button>
       <button class="tab" data-tab="reports">Relatórios</button>
       <button class="tab" data-tab="audit">Auditoria</button>
     </nav>
@@ -3545,6 +3837,38 @@
       <div class="kanban" id="projectsKanban"></div>
     </section>
 
+    <!-- ANÁLISES IA (pré-viabilidade) -->
+    <section class="panel" id="panel-analyses">
+      <div class="analyses-header">
+        <h2 class="section-title" style="margin: 0;">Análises de Pré-Viabilidade</h2>
+        <div class="analyses-actions">
+          <input type="text" class="search-input" id="searchAnalyses" placeholder="Buscar análise…" oninput="renderAnalysesList()" style="max-width: 280px;">
+          <select class="filter-select" id="analysesFilterClass" onchange="renderAnalysesList()">
+            <option value="">Todas classificações</option>
+            <option value="verde">🟢 Verde</option>
+            <option value="amarelo">🟡 Amarelo</option>
+            <option value="vermelho">🔴 Vermelho</option>
+          </select>
+          <button class="btn-primary" onclick="openNewAnalysisModal()">+ Nova análise</button>
+        </div>
+      </div>
+
+      <div class="analyses-info-card">
+        <div class="reports-info-icon">🤖</div>
+        <div class="reports-info-text">
+          <strong>Como funciona:</strong> envie um PDF (term sheet, balanço, regulamento, contrato de cessão) e/ou um texto descritivo da operação.
+          O <strong>Claude Opus 4.5</strong> analisa e gera um <strong>memorando executivo de pré-viabilidade</strong> com 9 seções e classificação <strong>Verde / Amarelo / Vermelho</strong>.
+          Análises podem ser linkadas a operações cadastradas ou ficar soltas pra avaliação preliminar.
+        </div>
+      </div>
+
+      <div id="analysesList" class="analyses-grid">
+        <div class="empty-state" style="grid-column: 1 / -1; padding: 40px;">
+          <h3>Carregando…</h3>
+        </div>
+      </div>
+    </section>
+
     <!-- RELATÓRIOS -->
     <section class="panel" id="panel-reports">
       <div class="reports-header">
@@ -3646,6 +3970,98 @@
     <div class="modal-foot">
       <div style="flex: 1; font-size: 11px; color: var(--text-mute);">Esta é a visão exata do email que será enviado aos destinatários ativos.</div>
       <button class="btn-secondary" onclick="closeReportPreview()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL NOVA ANÁLISE ===== -->
+<div class="modal-overlay" id="modalNewAnalysisOverlay">
+  <div class="modal" style="max-width: 720px;">
+    <div class="modal-head">
+      <h2>Nova análise de pré-viabilidade</h2>
+      <button class="modal-close" onclick="closeNewAnalysisModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-section">
+        <div class="form-grid">
+          <div class="field span2">
+            <label>Título da análise</label>
+            <input type="text" id="anaTitulo" placeholder="Ex: Pré-viabilidade FIDC XYZ Recebíveis Comerciais" autocomplete="off">
+          </div>
+          <div class="field">
+            <label>Tipo de operação</label>
+            <select id="anaTipo">
+              <option value="">— Selecione —</option>
+              <option value="fidc">FIDC</option>
+              <option value="cri">CRI</option>
+              <option value="cra">CRA</option>
+              <option value="debenture">Debênture</option>
+              <option value="nota_comercial">Nota Comercial</option>
+              <option value="hibrida">Estrutura Híbrida</option>
+              <option value="outro">Outro</option>
+            </select>
+          </div>
+
+          <div class="field span2">
+            <label>Empresa / Cedente</label>
+            <input type="text" id="anaEmpresa" placeholder="Ex: XYZ Comércio Ltda" autocomplete="off">
+          </div>
+          <div class="field">
+            <label>Vincular a operação <span style="font-weight:400; color:var(--text-mute); font-size:11px;">(opcional)</span></label>
+            <select id="anaOperationId">
+              <option value="">— Análise solta —</option>
+            </select>
+          </div>
+
+          <div class="field full">
+            <label>Descrição / Contexto <span style="font-weight:400; color:var(--text-mute); font-size:11px;">(opcional, mas ajuda muito)</span></label>
+            <textarea id="anaContexto" rows="3" placeholder="Resumo do que está sendo proposto: estrutura, partes, volumes, prazos. Quanto mais contexto, melhor a análise."></textarea>
+          </div>
+
+          <div class="field full">
+            <label>Documentos (PDFs) <span style="font-weight:400; color:var(--text-mute); font-size:11px;">(arraste aqui ou clique para selecionar)</span></label>
+            <div class="ana-dropzone" id="anaDropzone" onclick="document.getElementById('anaFileInput').click()">
+              <input type="file" id="anaFileInput" multiple accept="application/pdf" style="display:none;" onchange="onAnaFilesSelected(event)">
+              <div class="ana-dropzone-content">
+                <div class="ana-dropzone-icon">📎</div>
+                <div class="ana-dropzone-text">Arraste PDFs aqui ou clique para selecionar</div>
+                <div class="ana-dropzone-sub">Term sheet, balanço, regulamento, contrato de cessão, análise de carteira…</div>
+              </div>
+            </div>
+            <div id="anaFilesList" class="ana-files-list"></div>
+          </div>
+
+          <div class="field full">
+            <label>Instrução adicional <span style="font-weight:400; color:var(--text-mute); font-size:11px;">(opcional)</span></label>
+            <textarea id="anaPromptExtra" rows="2" placeholder="Ex: dê atenção especial à concentração de sacados / verifique compatibilidade com CVM 175 / etc."></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <div style="flex: 1; font-size: 11px; color: var(--text-mute);" id="anaStatusMsg">
+        💡 A análise leva entre 30s e 2min dependendo do volume de documentos
+      </div>
+      <button class="btn-secondary" onclick="closeNewAnalysisModal()">Cancelar</button>
+      <button class="btn-primary" id="anaGenerateBtn" onclick="generateAnalysis()">🤖 Gerar análise</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL VISUALIZAR ANÁLISE ===== -->
+<div class="modal-overlay" id="modalViewAnalysisOverlay">
+  <div class="modal" style="max-width: 880px;">
+    <div class="modal-head">
+      <h2 id="anaViewTitle">Análise</h2>
+      <div style="display:flex; gap:8px; margin-right: 12px;">
+        <button class="btn-secondary" id="anaExportPdfBtn" onclick="exportAnalysisPDF()" title="Baixar PDF com identidade Netz">📄 PDF</button>
+        <button class="btn-danger" id="anaDeleteBtn" onclick="deleteAnalysis()" title="Excluir esta análise">Excluir</button>
+      </div>
+      <button class="modal-close" onclick="closeViewAnalysisModal()">×</button>
+    </div>
+    <div class="modal-body" style="padding: 0;">
+      <div id="anaViewHeader" class="ana-view-header"></div>
+      <div id="anaViewContent" class="memo-content"></div>
     </div>
   </div>
 </div>
@@ -3755,6 +4171,10 @@
     <div class="modal-head">
       <h2 id="modalTitle">Nova Operação</h2>
       <div style="display: flex; gap: 8px; align-items: center;">
+        <button class="modal-ai-btn" id="modalPreViabBtn" onclick="openNewAnalysisFromOp()" style="display:none; background: #6A4A8C;" title="Gerar análise de pré-viabilidade com IA">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <span>Pré-Viabilidade</span>
+        </button>
         <button class="modal-ai-btn" id="modalAIBtn" onclick="generateOperationSummary()" style="display:none;" title="Gerar sumário inteligente da operação">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2"/></svg>
           <span>Resumir com IA</span>
@@ -4656,6 +5076,9 @@ document.querySelectorAll('.tab').forEach(t => {
     }
     if (t.dataset.tab === 'mytasks') {
       loadMyTasks();
+    }
+    if (t.dataset.tab === 'analyses') {
+      loadAnalyses();
     }
     renderAll();
   });
@@ -6519,6 +6942,498 @@ async function loadMyTasks() {
     state.myTasksDetected = true;
   }
   renderMyTasks();
+}
+
+// ============================================
+// ANÁLISES IA — Pré-Viabilidade
+// ============================================
+
+state.analyses = [];
+state.editingAnalysisId = null;
+state.anaPendingFiles = []; // [{ name, base64, mediaType, size }]
+
+const ANA_TIPO_LABELS = {
+  fidc: 'FIDC',
+  cri: 'CRI',
+  cra: 'CRA',
+  debenture: 'Debênture',
+  nota_comercial: 'Nota Comercial',
+  hibrida: 'Híbrida',
+  outro: 'Outro'
+};
+
+const ANA_FLAG_LABELS = {
+  verde: '🟢 Verde',
+  amarelo: '🟡 Amarelo',
+  vermelho: '🔴 Vermelho',
+  na: '⚪ Não classificado'
+};
+
+async function loadAnalyses() {
+  try {
+    const { data, error } = await sb.from('analyses').select('*').order('criado_em', { ascending: false });
+    if (error) throw error;
+    state.analyses = data || [];
+    renderAnalysesList();
+  } catch (e) {
+    console.warn('[analyses] load fail', e);
+    state.analyses = [];
+    renderAnalysesList();
+  }
+}
+
+function renderAnalysesList() {
+  const wrap = document.getElementById('analysesList');
+  if (!wrap) return;
+
+  const search = (document.getElementById('searchAnalyses')?.value || '').toLowerCase();
+  const fClass = document.getElementById('analysesFilterClass')?.value || '';
+
+  const filtered = state.analyses.filter(a => {
+    if (search) {
+      const hay = (a.titulo + ' ' + (a.empresa || '') + ' ' + (a.tipo_operacao || '')).toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    if (fClass && a.classificacao !== fClass) return false;
+    return true;
+  });
+
+  if (!filtered.length) {
+    wrap.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1; padding: 40px;">
+      <h3>Nenhuma análise ${state.analyses.length > 0 ? 'corresponde aos filtros' : 'gerada ainda'}</h3>
+      <p>${state.analyses.length > 0 ? 'Ajuste os filtros acima' : 'Clique em "+ Nova análise" pra gerar a primeira'}</p>
+    </div>`;
+    return;
+  }
+
+  wrap.innerHTML = filtered.map(a => {
+    const dt = new Date(a.criado_em);
+    const when = dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) +
+                 ' ' + dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const flag = a.classificacao || 'na';
+    const flagLabel = (ANA_FLAG_LABELS[flag] || 'Não classificado').replace(/^[^a-zA-Z]+/, '');
+    const opLink = a.operation_id ? state.operations.find(o => o.id === a.operation_id) : null;
+    const tipoLabel = a.tipo_operacao ? ANA_TIPO_LABELS[a.tipo_operacao] || a.tipo_operacao : '';
+
+    return `<div class="analysis-card flag-${flag}" onclick="openViewAnalysisModal(${a.id})">
+      <div class="analysis-card-head">
+        <div class="analysis-card-title">${escapeHtml(a.titulo)}</div>
+        <span class="analysis-flag-badge ${flag}">${flagLabel}</span>
+      </div>
+      ${a.empresa ? `<div class="analysis-card-empresa">${escapeHtml(a.empresa)}</div>` : ''}
+      <div class="analysis-card-meta">
+        ${tipoLabel ? `<span class="tipo-pill">${escapeHtml(tipoLabel)}</span>` : ''}
+        <span class="analysis-card-when">${when}</span>
+      </div>
+      ${opLink ? `<div class="analysis-card-op-link">🔗 ${escapeHtml(opLink.nome)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ===== Modal NOVA ANÁLISE =====
+// Abre modal de nova análise direto do modal da operação (linkando automaticamente)
+function openNewAnalysisFromOp() {
+  const opId = document.getElementById('opId').value;
+  if (!opId) return showToast('Salve a operação primeiro', true);
+  openNewAnalysisModal(opId);
+}
+
+function openNewAnalysisModal(operationId) {
+  state.anaPendingFiles = [];
+  document.getElementById('anaTitulo').value = '';
+  document.getElementById('anaTipo').value = '';
+  document.getElementById('anaEmpresa').value = '';
+  document.getElementById('anaContexto').value = '';
+  document.getElementById('anaPromptExtra').value = '';
+  document.getElementById('anaFileInput').value = '';
+
+  // Popula select de operações
+  const opSel = document.getElementById('anaOperationId');
+  opSel.innerHTML = '<option value="">— Análise solta —</option>' +
+    state.operations.map(o => `<option value="${o.id}">${escapeHtml(o.nome)} · ${escapeHtml(o.cliente || '—')}</option>`).join('');
+
+  if (operationId) {
+    opSel.value = operationId;
+    const op = state.operations.find(o => String(o.id) === String(operationId));
+    if (op) {
+      document.getElementById('anaTitulo').value = `Pré-viabilidade — ${op.nome}`;
+      document.getElementById('anaEmpresa').value = op.cliente || '';
+      const tipoMap = { FIDC: 'fidc', CR: 'cri', CRI: 'cri', CRA: 'cra', Debenture: 'debenture', Debênture: 'debenture', NC: 'nota_comercial' };
+      const t = tipoMap[op.tipo] || '';
+      if (t) document.getElementById('anaTipo').value = t;
+    }
+  }
+
+  renderAnaFilesList();
+  document.getElementById('anaStatusMsg').innerHTML = '💡 A análise leva entre 30s e 2min dependendo do volume de documentos';
+  document.getElementById('anaGenerateBtn').disabled = false;
+  document.getElementById('anaGenerateBtn').textContent = '🤖 Gerar análise';
+  document.getElementById('modalNewAnalysisOverlay').classList.add('active');
+
+  // Setup drag-and-drop
+  setupAnaDropzone();
+}
+
+function closeNewAnalysisModal() {
+  document.getElementById('modalNewAnalysisOverlay').classList.remove('active');
+  state.anaPendingFiles = [];
+}
+
+function setupAnaDropzone() {
+  const dz = document.getElementById('anaDropzone');
+  if (!dz || dz._setupDone) return;
+  dz._setupDone = true;
+  dz.addEventListener('dragover', e => {
+    e.preventDefault();
+    dz.classList.add('drag-over');
+  });
+  dz.addEventListener('dragleave', e => {
+    dz.classList.remove('drag-over');
+  });
+  dz.addEventListener('drop', async e => {
+    e.preventDefault();
+    dz.classList.remove('drag-over');
+    const files = [...(e.dataTransfer?.files || [])];
+    for (const f of files) await addAnaFile(f);
+  });
+}
+
+async function onAnaFilesSelected(event) {
+  const files = [...(event.target.files || [])];
+  for (const f of files) await addAnaFile(f);
+  event.target.value = '';
+}
+
+async function addAnaFile(file) {
+  if (!file) return;
+  if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+    showToast(`"${file.name}" não é PDF — ignorado`, true);
+    return;
+  }
+  // Limite de 30MB por arquivo
+  if (file.size > 30 * 1024 * 1024) {
+    showToast(`"${file.name}" excede 30MB — ignorado`, true);
+    return;
+  }
+  // Converte pra base64
+  const base64 = await new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result).split(',')[1]);
+    r.onerror = () => reject(new Error('Falha ao ler arquivo'));
+    r.readAsDataURL(file);
+  });
+  state.anaPendingFiles.push({
+    name: file.name,
+    base64,
+    mediaType: 'application/pdf',
+    size: file.size
+  });
+  renderAnaFilesList();
+}
+
+function removeAnaFile(idx) {
+  state.anaPendingFiles.splice(idx, 1);
+  renderAnaFilesList();
+}
+
+function renderAnaFilesList() {
+  const wrap = document.getElementById('anaFilesList');
+  if (!wrap) return;
+  wrap.innerHTML = state.anaPendingFiles.map((f, i) => `
+    <div class="ana-file-item">
+      <span class="ana-file-icon">📄</span>
+      <span class="ana-file-name">${escapeHtml(f.name)}</span>
+      <span class="ana-file-size">${(f.size / 1024).toFixed(0)} KB</span>
+      <button class="ana-file-remove" onclick="removeAnaFile(${i})" title="Remover">×</button>
+    </div>
+  `).join('');
+}
+
+async function generateAnalysis() {
+  const titulo = document.getElementById('anaTitulo').value.trim();
+  if (!titulo) return showToast('Informe o título da análise', true);
+
+  const contexto = document.getElementById('anaContexto').value.trim();
+  const promptExtra = document.getElementById('anaPromptExtra').value.trim();
+  const operationId = document.getElementById('anaOperationId').value || null;
+  const empresa = document.getElementById('anaEmpresa').value.trim() || null;
+  const tipoOp = document.getElementById('anaTipo').value || null;
+
+  if (state.anaPendingFiles.length === 0 && !contexto) {
+    return showToast('Envie pelo menos um PDF ou preencha o contexto', true);
+  }
+
+  const btn = document.getElementById('anaGenerateBtn');
+  const status = document.getElementById('anaStatusMsg');
+  btn.disabled = true;
+  btn.textContent = '⏳ Gerando…';
+  status.innerHTML = '🤖 Claude Opus analisando documentos…';
+
+  const startTs = Date.now();
+  const tickInterval = setInterval(() => {
+    const elapsed = Math.round((Date.now() - startTs) / 1000);
+    status.innerHTML = `🤖 Claude Opus analisando… <span class="mono">${elapsed}s</span>`;
+  }, 1000);
+
+  try {
+    const documents = state.anaPendingFiles.map(f => ({
+      name: f.name,
+      base64: f.base64,
+      mediaType: f.mediaType
+    }));
+
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/analyze-document`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'apikey': SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({
+        documents,
+        textContext: contexto,
+        promptExtra: promptExtra,
+      })
+    });
+
+    clearInterval(tickInterval);
+
+    const data = await resp.json();
+    if (!resp.ok) {
+      throw new Error(data.error || `HTTP ${resp.status}`);
+    }
+
+    // Salva no banco
+    const documentosMeta = state.anaPendingFiles.map(f => ({
+      nome: f.name,
+      tamanho_kb: Math.round(f.size / 1024),
+      tipo: f.mediaType
+    }));
+
+    let autorNome = null;
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      autorNome = user?.email || null;
+    } catch (e) {}
+
+    const { data: saved, error } = await sb.from('analyses').insert({
+      titulo,
+      operation_id: operationId,
+      empresa,
+      tipo_operacao: tipoOp,
+      classificacao: data.classificacao,
+      prompt_extra: promptExtra || null,
+      memorando: data.memorando,
+      documentos: documentosMeta,
+      autor: autorNome,
+      modelo: data.modelo,
+      tokens_input: data.tokens_input,
+      tokens_output: data.tokens_output,
+    }).select().single();
+    if (error) throw error;
+
+    showToast(`Análise concluída · ${(data.classificacao || 'sem classificação').toUpperCase()}`);
+    closeNewAnalysisModal();
+    await loadAnalyses();
+    // Abre direto a análise gerada
+    openViewAnalysisModal(saved.id);
+  } catch (e) {
+    clearInterval(tickInterval);
+    console.error('[analyses] erro:', e);
+    btn.disabled = false;
+    btn.textContent = '🤖 Gerar análise';
+    status.innerHTML = `❌ Erro: ${escapeHtml(e.message || String(e))}`;
+    showToast('Erro: ' + (e.message || 'falha'), true);
+  }
+}
+
+// ===== Modal VISUALIZAR ANÁLISE =====
+function openViewAnalysisModal(id) {
+  const a = state.analyses.find(x => String(x.id) === String(id));
+  if (!a) return showToast('Análise não encontrada', true);
+
+  state.editingAnalysisId = a.id;
+  document.getElementById('anaViewTitle').textContent = a.titulo;
+
+  const dt = new Date(a.criado_em);
+  const when = dt.toLocaleString('pt-BR');
+  const opLink = a.operation_id ? state.operations.find(o => o.id === a.operation_id) : null;
+  const flagText = a.classificacao
+    ? (ANA_FLAG_LABELS[a.classificacao] || a.classificacao).replace(/^[^a-zA-Z]+/, '')
+    : 'Não classificado';
+  const tipoLabel = a.tipo_operacao ? ANA_TIPO_LABELS[a.tipo_operacao] || a.tipo_operacao : '—';
+  const docsList = (a.documentos || []).map(d => d.nome).join(' · ') || '—';
+
+  document.getElementById('anaViewHeader').innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:start; gap:14px; flex-wrap: wrap;">
+      <div>
+        ${a.empresa ? `<div style="font-weight:600; color: var(--navy); font-size: 14px;">${escapeHtml(a.empresa)}</div>` : ''}
+        <div class="ana-view-meta-row">
+          <span><strong>Tipo:</strong> ${escapeHtml(tipoLabel)}</span>
+          ${opLink ? `<span><strong>Operação:</strong> ${escapeHtml(opLink.nome)}</span>` : ''}
+          <span><strong>Gerado em:</strong> ${when}</span>
+          <span><strong>Modelo:</strong> ${escapeHtml(a.modelo || 'Claude Opus')}</span>
+        </div>
+        <div class="ana-view-meta-row">
+          <span><strong>Documentos:</strong> ${escapeHtml(docsList)}</span>
+        </div>
+      </div>
+      <span class="analysis-flag-badge ${a.classificacao || 'na'}" style="font-size:11px;padding:6px 12px;">${flagText}</span>
+    </div>
+  `;
+
+  // Sanitiza levemente — só permite tags que o prompt instruiu
+  document.getElementById('anaViewContent').innerHTML = sanitizeMemoHTML(a.memorando);
+
+  document.getElementById('modalViewAnalysisOverlay').classList.add('active');
+}
+
+function closeViewAnalysisModal() {
+  document.getElementById('modalViewAnalysisOverlay').classList.remove('active');
+  state.editingAnalysisId = null;
+}
+
+// Sanitização leve do HTML do memorando — mantém apenas tags permitidas
+function sanitizeMemoHTML(html) {
+  if (!html) return '';
+  // Cria DOM temporário pra parse seguro
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(`<div>${html}</div>`, 'text/html');
+  const root = doc.body.firstChild;
+
+  const ALLOWED_TAGS = ['H2','H3','P','STRONG','EM','UL','OL','LI','TABLE','THEAD','TBODY','TR','TH','TD','BR','DIV','SPAN','B','I'];
+  const ALLOWED_CLASSES = ['memo-flag-verde','memo-flag-amarelo','memo-flag-vermelho','memo-info','memo-warn'];
+
+  function clean(node) {
+    const children = [...node.children];
+    children.forEach(child => {
+      if (!ALLOWED_TAGS.includes(child.tagName)) {
+        // Substitui por span (preserva texto)
+        const span = document.createElement('span');
+        span.innerHTML = child.innerHTML;
+        child.replaceWith(span);
+        clean(span);
+      } else {
+        // Limpa atributos exceto class (se permitida)
+        const classAttr = child.getAttribute('class');
+        [...child.attributes].forEach(attr => {
+          if (attr.name !== 'class') child.removeAttribute(attr.name);
+        });
+        if (classAttr) {
+          const classes = classAttr.split(/\s+/).filter(c => ALLOWED_CLASSES.includes(c));
+          if (classes.length) child.setAttribute('class', classes.join(' '));
+          else child.removeAttribute('class');
+        }
+        clean(child);
+      }
+    });
+  }
+  clean(root);
+  return root.innerHTML;
+}
+
+async function deleteAnalysis() {
+  if (!state.editingAnalysisId) return;
+  if (!confirm('Excluir esta análise? Esta ação não pode ser desfeita.')) return;
+  try {
+    const { error } = await sb.from('analyses').delete().eq('id', state.editingAnalysisId);
+    if (error) throw error;
+    showToast('Análise excluída');
+    closeViewAnalysisModal();
+    await loadAnalyses();
+  } catch (e) {
+    showToast('Erro: ' + (e.message || 'falha'), true);
+  }
+}
+
+// ===== Exportação para PDF com identidade Netz =====
+async function exportAnalysisPDF() {
+  if (!state.editingAnalysisId) return;
+  const a = state.analyses.find(x => String(x.id) === String(state.editingAnalysisId));
+  if (!a) return;
+
+  if (!window.jspdf) {
+    return showToast('Biblioteca PDF não carregada — recarregue a página', true);
+  }
+
+  showToast('Gerando PDF…');
+
+  // Cria um container offscreen com o HTML formatado pra renderizar com html2canvas
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:absolute; left:-9999px; top:0; width:680px; background:#fff; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; color:#0E1B3D; padding:0;';
+
+  const dt = new Date(a.criado_em);
+  const when = dt.toLocaleString('pt-BR');
+  const opLink = a.operation_id ? state.operations.find(o => o.id === a.operation_id) : null;
+  const tipoLabel = a.tipo_operacao ? ANA_TIPO_LABELS[a.tipo_operacao] || a.tipo_operacao : '—';
+
+  wrap.innerHTML = `
+    <div style="background:#001B5C; color:#fff; padding:24px 32px;">
+      <div style="font-size:11px; color:#B1C6E5; letter-spacing:0.06em; text-transform:uppercase; margin-bottom:4px;">NETZ SOLUTION · ANÁLISE DE PRÉ-VIABILIDADE</div>
+      <h1 style="margin:0; font-size:22px; font-family:'Fraunces',serif; font-weight:600; letter-spacing:-0.01em;">${escapeHtml(a.titulo)}</h1>
+    </div>
+    <div style="padding:18px 32px; background:#F0F6FC; border-bottom:1px solid #DCE3EE; font-size:11px; color:#5A6785;">
+      ${a.empresa ? `<div style="font-weight:600; color:#001B5C; font-size:13px; margin-bottom:6px;">${escapeHtml(a.empresa)}</div>` : ''}
+      <div>
+        <strong style="color:#001B5C;">Tipo:</strong> ${escapeHtml(tipoLabel)}
+        ${opLink ? ` · <strong style="color:#001B5C;">Operação:</strong> ${escapeHtml(opLink.nome)}` : ''}
+        · <strong style="color:#001B5C;">Gerado em:</strong> ${when}
+      </div>
+    </div>
+    <div style="padding:28px 32px; font-size:12px; line-height:1.7;" class="memo-pdf-body">
+      ${sanitizeMemoHTML(a.memorando)}
+    </div>
+    <div style="padding:14px 32px; background:#F0F6FC; border-top:1px solid #DCE3EE; text-align:center; font-size:9px; color:#5A6785;">
+      Documento confidencial · Netz Solution · Análise gerada por IA (${escapeHtml(a.modelo || 'Claude Opus')})<br>
+      Esta análise é uma pré-viabilidade indicativa — não substitui due diligence completa
+    </div>
+  `;
+
+  // Aplica estilos inline em h2/h3/blockquotes
+  const style = document.createElement('style');
+  style.textContent = `
+    .memo-pdf-body h2 { color:#001B5C; font-size:14px; font-weight:700; margin:18px 0 8px 0; padding-bottom:6px; border-bottom:2px solid #FF965A; font-family:'Fraunces',serif; }
+    .memo-pdf-body h2:first-child { margin-top:0; }
+    .memo-pdf-body h3 { color:#001B5C; font-size:12px; font-weight:600; margin:12px 0 6px 0; }
+    .memo-pdf-body p { margin:0 0 8px 0; }
+    .memo-pdf-body strong { color:#001B5C; font-weight:600; }
+    .memo-pdf-body ul, .memo-pdf-body ol { padding-left:18px; margin:6px 0; }
+    .memo-pdf-body li { margin-bottom:4px; }
+    .memo-pdf-body table { width:100%; border-collapse:collapse; margin:10px 0; font-size:10px; }
+    .memo-pdf-body th, .memo-pdf-body td { padding:6px 8px; text-align:left; border-bottom:1px solid #DCE3EE; }
+    .memo-pdf-body th { background:#E4F3FF; color:#001B5C; font-weight:600; text-transform:uppercase; font-size:9px; letter-spacing:0.05em; }
+    .memo-pdf-body .memo-flag-verde { padding:12px 16px; border-radius:6px; margin:14px 0; font-weight:600; border-left:4px solid #2E7D5B; background:rgba(46,125,91,0.08); color:#1E5A40; }
+    .memo-pdf-body .memo-flag-amarelo { padding:12px 16px; border-radius:6px; margin:14px 0; font-weight:600; border-left:4px solid #E5A82E; background:rgba(229,168,46,0.10); color:#8B6420; }
+    .memo-pdf-body .memo-flag-vermelho { padding:12px 16px; border-radius:6px; margin:14px 0; font-weight:600; border-left:4px solid #C93B3B; background:rgba(201,59,59,0.08); color:#8B2A2A; }
+    .memo-pdf-body .memo-info { background:#E4F3FF; padding:8px 12px; border-radius:5px; border-left:3px solid #001B5C; font-size:11px; margin:8px 0; }
+    .memo-pdf-body .memo-warn { background:rgba(255,150,90,0.10); padding:8px 12px; border-radius:5px; border-left:3px solid #FF965A; font-size:11px; margin:8px 0; }
+  `;
+  wrap.appendChild(style);
+  document.body.appendChild(wrap);
+
+  try {
+    // Usa o jsPDF html() que internamente usa html2canvas
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    await doc.html(wrap, {
+      callback: (d) => {
+        const safe = (a.titulo || 'analise').replace(/[^a-zA-Z0-9-_]/g, '_').slice(0, 60);
+        d.save(`Netz_PreViabilidade_${safe}.pdf`);
+        showToast('PDF gerado');
+      },
+      x: 0, y: 0,
+      width: 210,
+      windowWidth: 680,
+      html2canvas: { scale: 0.5, useCORS: true, logging: false },
+      autoPaging: 'text',
+      margin: [0, 0, 0, 0],
+    });
+  } catch (e) {
+    console.error('[analyses] PDF erro:', e);
+    showToast('Erro ao gerar PDF: ' + e.message, true);
+  } finally {
+    setTimeout(() => wrap.remove(), 100);
+  }
 }
 
 async function loadProjects() {
@@ -8621,6 +9536,7 @@ function openModal(opId) {
   document.getElementById('modalTitle').textContent = isEdit ? 'Editar Operação' : 'Nova Operação';
   document.getElementById('btnDelete').style.display = isEdit ? 'inline-flex' : 'none';
   document.getElementById('modalAIBtn').style.display = isEdit ? 'inline-flex' : 'none';
+  document.getElementById('modalPreViabBtn').style.display = isEdit ? 'inline-flex' : 'none';
   document.getElementById('opId').value = opId || '';
   document.getElementById('auditStrip').style.display = isEdit ? 'flex' : 'none';
   closeAISummary();
