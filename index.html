@@ -7429,23 +7429,31 @@ async function exportAnalysisPDF() {
 
   showToast('Gerando PDF…');
 
-  // Container offscreen — IMPORTANTE: não usar opacity:0 nem display:none,
-  // senão html2canvas captura em branco. Mover pra fora da viewport é seguro.
+  // Constantes A4
+  const PDF_W_MM = 210;
+  const PDF_H_MM = 297;
+  const MARGIN_X_MM = 0;        // sem margem lateral (header e footer ocupam tudo)
+  const MARGIN_TOP_MM = 15;     // margem top do conteúdo do memorando
+  const MARGIN_BOT_MM = 15;     // margem bottom
+  const CONTENT_W_MM = PDF_W_MM - 2 * MARGIN_X_MM;
+  const CONTENT_H_MM = PDF_H_MM - MARGIN_TOP_MM - MARGIN_BOT_MM;
+
+  // Container offscreen renderizado normalmente
   const wrap = document.createElement('div');
   wrap.style.cssText = 'position:fixed; left:-10000px; top:0; width:794px; background:#fff; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; color:#0E1B3D; padding:0;';
-  // Largura A4 a 96dpi ≈ 794px
 
   const dt = new Date(a.criado_em);
   const when = dt.toLocaleString('pt-BR');
   const opLink = a.operation_id ? state.operations.find(o => o.id === a.operation_id) : null;
   const tipoLabel = a.tipo_operacao ? ANA_TIPO_LABELS[a.tipo_operacao] || a.tipo_operacao : '—';
 
+  // HEADER + METADADOS + CONTEÚDO + FOOTER são identificados com IDs pra capturar separado
   wrap.innerHTML = `
-    <div style="background:#001B5C; color:#fff; padding:28px 36px;">
+    <div id="pdf-header" style="background:#001B5C; color:#fff; padding:28px 36px;">
       <div style="font-size:12px; color:#B1C6E5; letter-spacing:0.06em; text-transform:uppercase; margin-bottom:6px;">NETZ SOLUTION · ANÁLISE DE PRÉ-VIABILIDADE</div>
       <h1 style="margin:0; font-size:24px; font-weight:600; letter-spacing:-0.01em; line-height:1.3;">${escapeHtml(a.titulo)}</h1>
     </div>
-    <div style="padding:20px 36px; background:#F0F6FC; border-bottom:1px solid #DCE3EE; font-size:12px; color:#5A6785;">
+    <div id="pdf-meta" style="padding:20px 36px; background:#F0F6FC; border-bottom:1px solid #DCE3EE; font-size:12px; color:#5A6785;">
       ${a.empresa ? `<div style="font-weight:600; color:#001B5C; font-size:14px; margin-bottom:8px;">${escapeHtml(a.empresa)}</div>` : ''}
       <div style="line-height:1.6;">
         <strong style="color:#001B5C;">Tipo:</strong> ${escapeHtml(tipoLabel)}
@@ -7453,10 +7461,10 @@ async function exportAnalysisPDF() {
         &nbsp;·&nbsp;<strong style="color:#001B5C;">Gerado em:</strong> ${when}
       </div>
     </div>
-    <div style="padding:32px 36px; font-size:13px; line-height:1.7;" class="memo-pdf-body">
+    <div id="pdf-body" style="padding:28px 36px; font-size:13px; line-height:1.7;" class="memo-pdf-body">
       ${sanitizeMemoHTML(a.memorando)}
     </div>
-    <div style="padding:18px 36px; background:#F0F6FC; border-top:1px solid #DCE3EE; text-align:center; font-size:10px; color:#5A6785;">
+    <div id="pdf-footer" style="padding:18px 36px; background:#F0F6FC; border-top:1px solid #DCE3EE; text-align:center; font-size:10px; color:#5A6785;">
       Documento confidencial · Netz Solution · Análise gerada por IA (${escapeHtml(a.modelo || 'Claude Opus')})<br>
       Esta análise é uma pré-viabilidade indicativa — não substitui due diligence completa
     </div>
@@ -7464,9 +7472,14 @@ async function exportAnalysisPDF() {
 
   const style = document.createElement('style');
   style.textContent = `
-    .memo-pdf-body h2 { color:#001B5C; font-size:15px; font-weight:700; margin:18px 0 10px 0; padding-bottom:6px; border-bottom:2px solid #FF965A; }
+    .memo-pdf-body h2 {
+      color:#001B5C; font-size:15px; font-weight:700;
+      margin:18px 0 10px 0; padding-bottom:6px;
+      border-bottom:2px solid #FF965A;
+      page-break-after: avoid;
+    }
     .memo-pdf-body h2:first-child { margin-top:0; }
-    .memo-pdf-body h3 { color:#001B5C; font-size:13px; font-weight:600; margin:14px 0 8px 0; }
+    .memo-pdf-body h3 { color:#001B5C; font-size:13px; font-weight:600; margin:14px 0 8px 0; page-break-after: avoid; }
     .memo-pdf-body p { margin:0 0 10px 0; }
     .memo-pdf-body strong { color:#001B5C; font-weight:600; }
     .memo-pdf-body ul, .memo-pdf-body ol { padding-left:20px; margin:8px 0; }
@@ -7484,66 +7497,181 @@ async function exportAnalysisPDF() {
   document.body.appendChild(wrap);
 
   try {
-    // Aguarda DOM renderizar completamente (importante pra html2canvas pegar tudo)
+    // Aguarda render
     await new Promise(r => setTimeout(r, 300));
 
-    // Captura o container inteiro como imagem
-    const canvas = await window.html2canvas(wrap, {
-      scale: 2, // alta resolução
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-      windowWidth: 794,
-      width: 794,
-      height: wrap.scrollHeight,
-      // Importante: força captura sincronizada do layout real
-      onclone: (clonedDoc) => {
-        const cloned = clonedDoc.body.querySelector('div[style*="left:-10000px"]') ||
-                       clonedDoc.body.lastChild;
-        if (cloned) {
-          cloned.style.left = '0';
-          cloned.style.opacity = '1';
-        }
-      }
-    });
-
-    const imgData = canvas.toDataURL('image/jpeg', 0.92);
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
 
-    // A4: 210mm × 297mm
-    const pdfW = 210;
-    const pdfH = 297;
-    const ratio = canvas.width / pdfW; // px per mm
-    const fullH = canvas.height / ratio; // altura total em mm
+    // === Captura header + meta + body + footer SEPARADAMENTE ===
+    // Header e meta vão no topo da primeira página apenas.
+    // Body é dividido em blocos lógicos (h2, table, ul, p, div.flag, etc).
+    // Footer vai no final do documento.
 
-    if (fullH <= pdfH) {
-      // Cabe numa página só
-      doc.addImage(imgData, 'JPEG', 0, 0, pdfW, fullH);
-    } else {
-      // Múltiplas páginas — recorta o canvas em pedaços de altura pdfH
-      const pageHeightPx = Math.floor(pdfH * ratio);
-      let yOffset = 0;
-      let isFirst = true;
-      while (yOffset < canvas.height) {
-        if (!isFirst) doc.addPage();
-        isFirst = false;
-        const sliceHeightPx = Math.min(pageHeightPx, canvas.height - yOffset);
+    const renderEl = async (el) => {
+      const c = await window.html2canvas(el, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        logging: false,
+        windowWidth: 794,
+      });
+      const imgW = CONTENT_W_MM;
+      const imgH = (c.height * imgW) / c.width;
+      return { data: c.toDataURL('image/jpeg', 0.92), w: imgW, h: imgH };
+    };
 
-        // Cria canvas temporário com o pedaço
-        const tmp = document.createElement('canvas');
-        tmp.width = canvas.width;
-        tmp.height = sliceHeightPx;
-        const tmpCtx = tmp.getContext('2d');
-        tmpCtx.fillStyle = '#ffffff';
-        tmpCtx.fillRect(0, 0, tmp.width, tmp.height);
-        tmpCtx.drawImage(canvas, 0, yOffset, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx);
-        const sliceData = tmp.toDataURL('image/jpeg', 0.92);
-        const sliceHeightMm = sliceHeightPx / ratio;
-        doc.addImage(sliceData, 'JPEG', 0, 0, pdfW, sliceHeightMm);
-        yOffset += pageHeightPx;
+    // Estado do cursor (Y atual em mm)
+    let cursorY = 0;
+    let onFirstPage = true;
+    const HEADER_AREA_MM = 0;        // header só vai uma vez
+    const FOOTER_RESERVE_MM = 0;     // footer só vai no final
+
+    const ensureSpace = (heightNeeded) => {
+      // Se não cabe na página atual, abre nova
+      const limit = PDF_H_MM - MARGIN_BOT_MM;
+      if (cursorY + heightNeeded > limit) {
+        doc.addPage();
+        cursorY = MARGIN_TOP_MM;
+        onFirstPage = false;
+      }
+    };
+
+    // 1. HEADER (só na primeira página)
+    const headerImg = await renderEl(wrap.querySelector('#pdf-header'));
+    doc.addImage(headerImg.data, 'JPEG', MARGIN_X_MM, 0, headerImg.w, headerImg.h);
+    cursorY = headerImg.h;
+
+    // 2. META
+    const metaImg = await renderEl(wrap.querySelector('#pdf-meta'));
+    doc.addImage(metaImg.data, 'JPEG', MARGIN_X_MM, cursorY, metaImg.w, metaImg.h);
+    cursorY += metaImg.h;
+    cursorY += 8; // padding antes do conteúdo
+
+    // 3. BODY — captura BLOCO A BLOCO
+    // Cada filho direto do .memo-pdf-body é um bloco. Quando um bloco for "atômico"
+    // (tabela, flag colorida) e não couber inteiro, abrimos nova página.
+    const body = wrap.querySelector('#pdf-body');
+    const blocks = [...body.children];
+
+    // Agrupamento: um <h2> deve ficar com pelo menos o próximo bloco (não orfão)
+    const groups = [];
+    let currentGroup = [];
+    blocks.forEach((blk, i) => {
+      if (blk.tagName === 'H2' && currentGroup.length > 0) {
+        groups.push(currentGroup);
+        currentGroup = [blk];
+      } else {
+        currentGroup.push(blk);
+      }
+    });
+    if (currentGroup.length > 0) groups.push(currentGroup);
+
+    for (const group of groups) {
+      // Captura o grupo todo primeiro pra medir altura
+      // Se grupo couber inteiro na página atual → adiciona junto
+      // Se não couber → renderiza item a item, quebrando onde necessário
+
+      // Renderiza grupo todo num container temp pra medir
+      const tempGroup = document.createElement('div');
+      tempGroup.style.cssText = wrap.style.cssText + 'top:0; left:-20000px;';
+      tempGroup.className = 'memo-pdf-body';
+      tempGroup.style.padding = '0 36px';
+      tempGroup.style.fontSize = '13px';
+      tempGroup.style.lineHeight = '1.7';
+      group.forEach(blk => tempGroup.appendChild(blk.cloneNode(true)));
+      tempGroup.appendChild(style.cloneNode(true));
+      document.body.appendChild(tempGroup);
+      await new Promise(r => setTimeout(r, 50));
+
+      const groupImg = await renderEl(tempGroup);
+      tempGroup.remove();
+
+      const availableH = PDF_H_MM - MARGIN_BOT_MM - cursorY;
+
+      if (groupImg.h <= availableH) {
+        // Grupo cabe inteiro
+        doc.addImage(groupImg.data, 'JPEG', MARGIN_X_MM, cursorY, groupImg.w, groupImg.h);
+        cursorY += groupImg.h;
+      } else if (groupImg.h <= CONTENT_H_MM) {
+        // Grupo cabe em uma página vazia → quebra antes
+        doc.addPage();
+        cursorY = MARGIN_TOP_MM;
+        doc.addImage(groupImg.data, 'JPEG', MARGIN_X_MM, cursorY, groupImg.w, groupImg.h);
+        cursorY += groupImg.h;
+      } else {
+        // Grupo grande demais — divide bloco a bloco
+        for (const blk of group) {
+          const tempBlk = document.createElement('div');
+          tempBlk.style.cssText = wrap.style.cssText + 'top:0; left:-20000px;';
+          tempBlk.className = 'memo-pdf-body';
+          tempBlk.style.padding = '0 36px';
+          tempBlk.style.fontSize = '13px';
+          tempBlk.style.lineHeight = '1.7';
+          tempBlk.appendChild(blk.cloneNode(true));
+          tempBlk.appendChild(style.cloneNode(true));
+          document.body.appendChild(tempBlk);
+          await new Promise(r => setTimeout(r, 30));
+          const blkImg = await renderEl(tempBlk);
+          tempBlk.remove();
+
+          const remaining = PDF_H_MM - MARGIN_BOT_MM - cursorY;
+
+          // Itens "atômicos" que não devem quebrar: tables, divs com flag, h2, h3
+          const isAtomic = ['TABLE','H2','H3'].includes(blk.tagName) ||
+                           (blk.tagName === 'DIV' && /memo-flag-|memo-info|memo-warn/.test(blk.className));
+
+          if (blkImg.h <= remaining) {
+            // Cabe na página atual
+            doc.addImage(blkImg.data, 'JPEG', MARGIN_X_MM, cursorY, blkImg.w, blkImg.h);
+            cursorY += blkImg.h;
+          } else if (isAtomic && blkImg.h <= CONTENT_H_MM) {
+            // Item atômico: quebra antes e coloca inteiro
+            doc.addPage();
+            cursorY = MARGIN_TOP_MM;
+            doc.addImage(blkImg.data, 'JPEG', MARGIN_X_MM, cursorY, blkImg.w, blkImg.h);
+            cursorY += blkImg.h;
+          } else {
+            // Item muito grande: divide cego em fatias da página
+            let yOffset = 0;
+            const ratio = blkImg.w / (await dataUrlToCanvas(blkImg.data)).width;
+            const blkCanvas = await dataUrlToCanvas(blkImg.data);
+            while (yOffset < blkCanvas.height) {
+              const sliceHmm = PDF_H_MM - MARGIN_BOT_MM - cursorY;
+              const sliceHpx = Math.floor(sliceHmm / ratio);
+              const actualSliceHpx = Math.min(sliceHpx, blkCanvas.height - yOffset);
+              const tmp = document.createElement('canvas');
+              tmp.width = blkCanvas.width;
+              tmp.height = actualSliceHpx;
+              const ctx = tmp.getContext('2d');
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0, 0, tmp.width, tmp.height);
+              ctx.drawImage(blkCanvas, 0, yOffset, blkCanvas.width, actualSliceHpx, 0, 0, blkCanvas.width, actualSliceHpx);
+              const sliceData = tmp.toDataURL('image/jpeg', 0.92);
+              const sliceHmmActual = actualSliceHpx * ratio;
+              doc.addImage(sliceData, 'JPEG', MARGIN_X_MM, cursorY, blkImg.w, sliceHmmActual);
+              cursorY += sliceHmmActual;
+              yOffset += actualSliceHpx;
+              if (yOffset < blkCanvas.height) {
+                doc.addPage();
+                cursorY = MARGIN_TOP_MM;
+              }
+            }
+          }
+        }
       }
     }
+
+    // 4. FOOTER no final
+    const footerImg = await renderEl(wrap.querySelector('#pdf-footer'));
+    const remainingForFooter = PDF_H_MM - cursorY;
+    if (remainingForFooter < footerImg.h + 5) {
+      doc.addPage();
+      cursorY = MARGIN_TOP_MM;
+    } else {
+      cursorY += 10; // espaço antes do footer
+    }
+    doc.addImage(footerImg.data, 'JPEG', MARGIN_X_MM, cursorY, footerImg.w, footerImg.h);
 
     const safe = (a.titulo || 'analise').replace(/[^a-zA-Z0-9-_]/g, '_').slice(0, 60);
     doc.save(`Netz_PreViabilidade_${safe}.pdf`);
@@ -7554,6 +7682,22 @@ async function exportAnalysisPDF() {
   } finally {
     setTimeout(() => wrap.remove(), 200);
   }
+}
+
+// Helper: converte data URL em canvas pra recortar
+function dataUrlToCanvas(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = img.width;
+      c.height = img.height;
+      c.getContext('2d').drawImage(img, 0, 0);
+      resolve(c);
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
 }
 
 async function loadProjects() {
