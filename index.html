@@ -3624,7 +3624,12 @@
         </div>
       </div>
 
-      <h2 class="section-title">Aportes & Desembolsos para Captação</h2>
+      <h2 class="section-title" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+        <span>Aportes & Desembolsos para Captação</span>
+        <button class="btn-secondary" onclick="exportDesembolsosXLSX()" title="Baixar planilha com cronograma detalhado por operação e mês" style="font-size: 12px; padding: 6px 14px;">
+          📊 Exportar Excel
+        </button>
+      </h2>
       <div class="single-chart-card">
         <div class="chart-card chart-card-wide">
           <h3>
@@ -10100,6 +10105,314 @@ function clearChecklistTemplate() {
 // Retorna array de aportes mensais previstos: [{ ym: '2026-05', valor: 5000000, isFirst: true }, ...]
 // Lógica: 1ª liberação no mês da data_prevista (ou data_liquidacao se já existe).
 // Restante distribuído uniformemente nos (período - 1) meses seguintes.
+// ===== Exportar planilha de Desembolsos por Mês =====
+// Cria XLSX com 2 abas (Realizado e Projetado), matriz operações × meses,
+// totais por mês (linha) e por operação (coluna)
+function exportDesembolsosXLSX() {
+  if (!window.XLSX) {
+    return showToast('Biblioteca Excel não carregada', true);
+  }
+
+  const ops = getFilteredOps();
+  const todayD = new Date();
+  todayD.setDate(1); todayD.setHours(0,0,0,0);
+  const todayYM = `${todayD.getFullYear()}-${String(todayD.getMonth()+1).padStart(2,'0')}`;
+
+  // Coleta todos os desembolsos linha por linha
+  // Cada linha: { opNome, opTipo, ym, valor, isFirst, isRealizado }
+  const allRows = [];
+  ops.forEach(o => {
+    if (o.status === 'stand') return;
+    const schedule = getAportesSchedule(o);
+    if (schedule.length === 0) return;
+    const liquidada = !!o.data_liquidacao;
+    schedule.forEach(s => {
+      const isRealizado = liquidada && s.ym <= todayYM;
+      allRows.push({
+        opNome: o.nome,
+        opTipo: o.tipo,
+        opCliente: o.cliente || '',
+        opResponsavel: o.responsavel || '',
+        ym: s.ym,
+        valor: s.valor,
+        isFirst: s.isFirst,
+        isRealizado,
+      });
+    });
+  });
+
+  if (allRows.length === 0) {
+    return showToast('Nenhum desembolso para exportar', true);
+  }
+
+  // Cores Netz
+  const NAVY = '001B5C';
+  const ORANGE = 'FF965A';
+  const BLUE_LIGHT = 'E4F3FF';
+  const BLUE_PALE = 'F0F6FC';
+  const TEXT = '0E1B3D';
+  const TEXT_MUTE = '5A6785';
+  const BORDER = 'DCE3EE';
+  const GREEN = 'D7EBE0';
+
+  // Constrói uma aba (Realizado ou Projetado)
+  const buildSheet = (rows, sheetTitle, subtitle) => {
+    if (rows.length === 0) {
+      // Aba vazia com aviso
+      const ws = XLSX.utils.aoa_to_sheet([
+        [sheetTitle],
+        [subtitle],
+        [],
+        ['Nenhum desembolso nesta categoria.']
+      ]);
+      ws['!cols'] = [{ wch: 50 }];
+      ws['A1'].s = {
+        font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' } },
+        fill: { patternType: 'solid', fgColor: { rgb: NAVY } },
+        alignment: { horizontal: 'center', vertical: 'center' }
+      };
+      return ws;
+    }
+
+    // Coleta meses únicos e ordena
+    const monthsSet = new Set(rows.map(r => r.ym));
+    const months = [...monthsSet].sort();
+
+    // Agrupa por operação (nome)
+    const opsMap = {};
+    rows.forEach(r => {
+      const key = r.opNome;
+      if (!opsMap[key]) {
+        opsMap[key] = {
+          nome: r.opNome,
+          tipo: r.opTipo,
+          cliente: r.opCliente,
+          responsavel: r.opResponsavel,
+          byMonth: {},
+          parcelasByMonth: {}, // pra contar parcelas
+        };
+      }
+      opsMap[key].byMonth[r.ym] = (opsMap[key].byMonth[r.ym] || 0) + r.valor;
+      if (!opsMap[key].parcelasByMonth[r.ym]) opsMap[key].parcelasByMonth[r.ym] = [];
+      opsMap[key].parcelasByMonth[r.ym].push({ val: r.valor, isFirst: r.isFirst });
+    });
+
+    const opNames = Object.keys(opsMap).sort();
+
+    // Monta AOA
+    const aoa = [];
+
+    // Linha 1: título
+    aoa.push([sheetTitle]);
+    // Linha 2: subtítulo
+    aoa.push([subtitle]);
+    // Linha 3: vazia
+    aoa.push([]);
+
+    // Linha 4: cabeçalho — Operação | Cliente | Tipo | Responsável | [meses...] | TOTAL
+    const fixedCols = ['Operação', 'Cliente', 'Tipo', 'Responsável'];
+    const monthLabels = months.map(ym => {
+      const [y, m] = ym.split('-');
+      const dt = new Date(Number(y), Number(m) - 1, 1);
+      const monthAbbr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][dt.getMonth()];
+      return `${monthAbbr}/${String(y).slice(2)}`;
+    });
+    const header = [...fixedCols, ...monthLabels, 'TOTAL'];
+    aoa.push(header);
+
+    // Linhas: 1 por operação
+    opNames.forEach(opName => {
+      const op = opsMap[opName];
+      const row = [op.nome, op.cliente, op.tipo, op.responsavel];
+      let totalOp = 0;
+      months.forEach(ym => {
+        const v = op.byMonth[ym] || 0;
+        row.push(v > 0 ? v : '');
+        totalOp += v;
+      });
+      row.push(totalOp);
+      aoa.push(row);
+    });
+
+    // Linha de TOTAL POR MÊS
+    const totalRow = ['TOTAL', '', '', ''];
+    let grandTotal = 0;
+    months.forEach(ym => {
+      const sum = opNames.reduce((acc, n) => acc + (opsMap[n].byMonth[ym] || 0), 0);
+      totalRow.push(sum > 0 ? sum : 0);
+      grandTotal += sum;
+    });
+    totalRow.push(grandTotal);
+    aoa.push(totalRow);
+
+    aoa.push([]);
+    aoa.push([`Total geral: R$ ${(grandTotal/1e6).toFixed(2)} MM · ${opNames.length} operação${opNames.length !== 1 ? 'ões' : ''} · ${months.length} mês${months.length !== 1 ? 'es' : ''}`]);
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    // Larguras das colunas
+    ws['!cols'] = [
+      { wch: 28 }, // Operação
+      { wch: 22 }, // Cliente
+      { wch: 10 }, // Tipo
+      { wch: 18 }, // Responsável
+      ...months.map(() => ({ wch: 13 })),
+      { wch: 16 }, // Total
+    ];
+
+    // Merges: título e subtítulo
+    const lastCol = header.length - 1;
+    ws['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: lastCol } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: lastCol } },
+    ];
+
+    const setStyle = (ref, style) => {
+      if (!ws[ref]) return;
+      ws[ref].s = style;
+    };
+
+    // Título (linha 1)
+    setStyle('A1', {
+      font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' }, name: 'Calibri' },
+      fill: { patternType: 'solid', fgColor: { rgb: NAVY } },
+      alignment: { horizontal: 'center', vertical: 'center' }
+    });
+    // Set row height for title
+    if (!ws['!rows']) ws['!rows'] = [];
+    ws['!rows'][0] = { hpx: 32 };
+
+    // Subtítulo (linha 2)
+    setStyle('A2', {
+      font: { italic: true, sz: 11, color: { rgb: TEXT_MUTE }, name: 'Calibri' },
+      fill: { patternType: 'solid', fgColor: { rgb: BLUE_PALE } },
+      alignment: { horizontal: 'center', vertical: 'center' }
+    });
+    ws['!rows'][1] = { hpx: 22 };
+
+    // Header (linha 4 = row index 3)
+    const headerRow = 3;
+    for (let c = 0; c <= lastCol; c++) {
+      const ref = XLSX.utils.encode_cell({ r: headerRow, c });
+      setStyle(ref, {
+        font: { bold: true, sz: 10, color: { rgb: 'FFFFFF' }, name: 'Calibri' },
+        fill: { patternType: 'solid', fgColor: { rgb: NAVY } },
+        alignment: { horizontal: c < 4 ? 'left' : 'center', vertical: 'center', wrapText: true },
+        border: {
+          top: { style: 'thin', color: { rgb: BORDER } },
+          bottom: { style: 'thin', color: { rgb: BORDER } },
+          left: { style: 'thin', color: { rgb: BORDER } },
+          right: { style: 'thin', color: { rgb: BORDER } },
+        },
+      });
+    }
+    ws['!rows'][headerRow] = { hpx: 28 };
+
+    // Linhas de operações (linha 5 em diante)
+    for (let i = 0; i < opNames.length; i++) {
+      const r = headerRow + 1 + i;
+      const isEven = i % 2 === 0;
+      const bgColor = isEven ? 'FFFFFF' : BLUE_PALE;
+
+      for (let c = 0; c <= lastCol; c++) {
+        const ref = XLSX.utils.encode_cell({ r, c });
+        const isMonthCol = c >= 4 && c < lastCol;
+        const isTotalCol = c === lastCol;
+        const isTextCol = c < 4;
+
+        let style = {
+          font: { sz: 10, color: { rgb: TEXT }, name: 'Calibri' },
+          fill: { patternType: 'solid', fgColor: { rgb: bgColor } },
+          alignment: { horizontal: isTextCol ? 'left' : 'right', vertical: 'center' },
+          border: {
+            top: { style: 'thin', color: { rgb: BORDER } },
+            bottom: { style: 'thin', color: { rgb: BORDER } },
+            left: { style: 'thin', color: { rgb: BORDER } },
+            right: { style: 'thin', color: { rgb: BORDER } },
+          },
+        };
+
+        if (isMonthCol || isTotalCol) {
+          style.numFmt = '"R$" #,##0';
+        }
+        if (isTotalCol) {
+          style.font = { sz: 10, bold: true, color: { rgb: NAVY }, name: 'Calibri' };
+          style.fill = { patternType: 'solid', fgColor: { rgb: BLUE_LIGHT } };
+        }
+        // Destaque para a primeira coluna (nome da operação)
+        if (c === 0) {
+          style.font = { sz: 10, bold: true, color: { rgb: NAVY }, name: 'Calibri' };
+        }
+
+        setStyle(ref, style);
+      }
+    }
+
+    // Linha de TOTAL (logo após operações)
+    const totalRowIdx = headerRow + 1 + opNames.length;
+    for (let c = 0; c <= lastCol; c++) {
+      const ref = XLSX.utils.encode_cell({ r: totalRowIdx, c });
+      setStyle(ref, {
+        font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' }, name: 'Calibri' },
+        fill: { patternType: 'solid', fgColor: { rgb: ORANGE } },
+        alignment: { horizontal: c < 4 ? 'left' : 'right', vertical: 'center' },
+        border: {
+          top: { style: 'medium', color: { rgb: NAVY } },
+          bottom: { style: 'medium', color: { rgb: NAVY } },
+          left: { style: 'thin', color: { rgb: BORDER } },
+          right: { style: 'thin', color: { rgb: BORDER } },
+        },
+        ...(c >= 4 ? { numFmt: '"R$" #,##0' } : {}),
+      });
+    }
+    ws['!rows'][totalRowIdx] = { hpx: 28 };
+
+    // Rodapé com sumário (após total + linha em branco)
+    const summaryRow = totalRowIdx + 2;
+    const summaryRef = XLSX.utils.encode_cell({ r: summaryRow, c: 0 });
+    setStyle(summaryRef, {
+      font: { italic: true, sz: 10, color: { rgb: TEXT_MUTE }, name: 'Calibri' },
+      alignment: { horizontal: 'left' }
+    });
+    ws['!merges'].push({ s: { r: summaryRow, c: 0 }, e: { r: summaryRow, c: lastCol } });
+
+    // Freeze pane: trava as 4 primeiras colunas + 4 primeiras linhas
+    ws['!freeze'] = { xSplit: 4, ySplit: 4 };
+    ws['!views'] = [{ state: 'frozen', xSplit: 4, ySplit: 4 }];
+
+    return ws;
+  };
+
+  // === Cria o workbook com 2 abas ===
+  const wb = XLSX.utils.book_new();
+
+  const realizadoRows = allRows.filter(r => r.isRealizado);
+  const projetadoRows = allRows.filter(r => !r.isRealizado);
+
+  const todayLabel = new Date().toLocaleDateString('pt-BR');
+
+  const wsRealizado = buildSheet(
+    realizadoRows,
+    'NETZ SOLUTION · Desembolsos Realizados',
+    `Cronograma de aportes já liquidados · Gerado em ${todayLabel}`
+  );
+  const wsProjetado = buildSheet(
+    projetadoRows,
+    'NETZ SOLUTION · Desembolsos Projetados',
+    `Cronograma de aportes futuros · Gerado em ${todayLabel}`
+  );
+
+  XLSX.utils.book_append_sheet(wb, wsRealizado, 'Realizado');
+  XLSX.utils.book_append_sheet(wb, wsProjetado, 'Projetado');
+
+  const now = new Date();
+  const stamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+  const filename = `Netz_Cronograma_Desembolsos_${stamp}.xlsx`;
+
+  XLSX.writeFile(wb, filename);
+  showToast(`Excel gerado · ${realizadoRows.length} realizados · ${projetadoRows.length} projetados`);
+}
+
 function getAportesSchedule(op) {
   if (!op) return [];
   const volumeTotal = Number(op.valor) || 0;
