@@ -1273,6 +1273,167 @@
     margin-bottom: 20px;
   }
 
+  /* ===== Aba Repositório de Arquivos ===== */
+  .library-header {
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 12px;
+    margin-bottom: 20px;
+  }
+  .library-actions {
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  }
+  .library-info-card {
+    display: flex; gap: 12px;
+    padding: 14px 16px;
+    background: var(--blue-light);
+    border-left: 3px solid var(--navy);
+    border-radius: 6px;
+    margin-bottom: 24px;
+  }
+  .library-folders {
+    display: flex; flex-direction: column;
+    gap: 18px;
+  }
+  .library-folder {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: box-shadow 0.18s;
+  }
+  .library-folder:hover { box-shadow: var(--shadow-sm); }
+  .library-folder-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px;
+    background: var(--blue-pale);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .library-folder-head:hover { background: var(--blue-light); }
+  .library-folder-head-left {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .library-folder-icon {
+    font-size: 22px;
+  }
+  .library-folder-title {
+    color: var(--navy);
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .library-folder-count {
+    font-size: 11px;
+    color: var(--text-mute);
+    font-family: 'IBM Plex Mono', monospace;
+    background: #fff;
+    padding: 2px 9px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .library-folder-toggle {
+    color: var(--text-mute);
+    font-size: 18px;
+    transition: transform 0.2s;
+  }
+  .library-folder.collapsed .library-folder-toggle {
+    transform: rotate(-90deg);
+  }
+  .library-folder-body {
+    overflow: hidden;
+    transition: max-height 0.25s;
+  }
+  .library-folder.collapsed .library-folder-body {
+    max-height: 0 !important;
+  }
+  .library-file-list {
+    padding: 6px 0;
+  }
+  .library-file-row {
+    display: grid;
+    grid-template-columns: 28px 1fr 90px 130px 140px 80px;
+    gap: 12px;
+    padding: 10px 18px;
+    align-items: center;
+    border-bottom: 1px solid var(--border-soft);
+    font-size: 13px;
+    transition: background 0.12s;
+  }
+  .library-file-row:last-child { border-bottom: none; }
+  .library-file-row:hover { background: var(--blue-pale); }
+  .library-file-ext-icon { font-size: 18px; }
+  .library-file-name {
+    color: var(--navy);
+    font-weight: 500;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .library-file-size {
+    font-size: 11px;
+    color: var(--text-mute);
+    font-family: 'IBM Plex Mono', monospace;
+    text-align: right;
+  }
+  .library-file-author {
+    font-size: 11px;
+    color: var(--text-mute);
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .library-file-date {
+    font-size: 11px;
+    color: var(--text-mute);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .library-file-actions {
+    display: flex; gap: 4px; justify-content: flex-end;
+  }
+  .library-file-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-soft);
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .library-file-btn:hover {
+    border-color: var(--orange);
+    color: var(--orange);
+    background: #FFF8F3;
+  }
+  .library-file-btn.danger:hover {
+    border-color: var(--red);
+    color: var(--red);
+    background: var(--red-bg);
+  }
+  .library-empty-folder {
+    padding: 20px 18px;
+    text-align: center;
+    color: var(--text-mute);
+    font-size: 12px;
+    font-style: italic;
+  }
+  .lib-dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.18s;
+    background: #fff;
+  }
+  .lib-dropzone:hover, .lib-dropzone.drag-over {
+    border-color: var(--orange);
+    background: #FFF8F3;
+  }
+  .lib-dropzone.has-file {
+    border-color: var(--green);
+    background: var(--green-bg);
+    border-style: solid;
+  }
+
   /* ===== Aba Análises IA ===== */
   .analyses-header {
     display: flex; justify-content: space-between; align-items: center;
@@ -3532,6 +3693,7 @@
       <button class="tab" data-tab="weekly">Semana</button>
       <button class="tab" data-tab="mytasks">Minhas Tarefas</button>
       <button class="tab" data-tab="projects">Projetos</button>
+      <button class="tab" data-tab="library">Repositório</button>
       <button class="tab" data-tab="analyses">Análises IA</button>
       <button class="tab" data-tab="reports">Relatórios</button>
       <button class="tab" data-tab="audit">Auditoria</button>
@@ -3843,6 +4005,34 @@
       <div class="kanban" id="projectsKanban"></div>
     </section>
 
+    <!-- REPOSITÓRIO DE ARQUIVOS INSTITUCIONAIS -->
+    <section class="panel" id="panel-library">
+      <div class="library-header">
+        <h2 class="section-title" style="margin: 0;">Repositório de Arquivos</h2>
+        <div class="library-actions">
+          <input type="text" class="search-input" id="searchLibrary" placeholder="Buscar arquivo…" oninput="renderLibrary()" style="max-width: 280px;">
+          <select class="filter-select" id="libraryFilterPasta" onchange="renderLibrary()">
+            <option value="">Todas as pastas</option>
+          </select>
+          <button class="btn-primary" onclick="openUploadFileModal()">+ Subir arquivo</button>
+        </div>
+      </div>
+
+      <div class="library-info-card">
+        <div class="reports-info-icon">📚</div>
+        <div class="reports-info-text">
+          <strong>Base de conhecimento Netz:</strong> modelos de minutas, planilhas de modelagem, checklists, propostas, pareceres e outros materiais institucionais.
+          <strong>Qualquer um do time</strong> pode subir e baixar arquivos · <strong>Limite</strong>: 50 MB por arquivo · <strong>Admins</strong> podem excluir.
+        </div>
+      </div>
+
+      <div id="libraryFolders" class="library-folders">
+        <div class="empty-state" style="grid-column: 1 / -1; padding: 40px;">
+          <h3>Carregando…</h3>
+        </div>
+      </div>
+    </section>
+
     <!-- ANÁLISES IA (pré-viabilidade) -->
     <section class="panel" id="panel-analyses">
       <div class="analyses-header">
@@ -3976,6 +4166,42 @@
     <div class="modal-foot">
       <div style="flex: 1; font-size: 11px; color: var(--text-mute);">Esta é a visão exata do email que será enviado aos destinatários ativos.</div>
       <button class="btn-secondary" onclick="closeReportPreview()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL SUBIR ARQUIVO (REPOSITÓRIO) ===== -->
+<div class="modal-overlay" id="modalUploadFileOverlay">
+  <div class="modal" style="max-width: 560px;">
+    <div class="modal-head">
+      <h2>Subir arquivo para o repositório</h2>
+      <button class="modal-close" onclick="closeUploadFileModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-section">
+        <div class="form-grid">
+          <div class="field full">
+            <label>Pasta de destino</label>
+            <select id="libUploadPasta"></select>
+          </div>
+          <div class="field full">
+            <label>Arquivo</label>
+            <div class="lib-dropzone" id="libDropzone" onclick="document.getElementById('libFileInput').click()">
+              <input type="file" id="libFileInput" style="display:none;" onchange="onLibFileSelected(event)">
+              <div class="ana-dropzone-content">
+                <div class="ana-dropzone-icon">📎</div>
+                <div class="ana-dropzone-text" id="libDropzoneText">Arraste o arquivo aqui ou clique para selecionar</div>
+                <div class="ana-dropzone-sub" id="libDropzoneSub">Limite: 50 MB · qualquer tipo de arquivo</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <div style="flex: 1; font-size: 11px; color: var(--text-mute);" id="libUploadStatus"></div>
+      <button class="btn-secondary" onclick="closeUploadFileModal()">Cancelar</button>
+      <button class="btn-primary" id="libUploadBtn" onclick="uploadLibraryFile()" disabled>📤 Subir arquivo</button>
     </div>
   </div>
 </div>
@@ -5085,6 +5311,9 @@ document.querySelectorAll('.tab').forEach(t => {
     }
     if (t.dataset.tab === 'analyses') {
       loadAnalyses();
+    }
+    if (t.dataset.tab === 'library') {
+      loadLibrary();
     }
     renderAll();
   });
@@ -6948,6 +7177,337 @@ async function loadMyTasks() {
     state.myTasksDetected = true;
   }
   renderMyTasks();
+}
+
+// ============================================
+// REPOSITÓRIO DE ARQUIVOS INSTITUCIONAIS
+// ============================================
+
+state.libraryFiles = [];
+state.libraryFolderCollapsed = {}; // { folderKey: true/false }
+state.libUploadPending = null;     // arquivo selecionado mas ainda não enviado
+
+// Pastas fixas — não dá pra criar novas pela UI
+const LIBRARY_FOLDERS = [
+  { key: 'minutas',    label: 'Modelos de Minutas',      icon: '📝', desc: 'Escrituras, regulamentos, termos de cessão' },
+  { key: 'modelagem',  label: 'Planilhas de Modelagem',  icon: '📊', desc: 'Templates Excel de pricing, fluxo de caixa, waterfall' },
+  { key: 'checklists', label: 'Checklists',              icon: '✅', desc: 'Checklists operacionais por tipo de operação' },
+  { key: 'propostas',  label: 'Propostas',               icon: '💼', desc: 'Templates de propostas comerciais e term sheets' },
+  { key: 'pareceres',  label: 'Pareceres e Opiniões',    icon: '⚖️', desc: 'Pareceres jurídicos e fiscais de referência' },
+  { key: 'apresent',   label: 'Apresentações',           icon: '🎯', desc: 'Decks institucionais, modelos de pitch' },
+  { key: 'normativos', label: 'Normativos e Regulação',  icon: '📜', desc: 'Resoluções CVM, leis, instruções normativas' },
+  { key: 'outros',     label: 'Outros',                  icon: '📂', desc: 'Documentos diversos' },
+];
+
+const LIBRARY_FOLDER_MAP = {};
+LIBRARY_FOLDERS.forEach(f => LIBRARY_FOLDER_MAP[f.key] = f);
+
+// Detecta o ícone baseado na extensão
+function getFileIcon(filename) {
+  const ext = (filename.split('.').pop() || '').toLowerCase();
+  const map = {
+    pdf: '📕',
+    doc: '📘', docx: '📘',
+    xls: '📗', xlsx: '📗', csv: '📗',
+    ppt: '📙', pptx: '📙',
+    txt: '📄', md: '📄',
+    zip: '🗜️', rar: '🗜️', '7z': '🗜️',
+    png: '🖼️', jpg: '🖼️', jpeg: '🖼️', gif: '🖼️', svg: '🖼️',
+    mp4: '🎬', mov: '🎬',
+    mp3: '🎵', wav: '🎵',
+  };
+  return map[ext] || '📄';
+}
+
+function fmtFileSize(bytes) {
+  if (!bytes || bytes < 1024) return `${bytes || 0} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
+}
+
+async function loadLibrary() {
+  try {
+    const { data, error } = await sb
+      .from('library_files')
+      .select('*')
+      .order('criado_em', { ascending: false });
+    if (error) throw error;
+    state.libraryFiles = data || [];
+
+    // Popula select de filtro
+    const sel = document.getElementById('libraryFilterPasta');
+    if (sel) {
+      const current = sel.value;
+      sel.innerHTML = '<option value="">Todas as pastas</option>' +
+        LIBRARY_FOLDERS.map(f => `<option value="${f.key}">${f.icon} ${f.label}</option>`).join('');
+      sel.value = current;
+    }
+    renderLibrary();
+  } catch (e) {
+    console.warn('[library] load fail', e);
+    state.libraryFiles = [];
+    renderLibrary();
+  }
+}
+
+function renderLibrary() {
+  const wrap = document.getElementById('libraryFolders');
+  if (!wrap) return;
+
+  const search = (document.getElementById('searchLibrary')?.value || '').toLowerCase();
+  const filterPasta = document.getElementById('libraryFilterPasta')?.value || '';
+
+  // Agrupa por pasta
+  const byFolder = {};
+  LIBRARY_FOLDERS.forEach(f => byFolder[f.key] = []);
+
+  state.libraryFiles.forEach(file => {
+    // Filtro de pasta
+    if (filterPasta && file.pasta !== filterPasta) return;
+    // Filtro de busca
+    if (search && !file.nome.toLowerCase().includes(search)) return;
+    if (!byFolder[file.pasta]) byFolder[file.pasta] = [];
+    byFolder[file.pasta].push(file);
+  });
+
+  // Se filtrou por pasta, mostra só ela; senão mostra todas
+  const foldersToShow = filterPasta
+    ? LIBRARY_FOLDERS.filter(f => f.key === filterPasta)
+    : LIBRARY_FOLDERS;
+
+  if (foldersToShow.every(f => byFolder[f.key].length === 0) && (search || filterPasta)) {
+    wrap.innerHTML = `<div class="empty-state" style="padding: 40px;">
+      <h3>Nenhum arquivo corresponde aos filtros</h3>
+      <p>Tente outra busca ou limpe os filtros</p>
+    </div>`;
+    return;
+  }
+
+  wrap.innerHTML = foldersToShow.map(folder => {
+    const files = byFolder[folder.key] || [];
+    const collapsed = state.libraryFolderCollapsed[folder.key] || false;
+    const count = files.length;
+
+    return `<div class="library-folder ${collapsed ? 'collapsed' : ''}" data-folder="${folder.key}">
+      <div class="library-folder-head" onclick="toggleLibraryFolder('${folder.key}')">
+        <div class="library-folder-head-left">
+          <span class="library-folder-icon">${folder.icon}</span>
+          <div>
+            <div class="library-folder-title">${folder.label}</div>
+            <div style="font-size: 11px; color: var(--text-mute);">${folder.desc}</div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span class="library-folder-count">${count} arquivo${count !== 1 ? 's' : ''}</span>
+          <span class="library-folder-toggle">▼</span>
+        </div>
+      </div>
+      <div class="library-folder-body" style="max-height: ${collapsed ? '0' : '2000px'};">
+        ${count === 0
+          ? `<div class="library-empty-folder">Nenhum arquivo nesta pasta. Clique em "+ Subir arquivo" para adicionar.</div>`
+          : `<div class="library-file-list">${files.map(file => renderLibraryFileRow(file)).join('')}</div>`
+        }
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderLibraryFileRow(file) {
+  const dt = new Date(file.criado_em);
+  const when = dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+  const author = (file.subido_por || '').split('@')[0] || '—';
+  return `
+    <div class="library-file-row">
+      <span class="library-file-ext-icon">${getFileIcon(file.nome)}</span>
+      <span class="library-file-name" title="${escapeAttr(file.nome)}">${escapeHtml(file.nome)}</span>
+      <span class="library-file-size">${fmtFileSize(file.tamanho_bytes)}</span>
+      <span class="library-file-author" title="${escapeAttr(file.subido_por || '')}">${escapeHtml(author)}</span>
+      <span class="library-file-date">${when}</span>
+      <div class="library-file-actions">
+        <button class="library-file-btn" onclick="downloadLibraryFile(${file.id})" title="Baixar">↓ Baixar</button>
+        <button class="library-file-btn danger" onclick="deleteLibraryFile(${file.id})" title="Excluir (apenas admins)">×</button>
+      </div>
+    </div>
+  `;
+}
+
+function toggleLibraryFolder(key) {
+  state.libraryFolderCollapsed[key] = !state.libraryFolderCollapsed[key];
+  renderLibrary();
+}
+
+// ===== UPLOAD =====
+function openUploadFileModal() {
+  state.libUploadPending = null;
+  const sel = document.getElementById('libUploadPasta');
+  sel.innerHTML = LIBRARY_FOLDERS.map(f => `<option value="${f.key}">${f.icon}  ${f.label}</option>`).join('');
+  document.getElementById('libDropzoneText').textContent = 'Arraste o arquivo aqui ou clique para selecionar';
+  document.getElementById('libDropzoneSub').textContent = 'Limite: 50 MB · qualquer tipo de arquivo';
+  document.getElementById('libDropzone').classList.remove('has-file');
+  document.getElementById('libUploadBtn').disabled = true;
+  document.getElementById('libUploadStatus').textContent = '';
+  document.getElementById('libFileInput').value = '';
+  document.getElementById('modalUploadFileOverlay').classList.add('active');
+  setupLibDropzone();
+}
+
+function closeUploadFileModal() {
+  document.getElementById('modalUploadFileOverlay').classList.remove('active');
+  state.libUploadPending = null;
+}
+
+function setupLibDropzone() {
+  const dz = document.getElementById('libDropzone');
+  if (!dz || dz._setupDone) return;
+  dz._setupDone = true;
+  dz.addEventListener('dragover', e => {
+    e.preventDefault();
+    dz.classList.add('drag-over');
+  });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.classList.remove('drag-over');
+    const file = e.dataTransfer?.files?.[0];
+    if (file) handleLibFile(file);
+  });
+}
+
+function onLibFileSelected(event) {
+  const file = event.target.files?.[0];
+  if (file) handleLibFile(file);
+}
+
+function handleLibFile(file) {
+  // Limite 50 MB
+  if (file.size > 50 * 1024 * 1024) {
+    showToast(`"${file.name}" excede 50MB`, true);
+    return;
+  }
+  state.libUploadPending = file;
+  document.getElementById('libDropzoneText').textContent = `${getFileIcon(file.name)}  ${file.name}`;
+  document.getElementById('libDropzoneSub').textContent = `${fmtFileSize(file.size)} · pronto para subir`;
+  document.getElementById('libDropzone').classList.add('has-file');
+  document.getElementById('libUploadBtn').disabled = false;
+}
+
+async function uploadLibraryFile() {
+  const file = state.libUploadPending;
+  if (!file) return;
+
+  const pasta = document.getElementById('libUploadPasta').value;
+  if (!pasta) return showToast('Selecione uma pasta', true);
+
+  const btn = document.getElementById('libUploadBtn');
+  const status = document.getElementById('libUploadStatus');
+  btn.disabled = true;
+  btn.textContent = '⏳ Subindo…';
+  status.textContent = 'Enviando arquivo…';
+
+  try {
+    // Gera path único no Storage
+    const ts = Date.now();
+    const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+    const storagePath = `${pasta}/${ts}-${safeName}`;
+
+    // Upload pro Storage
+    const { error: upErr } = await sb.storage
+      .from('library')
+      .upload(storagePath, file, {
+        contentType: file.type || 'application/octet-stream',
+        upsert: false,
+      });
+    if (upErr) throw upErr;
+
+    // Pega email do usuário
+    let userEmail = null;
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      userEmail = user?.email || null;
+    } catch (e) {}
+
+    // Insere registro na tabela
+    const { error: dbErr } = await sb.from('library_files').insert({
+      nome: file.name,
+      pasta,
+      storage_path: storagePath,
+      tamanho_bytes: file.size,
+      mime_type: file.type || null,
+      subido_por: userEmail,
+    });
+    if (dbErr) throw dbErr;
+
+    showToast(`Arquivo "${file.name}" enviado com sucesso`);
+    closeUploadFileModal();
+    await loadLibrary();
+  } catch (e) {
+    console.error('[library] upload erro:', e);
+    btn.disabled = false;
+    btn.textContent = '📤 Subir arquivo';
+    status.innerHTML = `❌ Erro: ${escapeHtml(e.message || String(e))}`;
+    showToast('Erro: ' + (e.message || 'falha'), true);
+  }
+}
+
+// ===== DOWNLOAD =====
+async function downloadLibraryFile(id) {
+  const file = state.libraryFiles.find(f => String(f.id) === String(id));
+  if (!file) return showToast('Arquivo não encontrado', true);
+
+  try {
+    showToast('Gerando link de download…');
+    // Gera signed URL válida por 60s (já abre direto)
+    const { data, error } = await sb.storage
+      .from('library')
+      .createSignedUrl(file.storage_path, 60, { download: file.nome });
+    if (error) throw error;
+
+    // Força download abrindo a URL
+    const a = document.createElement('a');
+    a.href = data.signedUrl;
+    a.download = file.nome;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } catch (e) {
+    console.error('[library] download erro:', e);
+    showToast('Erro ao baixar: ' + (e.message || 'falha'), true);
+  }
+}
+
+// ===== DELETE (só admins) =====
+async function deleteLibraryFile(id) {
+  const file = state.libraryFiles.find(f => String(f.id) === String(id));
+  if (!file) return;
+  if (!confirm(`Excluir "${file.nome}"?\n\nEsta ação não pode ser desfeita.\nApenas administradores podem excluir arquivos.`)) return;
+
+  try {
+    // Apaga do Storage primeiro
+    const { error: storageErr } = await sb.storage
+      .from('library')
+      .remove([file.storage_path]);
+
+    // Depois da tabela (mesmo se Storage falhar, tenta limpar o registro)
+    const { error: dbErr } = await sb.from('library_files').delete().eq('id', file.id);
+    if (dbErr) {
+      // Se a policy bloqueou (não é admin), mostra erro amigável
+      if (dbErr.code === '42501' || /policy/i.test(dbErr.message || '')) {
+        throw new Error('Apenas administradores podem excluir arquivos.');
+      }
+      throw dbErr;
+    }
+
+    if (storageErr && !/not found/i.test(storageErr.message || '')) {
+      console.warn('[library] storage delete warning:', storageErr);
+    }
+
+    showToast('Arquivo excluído');
+    await loadLibrary();
+  } catch (e) {
+    console.error('[library] delete erro:', e);
+    showToast(e.message || 'Erro ao excluir', true);
+  }
 }
 
 // ============================================
