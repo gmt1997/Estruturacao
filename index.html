@@ -1273,6 +1273,168 @@
     margin-bottom: 20px;
   }
 
+  /* ===== Forecast Probabilístico ===== */
+  .forecast-panel {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-sm);
+  }
+  .forecast-scenarios {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 22px;
+  }
+  @media (max-width: 768px) {
+    .forecast-scenarios { grid-template-columns: 1fr; }
+  }
+  .forecast-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px;
+    background: #fff;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .forecast-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+  .forecast-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+  }
+  .forecast-card.pessimista::before { background: #C93B3B; }
+  .forecast-card.base::before { background: var(--orange); }
+  .forecast-card.otimista::before { background: #2E7D5B; }
+
+  .forecast-card-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-mute);
+    margin-bottom: 6px;
+  }
+  .forecast-card.pessimista .forecast-card-label { color: #C93B3B; }
+  .forecast-card.base .forecast-card-label { color: var(--orange); }
+  .forecast-card.otimista .forecast-card-label { color: #2E7D5B; }
+
+  .forecast-card-value {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--navy);
+    font-family: 'Fraunces', serif;
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+  }
+  .forecast-card-sub {
+    font-size: 11px;
+    color: var(--text-mute);
+    line-height: 1.4;
+  }
+  .forecast-card-detail {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-soft);
+    font-size: 11px;
+    color: var(--text-soft);
+    line-height: 1.5;
+  }
+
+  /* Tabela de operações no forecast */
+  .forecast-ops-table-wrap {
+    margin-top: 12px;
+  }
+  .forecast-ops-table-toggle {
+    background: transparent;
+    border: none;
+    color: var(--orange);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 0;
+    text-decoration: underline;
+  }
+  .forecast-ops-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+    font-size: 12px;
+  }
+  .forecast-ops-table th,
+  .forecast-ops-table td {
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .forecast-ops-table th {
+    background: var(--blue-pale);
+    color: var(--navy);
+    font-weight: 600;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .forecast-ops-table td.mono { font-family: 'IBM Plex Mono', monospace; text-align: right; }
+  .forecast-ops-table .row-total td {
+    background: var(--blue-light);
+    font-weight: 700;
+    color: var(--navy);
+    border-top: 2px solid var(--navy);
+    border-bottom: none;
+  }
+  .forecast-prob-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .forecast-prob-pill.low { background: rgba(201,59,59,0.10); color: #C93B3B; }
+  .forecast-prob-pill.mid { background: rgba(229,168,46,0.12); color: #B57E2E; }
+  .forecast-prob-pill.high { background: rgba(46,125,91,0.10); color: #2E7D5B; }
+
+  /* Modal de configuração de probabilidades */
+  .forecast-sliders {
+    display: flex; flex-direction: column;
+    gap: 14px;
+  }
+  .forecast-slider-row {
+    display: grid;
+    grid-template-columns: 200px 1fr 60px;
+    gap: 14px;
+    align-items: center;
+    padding: 10px 14px;
+    background: var(--blue-pale);
+    border-radius: 6px;
+    border-left: 3px solid var(--orange);
+  }
+  .forecast-slider-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--navy);
+  }
+  .forecast-slider-input {
+    width: 100%;
+    cursor: pointer;
+    accent-color: var(--orange);
+  }
+  .forecast-slider-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 700;
+    color: var(--orange);
+    text-align: right;
+    font-size: 14px;
+  }
+
   /* ===== Aba Repositório de Arquivos ===== */
   .library-header {
     display: flex; justify-content: space-between; align-items: center;
@@ -3787,6 +3949,16 @@
       </div>
 
       <h2 class="section-title" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+        <span>Forecast Probabilístico de Receita</span>
+        <button class="btn-secondary" onclick="openForecastSettings()" title="Configurar probabilidades por etapa" style="font-size: 12px; padding: 6px 14px;">
+          ⚙️ Configurar
+        </button>
+      </h2>
+      <div id="forecastPanel" class="forecast-panel">
+        <!-- preenchido por renderForecast() -->
+      </div>
+
+      <h2 class="section-title" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
         <span>Aportes & Desembolsos para Captação</span>
         <button class="btn-secondary" onclick="exportDesembolsosXLSX()" title="Baixar planilha com cronograma detalhado por operação e mês" style="font-size: 12px; padding: 6px 14px;">
           📊 Exportar Excel
@@ -4166,6 +4338,31 @@
     <div class="modal-foot">
       <div style="flex: 1; font-size: 11px; color: var(--text-mute);">Esta é a visão exata do email que será enviado aos destinatários ativos.</div>
       <button class="btn-secondary" onclick="closeReportPreview()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL CONFIGURAÇÕES DE FORECAST ===== -->
+<div class="modal-overlay" id="modalForecastOverlay">
+  <div class="modal" style="max-width: 580px;">
+    <div class="modal-head">
+      <h2>Probabilidades de Fechamento por Etapa</h2>
+      <button class="modal-close" onclick="closeForecastSettings()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="background: var(--blue-pale); padding: 12px 14px; border-radius: 6px; border-left: 3px solid var(--navy); font-size: 12px; color: var(--text-soft); margin-bottom: 18px; line-height: 1.5;">
+        <strong style="color: var(--navy);">Como funciona:</strong> cada operação tem uma probabilidade de chegar até a liquidação baseada na etapa atual do pipeline. Quanto mais avançada, maior a chance de fechar.
+        O <strong>cenário Base</strong> usa esses números. O <strong>Pessimista</strong> aplica 50% sobre eles. O <strong>Otimista</strong> simula cada operação avançando 1 etapa.
+      </div>
+
+      <div id="forecastSliders" class="forecast-sliders">
+        <!-- gerado dinamicamente -->
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-secondary" onclick="resetForecastDefaults()" style="margin-right: auto;">↺ Restaurar padrões</button>
+      <button class="btn-secondary" onclick="closeForecastSettings()">Cancelar</button>
+      <button class="btn-primary" onclick="saveForecastSettings()">Salvar</button>
     </div>
   </div>
 </div>
@@ -5042,7 +5239,7 @@ async function submitResetPassword(e) {
 async function loadAll() {
   showLoading(true);
   try {
-    await Promise.all([loadOperations(), loadLogs()]);
+    await Promise.all([loadOperations(), loadLogs(), loadForecastSettings()]);
     populateFilters();
     renderAll();
   } catch (err) {
@@ -5361,6 +5558,7 @@ function renderAll() {
   renderRevenueMonthlyChart();
   renderVolumeMonthlyChart();
   renderAportesChart();
+  renderForecast();
   renderFunnelChart();
   renderTipoChart();
   renderStatusChart();
@@ -7177,6 +7375,306 @@ async function loadMyTasks() {
     state.myTasksDetected = true;
   }
   renderMyTasks();
+}
+
+// ============================================
+// FORECAST PROBABILÍSTICO DE RECEITA
+// ============================================
+
+state.forecastProbs = {
+  viabilidade: 10,
+  mandatado: 30,
+  kickoff: 50,
+  estruturacao: 75,
+  signoff: 90,
+  distribuicao: 98,
+  handover: 100,
+  liquidacao: 100,
+  stand: 0,
+};
+state.forecastShowDetail = false;
+
+const FORECAST_DEFAULTS = {
+  viabilidade: 10,
+  mandatado: 30,
+  kickoff: 50,
+  estruturacao: 75,
+  signoff: 90,
+  distribuicao: 98,
+  handover: 100,
+  liquidacao: 100,
+  stand: 0,
+};
+
+// Etapas mostradas no modal de config (na ordem do pipeline)
+const FORECAST_STAGES_ORDER = ['viabilidade','mandatado','kickoff','estruturacao','signoff','distribuicao','handover','liquidacao','stand'];
+
+async function loadForecastSettings() {
+  try {
+    const { data, error } = await sb
+      .from('app_settings')
+      .select('valor')
+      .eq('chave', 'forecast_probabilidades')
+      .maybeSingle();
+    if (error) throw error;
+    if (data && data.valor) {
+      // Merge com default pra garantir todas as etapas
+      state.forecastProbs = { ...FORECAST_DEFAULTS, ...data.valor };
+    }
+  } catch (e) {
+    console.warn('[forecast] load fail, usando defaults', e);
+  }
+}
+
+// Calcula receita esperada (receita projetada * probabilidade) por cenário
+function computeForecast() {
+  const ops = getFilteredOps();
+
+  // Considera só operações que ainda não liquidaram totalmente
+  // Liquidada/handover já realizadas vão por outro caminho (realizadas, não forecast)
+  const activeOps = ops.filter(o => {
+    if (o.status === 'stand') return false;
+    if (o.status === 'liquidacao' || o.status === 'handover') return false;
+    return Number(o.receita) > 0;
+  });
+
+  // Pipeline pra cenário Otimista (cada op avança 1 etapa)
+  const stagePipeline = ['viabilidade','mandatado','kickoff','estruturacao','signoff','distribuicao','handover'];
+
+  let totalBase = 0, totalPess = 0, totalOtim = 0;
+  const breakdown = [];
+
+  activeOps.forEach(op => {
+    const receita = Number(op.receita) || 0;
+    const probBase = (state.forecastProbs[op.status] ?? 0) / 100;
+    const probPess = probBase * 0.5;
+
+    // Otimista: avança uma etapa
+    let probOtim = probBase;
+    const currentIdx = stagePipeline.indexOf(op.status);
+    if (currentIdx >= 0 && currentIdx < stagePipeline.length - 1) {
+      const nextStage = stagePipeline[currentIdx + 1];
+      probOtim = (state.forecastProbs[nextStage] ?? probBase * 100) / 100;
+    }
+
+    const valBase = receita * probBase;
+    const valPess = receita * probPess;
+    const valOtim = receita * probOtim;
+
+    totalBase += valBase;
+    totalPess += valPess;
+    totalOtim += valOtim;
+
+    breakdown.push({
+      id: op.id,
+      nome: op.nome,
+      cliente: op.cliente,
+      tipo: op.tipo,
+      status: op.status,
+      receita,
+      probBase: probBase * 100,
+      probPess: probPess * 100,
+      probOtim: probOtim * 100,
+      valBase, valPess, valOtim,
+    });
+  });
+
+  // Ordena por contribuição base desc
+  breakdown.sort((a, b) => b.valBase - a.valBase);
+
+  return { totalBase, totalPess, totalOtim, breakdown, opsCount: activeOps.length };
+}
+
+function renderForecast() {
+  const wrap = document.getElementById('forecastPanel');
+  if (!wrap) return;
+  const f = computeForecast();
+
+  if (f.opsCount === 0) {
+    wrap.innerHTML = `<div class="empty-state" style="padding: 30px;">
+      <h3>Sem operações ativas para projetar</h3>
+      <p>O forecast é calculado sobre operações em etapas pré-liquidação (Viabilidade até Sign-Off / Distribuição)</p>
+    </div>`;
+    return;
+  }
+
+  // KPIs auxiliares
+  const realizadoYTD = state.operations
+    .filter(o => o.receita_realizada && Number(o.receita_realizada) > 0)
+    .reduce((s, o) => s + Number(o.receita_realizada), 0);
+
+  const totalOtimComRealizado = realizadoYTD + f.totalOtim;
+  const totalBaseComRealizado = realizadoYTD + f.totalBase;
+  const totalPessComRealizado = realizadoYTD + f.totalPess;
+
+  wrap.innerHTML = `
+    <div class="forecast-scenarios">
+      <div class="forecast-card pessimista">
+        <div class="forecast-card-label">Pessimista</div>
+        <div class="forecast-card-value">${fmtBRLshort(f.totalPess)}</div>
+        <div class="forecast-card-sub">Receita esperada<br><span style="font-size:10px;">50% das probabilidades base</span></div>
+        <div class="forecast-card-detail">
+          <strong>Total com realizado:</strong><br>
+          ${fmtBRL(totalPessComRealizado)}
+        </div>
+      </div>
+      <div class="forecast-card base">
+        <div class="forecast-card-label">⭐ Base</div>
+        <div class="forecast-card-value">${fmtBRLshort(f.totalBase)}</div>
+        <div class="forecast-card-sub">Receita esperada<br><span style="font-size:10px;">probabilidades padrão por etapa</span></div>
+        <div class="forecast-card-detail">
+          <strong>Total com realizado:</strong><br>
+          ${fmtBRL(totalBaseComRealizado)}
+        </div>
+      </div>
+      <div class="forecast-card otimista">
+        <div class="forecast-card-label">Otimista</div>
+        <div class="forecast-card-value">${fmtBRLshort(f.totalOtim)}</div>
+        <div class="forecast-card-sub">Receita esperada<br><span style="font-size:10px;">cada operação avança 1 etapa</span></div>
+        <div class="forecast-card-detail">
+          <strong>Total com realizado:</strong><br>
+          ${fmtBRL(totalOtimComRealizado)}
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; background: var(--blue-pale); border-radius: 6px; font-size: 12px; color: var(--text-soft);">
+      <div>
+        <strong style="color: var(--navy);">${f.opsCount} operação${f.opsCount !== 1 ? 'ões' : ''}</strong> no pipeline ·
+        Receita ${realizadoYTD > 0 ? `realizada YTD: <strong style="color: var(--navy);">${fmtBRLshort(realizadoYTD)}</strong> · ` : ''}potencial total (100%): <strong style="color: var(--navy);">${fmtBRLshort(f.breakdown.reduce((s,b) => s + b.receita, 0))}</strong>
+      </div>
+      <button class="forecast-ops-table-toggle" onclick="toggleForecastDetail()">
+        ${state.forecastShowDetail ? '▲ Ocultar' : '▼ Ver'} detalhamento por operação
+      </button>
+    </div>
+
+    ${state.forecastShowDetail ? `
+      <div class="forecast-ops-table-wrap">
+        <table class="forecast-ops-table">
+          <thead>
+            <tr>
+              <th>Operação</th>
+              <th>Etapa</th>
+              <th style="text-align: right;">Receita (100%)</th>
+              <th style="text-align: right;">Prob. Base</th>
+              <th style="text-align: right;">Pessimista</th>
+              <th style="text-align: right;">Base</th>
+              <th style="text-align: right;">Otimista</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${f.breakdown.map(b => {
+              const probClass = b.probBase < 30 ? 'low' : b.probBase < 70 ? 'mid' : 'high';
+              return `<tr>
+                <td>
+                  <a href="#" onclick="event.preventDefault(); openModal('${b.id}')" style="color: var(--navy); font-weight: 600; text-decoration: none;">${escapeHtml(b.nome)}</a>
+                  <div style="font-size:10px; color:var(--text-mute);">${escapeHtml(b.cliente || '—')} · ${escapeHtml(b.tipo)}</div>
+                </td>
+                <td><span class="status-badge status-${b.status}">${STATUS_LABELS[b.status]}</span></td>
+                <td class="mono">${fmtBRLshort(b.receita)}</td>
+                <td style="text-align: right;"><span class="forecast-prob-pill ${probClass}">${b.probBase.toFixed(0)}%</span></td>
+                <td class="mono" style="color: #C93B3B;">${fmtBRLshort(b.valPess)}</td>
+                <td class="mono" style="color: var(--orange); font-weight: 600;">${fmtBRLshort(b.valBase)}</td>
+                <td class="mono" style="color: #2E7D5B;">${fmtBRLshort(b.valOtim)}</td>
+              </tr>`;
+            }).join('')}
+            <tr class="row-total">
+              <td colspan="4" style="text-align: right;">TOTAL</td>
+              <td class="mono">${fmtBRLshort(f.totalPess)}</td>
+              <td class="mono">${fmtBRLshort(f.totalBase)}</td>
+              <td class="mono">${fmtBRLshort(f.totalOtim)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    ` : ''}
+  `;
+}
+
+function toggleForecastDetail() {
+  state.forecastShowDetail = !state.forecastShowDetail;
+  renderForecast();
+}
+
+// ===== Modal de configurações =====
+function openForecastSettings() {
+  const wrap = document.getElementById('forecastSliders');
+  if (!wrap) return;
+
+  // Etapas mostradas (sem stand-by que não faz sentido)
+  const stages = FORECAST_STAGES_ORDER.filter(s => s !== 'stand' && s !== 'liquidacao' && s !== 'handover');
+
+  wrap.innerHTML = stages.map(stage => {
+    const val = state.forecastProbs[stage] ?? FORECAST_DEFAULTS[stage] ?? 0;
+    return `
+      <div class="forecast-slider-row">
+        <div class="forecast-slider-label">${STATUS_LABELS[stage]}</div>
+        <input type="range" class="forecast-slider-input"
+          min="0" max="100" step="5"
+          value="${val}"
+          data-stage="${stage}"
+          oninput="onForecastSliderChange(event)">
+        <div class="forecast-slider-value" id="prob-val-${stage}">${val}%</div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('modalForecastOverlay').classList.add('active');
+}
+
+function closeForecastSettings() {
+  document.getElementById('modalForecastOverlay').classList.remove('active');
+}
+
+function onForecastSliderChange(event) {
+  const stage = event.target.dataset.stage;
+  const val = Number(event.target.value);
+  document.getElementById(`prob-val-${stage}`).textContent = `${val}%`;
+}
+
+function resetForecastDefaults() {
+  if (!confirm('Restaurar as probabilidades padrão?\n\nViabilidade: 10% · Mandatado: 30% · Kick-Off: 50%\nEstruturação: 75% · Sign-Off: 90% · Distribuição: 98%')) return;
+
+  document.querySelectorAll('.forecast-slider-input').forEach(input => {
+    const stage = input.dataset.stage;
+    const val = FORECAST_DEFAULTS[stage] ?? 0;
+    input.value = val;
+    document.getElementById(`prob-val-${stage}`).textContent = `${val}%`;
+  });
+}
+
+async function saveForecastSettings() {
+  // Coleta valores dos sliders
+  const newProbs = { ...state.forecastProbs };
+  document.querySelectorAll('.forecast-slider-input').forEach(input => {
+    newProbs[input.dataset.stage] = Number(input.value);
+  });
+
+  try {
+    let userEmail = null;
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      userEmail = user?.email || null;
+    } catch (e) {}
+
+    const { error } = await sb.from('app_settings').upsert({
+      chave: 'forecast_probabilidades',
+      valor: newProbs,
+      descricao: 'Probabilidades de fechamento da operação por etapa do pipeline',
+      atualizado_em: new Date().toISOString(),
+      atualizado_por: userEmail,
+    }, { onConflict: 'chave' });
+
+    if (error) throw error;
+
+    state.forecastProbs = newProbs;
+    showToast('Probabilidades atualizadas');
+    closeForecastSettings();
+    renderForecast();
+  } catch (e) {
+    console.error('[forecast] save erro:', e);
+    showToast('Erro ao salvar: ' + e.message, true);
+  }
 }
 
 // ============================================
