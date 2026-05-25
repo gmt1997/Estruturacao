@@ -12839,9 +12839,9 @@ function drawPieLegend(doc, x, y, itens, maxW = 80) {
       doc.setTextColor(120, 120, 120);
       doc.text(it.sublabel, x + 4, curY + 2.8);
       doc.setFontSize(7);
-      curY += 3;
+      curY += 3.2;
     }
-    curY += 3.8;
+    curY += 4.2;
   });
   return curY - y;
 }
@@ -13987,7 +13987,7 @@ async function exportPDFDetalhado() {
         // Pizza 2: distribuição geral por status (concluído/andamento/pendente/N/A)
         {
           // Se não há espaço suficiente nesta página, quebra ANTES (não pula)
-          const piePanelHeight = 58; // pizza (38mm) + título + margem
+          const piePanelHeight = 64; // pizza (38mm) + título + legenda com sublabels + margem
           if (y > pageH - piePanelHeight - 20) {
             doc.addPage();
             addPdfHeader(doc, pageW);
@@ -14018,11 +14018,20 @@ async function exportPDFDetalhado() {
           })).filter(f => f.total > 0);
 
           drawPieByAspect(doc, x1, pieY, pieSize, fatiasAspecto, 'Por Aspecto (escuro = concluido)');
-          const legendItens1 = fatiasAspecto.map(f => ({
-            label: f.label,
-            color: f.color,
-            value: `${f.done}/${f.total}`,
-          }));
+
+          // Total geral considerado (igual ao denominador da pizza, sem N/A)
+          const totalGeralAspecto = fatiasAspecto.reduce((s, f) => s + f.total, 0);
+
+          const legendItens1 = fatiasAspecto.map(f => {
+            const pctConcluido = f.total > 0 ? Math.round((f.done / f.total) * 100) : 0;
+            const pctDoTotal   = totalGeralAspecto > 0 ? Math.round((f.total / totalGeralAspecto) * 100) : 0;
+            return {
+              label: f.label,
+              color: f.color,
+              value: `${f.done}/${f.total}`,
+              sublabel: `${pctConcluido}% concluido · ${pctDoTotal}% do total`,
+            };
+          });
           drawPieLegend(doc, x1 + pieSize + pieGap, pieY + 12, legendItens1);
 
           // Pizza 2: geral por status
@@ -14049,7 +14058,7 @@ async function exportPDFDetalhado() {
           });
           drawPieLegend(doc, x2 + pieSize + pieGap, pieY + 12, legendItens2);
 
-          y += pieSize + 18;  // avança após pizzas
+          y += pieSize + 22;  // avança após pizzas (extra pra sublabels)
         }
 
         Object.keys(byCat).forEach(cat => {
