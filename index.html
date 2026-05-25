@@ -12666,6 +12666,186 @@ function addPdfFooter(doc, pageW, pageH, pageNum, pageTotal) {
   doc.text(`Página ${pageNum}${pageTotal ? ' de ' + pageTotal : ''}`, pageW - 15, pageH - 7, { align: 'right' });
 }
 
+// =====================================================
+// HELPERS: gráficos de pizza vetoriais no jsPDF
+// =====================================================
+
+// Limpa nome do aspecto para legendas/cabeçalhos: "1. Aspectos Operacionais" → "Operacionais"
+function cleanCatNameForLegend(cat) {
+  return String(cat || '')
+    .replace(/^\d+\.\s*/, '')
+    .replace(/^Aspectos?\s+/i, '')
+    .trim() || cat;
+}
+
+// Paleta de cores por aspecto (8 cores Netz-compatíveis, ciclam se passar de 8)
+const PIE_ASPECT_COLORS = [
+  [0, 27, 92],     // navy
+  [255, 150, 90],  // orange
+  [46, 125, 91],   // green
+  [106, 74, 140],  // purple
+  [31, 96, 136],   // blue-deep
+  [229, 168, 46],  // amber
+  [201, 59, 59],   // red
+  [156, 163, 181], // gray
+];
+
+// Versão "clara" da cor (mistura com branco) — usada pra "pendente" dentro do aspecto
+function lightenColor(rgb, factor = 0.78) {
+  return [
+    Math.round(rgb[0] + (255 - rgb[0]) * factor),
+    Math.round(rgb[1] + (255 - rgb[1]) * factor),
+    Math.round(rgb[2] + (255 - rgb[2]) * factor),
+  ];
+}
+
+// Desenha uma fatia de pizza (setor circular) — usa quadratic curves aproximadas
+// cx, cy: centro · r: raio · startAng, endAng: em radianos (0 = direita, sentido horário)
+function drawPieSlice(doc, cx, cy, r, startAng, endAng, fillRgb) {
+  doc.setFillColor(...fillRgb);
+  // Aproxima o arco por linhas curtas (poligonal). 360 segmentos = ~1° por segmento, suficiente.
+  const totalAng = endAng - startAng;
+  if (totalAng <= 0) return;
+  const segCount = Math.max(2, Math.ceil(totalAng / (Math.PI / 90))); // ~2° por segmento
+  // Constrói um caminho fechado: centro → arco → fecha
+  const points = [[cx, cy]];
+  for (let i = 0; i <= segCount; i++) {
+    const a = startAng + (totalAng * i) / segCount;
+    points.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
+  }
+  // Desenha polígono preenchido
+  // jsPDF: usar doc.lines() é mais limpo
+  const lines = [];
+  for (let i = 1; i < points.length; i++) {
+    lines.push([points[i][0] - points[i-1][0], points[i][1] - points[i-1][1]]);
+  }
+  // close back to center
+  lines.push([points[0][0] - points[points.length-1][0], points[0][1] - points[points.length-1][1]]);
+  doc.lines(lines, points[0][0], points[0][1], [1, 1], 'F', false);
+}
+
+// Pizza com fatias subdivididas (concluído escuro / pendente claro)
+// fatias: [{ label, total, done, color: [r,g,b] }]
+// Retorna a altura ocupada
+function drawPieByAspect(doc, x, y, size, fatias, title) {
+  const cx = x + size / 2;
+  const cy = y + size / 2 + 6;  // offset pra título acima
+  const r = size / 2 - 4;
+
+  // Título
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(0, 27, 92);
+  doc.text(title, x, y + 4);
+
+  const total = fatias.reduce((s, f) => s + f.total, 0);
+  if (total === 0) {
+    doc.setFontSize(7);
+    doc.setTextColor(120, 120, 120);
+    doc.text('Sem dados', cx, cy, { align: 'center' });
+    return size;
+  }
+
+  // Desenha fatias
+  let curAng = -Math.PI / 2; // começa no topo (12h)
+  fatias.forEach(f => {
+    if (f.total === 0) return;
+    const sweep = (f.total / total) * Math.PI * 2;
+    const endAng = curAng + sweep;
+
+    // Sub-fatia clara (pendente) — desenha a fatia inteira primeiro com cor clara
+    drawPieSlice(doc, cx, cy, r, curAng, endAng, lightenColor(f.color, 0.78));
+
+    // Sub-fatia escura (concluído) — sobrepõe a parte dos concluídos
+    if (f.done > 0) {
+      const doneSweep = (f.done / f.total) * sweep;
+      drawPieSlice(doc, cx, cy, r, curAng, curAng + doneSweep, f.color);
+    }
+
+    curAng = endAng;
+  });
+
+  // Borda branca entre fatias (efeito de separação)
+  doc.setDrawColor(255, 255, 255);
+  doc.setLineWidth(0.6);
+  curAng = -Math.PI / 2;
+  fatias.forEach(f => {
+    if (f.total === 0) return;
+    doc.line(cx, cy, cx + Math.cos(curAng) * r, cy + Math.sin(curAng) * r);
+    curAng += (f.total / total) * Math.PI * 2;
+  });
+
+  return size + 6;
+}
+
+// Pizza simples — fatias diretas {label, value, color}
+function drawPieSimple(doc, x, y, size, fatias, title) {
+  const cx = x + size / 2;
+  const cy = y + size / 2 + 6;
+  const r = size / 2 - 4;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(0, 27, 92);
+  doc.text(title, x, y + 4);
+
+  const total = fatias.reduce((s, f) => s + f.value, 0);
+  if (total === 0) {
+    doc.setFontSize(7);
+    doc.setTextColor(120, 120, 120);
+    doc.text('Sem dados', cx, cy, { align: 'center' });
+    return size;
+  }
+
+  let curAng = -Math.PI / 2;
+  fatias.forEach(f => {
+    if (f.value === 0) return;
+    const sweep = (f.value / total) * Math.PI * 2;
+    drawPieSlice(doc, cx, cy, r, curAng, curAng + sweep, f.color);
+    curAng += sweep;
+  });
+
+  // Separadores brancos
+  doc.setDrawColor(255, 255, 255);
+  doc.setLineWidth(0.6);
+  curAng = -Math.PI / 2;
+  fatias.forEach(f => {
+    if (f.value === 0) return;
+    doc.line(cx, cy, cx + Math.cos(curAng) * r, cy + Math.sin(curAng) * r);
+    curAng += (f.value / total) * Math.PI * 2;
+  });
+
+  return size + 6;
+}
+
+// Desenha legenda ao lado de uma pizza
+// itens: [{ label, color, value (opcional), sublabel (opcional) }]
+function drawPieLegend(doc, x, y, itens, maxW = 80) {
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  let curY = y;
+  itens.forEach(it => {
+    // Quadradinho colorido
+    doc.setFillColor(...it.color);
+    doc.rect(x, curY - 2.2, 2.6, 2.6, 'F');
+    // Texto
+    doc.setTextColor(60, 60, 60);
+    const txt = it.value !== undefined
+      ? `${truncate(it.label, 32)}  ${it.value}`
+      : truncate(it.label, 36);
+    doc.text(txt, x + 4, curY);
+    if (it.sublabel) {
+      doc.setFontSize(6);
+      doc.setTextColor(120, 120, 120);
+      doc.text(it.sublabel, x + 4, curY + 2.8);
+      doc.setFontSize(7);
+      curY += 3;
+    }
+    curY += 3.8;
+  });
+  return curY - y;
+}
+
 // Trunca texto pra caber em N caracteres com "..."
 function truncate(s, n) {
   if (!s) return '';
@@ -13801,6 +13981,62 @@ async function exportPDFDetalhado() {
           const pct = considered > 0 ? Math.round((cDone / considered) * 100) : 0;
           catStats[cat] = { total: items.length, done: cDone, and: cAnd, na: cNA, pend: cPend, pct };
         });
+
+        // ===== Gráficos de Pizza =====
+        // Pizza 1: por aspecto (sub-fatia escura = concluído, clara = pendente)
+        // Pizza 2: distribuição geral por status (concluído/andamento/pendente/N/A)
+        if (y < pageH - 70) {
+          const catKeys = Object.keys(byCat);
+          const pieSize = 38;
+          const pieGap = 5;
+          const legendW = 58;
+          const sectionW = pieSize + pieGap + legendW;
+          const x1 = margin;
+          const x2 = margin + sectionW + 8;
+          const pieY = y;
+
+          // Pizza 1: por aspecto, concluído escuro
+          const fatiasAspecto = catKeys.map((cat, idx) => ({
+            label: cleanCatNameForLegend(cat),
+            total: catStats[cat].total - catStats[cat].na, // exclui N/A
+            done: catStats[cat].done,
+            color: PIE_ASPECT_COLORS[idx % PIE_ASPECT_COLORS.length],
+          })).filter(f => f.total > 0);
+
+          drawPieByAspect(doc, x1, pieY, pieSize, fatiasAspecto, 'Por Aspecto (escuro = concluido)');
+          const legendItens1 = fatiasAspecto.map(f => ({
+            label: f.label,
+            color: f.color,
+            value: `${f.done}/${f.total}`,
+          }));
+          drawPieLegend(doc, x1 + pieSize + pieGap, pieY + 12, legendItens1);
+
+          // Pizza 2: geral por status
+          const totDone = templateCk.filter(c => c.status === 'concluido').length;
+          const totAnd  = templateCk.filter(c => c.status === 'andamento').length;
+          const totNA   = templateCk.filter(c => c.status === 'na').length;
+          const totPend = templateCk.filter(c => !['concluido','andamento','na'].includes(c.status)).length;
+
+          const fatiasStatus = [
+            { label: 'Concluido',    value: totDone, color: [46, 125, 91]   },
+            { label: 'Em Andamento', value: totAnd,  color: [229, 168, 46]  },
+            { label: 'Pendente',     value: totPend, color: [156, 163, 181] },
+            { label: 'N/A',          value: totNA,   color: [220, 227, 238] },
+          ].filter(f => f.value > 0);
+
+          drawPieSimple(doc, x2, pieY, pieSize, fatiasStatus, 'Por Status (geral)');
+          const legendItens2 = fatiasStatus.map(f => {
+            const pct = templateCk.length > 0 ? Math.round((f.value / templateCk.length) * 100) : 0;
+            return {
+              label: f.label,
+              color: f.color,
+              value: `${f.value} (${pct}%)`,
+            };
+          });
+          drawPieLegend(doc, x2 + pieSize + pieGap, pieY + 12, legendItens2);
+
+          y += pieSize + 18;  // avança após pizzas
+        }
 
         Object.keys(byCat).forEach(cat => {
           const s = catStats[cat];
