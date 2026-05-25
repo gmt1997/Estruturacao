@@ -13071,7 +13071,7 @@ async function exportPDFExecutivo() {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       doc.setTextColor(...NETZ_COLORS.textMute);
-      doc.text(`${opsEstruturacao.length} operação${opsEstruturacao.length !== 1 ? 'ões' : ''} · % de avanço por aspecto`, margin, y);
+      doc.text(`${opsEstruturacao.length} ${opsEstruturacao.length !== 1 ? 'operações' : 'operação'} · % de avanço por aspecto`, margin, y);
       y += 8;
 
       // Tabela: linha = operação, colunas = % por aspecto + total
@@ -13120,8 +13120,16 @@ async function exportPDFExecutivo() {
         return row;
       });
 
-      // Cabeçalho com aspectos abreviados (pra caber)
-      const head = [['Operação', ...catsList.map(c => truncate(c, 18)), 'TOTAL']];
+      // Limpa o nome do aspecto: "1. Aspectos Operacionais" → "Operacionais"
+      const cleanCatName = (cat) => {
+        return String(cat)
+          .replace(/^\d+\.\s*/, '')            // remove "1. ", "2. ", etc
+          .replace(/^Aspectos?\s+/i, '')       // remove "Aspectos " / "Aspecto "
+          .trim();
+      };
+
+      // Cabeçalho com aspectos limpos
+      const head = [['Operação', ...catsList.map(c => truncate(cleanCatName(c), 18)), 'TOTAL']];
 
       doc.autoTable({
         startY: y,
@@ -13160,7 +13168,7 @@ async function exportPDFExecutivo() {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7.5);
       doc.setTextColor(...NETZ_COLORS.textMute);
-      doc.text('Verde ≥ 80% · Âmbar 40-79% · Vermelho < 40% · N/A não conta no denominador · "—" sem itens neste aspecto', margin, y);
+      doc.text('Verde: 80% ou mais  -  Ambar: 40% a 79%  -  Vermelho: menos de 40%  -  N/A nao conta no denominador  -  "—" sem itens neste aspecto', margin, y);
     }
 
     // ===== Rodapé final =====
@@ -13727,22 +13735,21 @@ async function exportPDFDetalhado() {
 
         Object.keys(byCat).forEach(cat => {
           const s = catStats[cat];
-          // Barra ASCII (16 chars de largura) — não ideal mas funciona
-          const filled = Math.round((s.pct / 100) * 16);
-          const bar = '█'.repeat(filled) + '░'.repeat(16 - filled);
-          const label = `${cat.toUpperCase()}   ${bar}  ${s.pct}%  (${s.done}/${s.total - s.na}${s.na > 0 ? ` · ${s.na} N/A` : ''})`;
+          // Label sem barra ASCII — a barra é desenhada como retângulo no didDrawCell
+          const label = `${cat.toUpperCase()}                              ${s.pct}%  (${s.done}/${s.total - s.na}${s.na > 0 ? ` · ${s.na} N/A` : ''})`;
 
-          // Linha de categoria com barra de progresso
+          // Linha de categoria — marca com _progressPct pra ser identificada no didDrawCell
           ckRows.push([{
             content: label,
             colSpan: 5,
+            _progressPct: s.pct,  // hint pra o didDrawCell desenhar a barra
             styles: {
               fillColor: NETZ_COLORS.navy,
               textColor: [255, 255, 255],
               fontStyle: 'bold',
-              fontSize: 7.5,
-              font: 'courier',  // monospace pra barra ficar alinhada
-              cellPadding: 1.6,
+              fontSize: 8,
+              cellPadding: { top: 2, right: 2, bottom: 2, left: 2 },
+              minCellHeight: 7,
             }
           }]);
           byCat[cat].forEach(it => {
@@ -13787,6 +13794,36 @@ async function exportPDFDetalhado() {
               } else if (txt === 'PENDENTE') {
                 data.cell.styles.textColor = NETZ_COLORS.navy;
                 data.cell.styles.fillColor = NETZ_COLORS.bluePale;
+              }
+            }
+          },
+          didDrawCell: (data) => {
+            // Desenha barra de progresso real (retângulos vetoriais) nas linhas de categoria
+            const raw = data.cell.raw;
+            if (raw && typeof raw === 'object' && typeof raw._progressPct === 'number' && data.column.index === 0 && data.section === 'body') {
+              const pct = raw._progressPct;
+              // Barra: posicionada à direita do nome da categoria, antes do "X%"
+              const cellX = data.cell.x;
+              const cellY = data.cell.y;
+              const cellW = data.cell.width;
+              const cellH = data.cell.height;
+
+              // Largura e posição da barra: começa em ~45% da célula, ocupa ~30% da largura
+              const barW = cellW * 0.30;
+              const barH = 2.2;
+              const barX = cellX + cellW * 0.42;
+              const barY = cellY + (cellH - barH) / 2;
+
+              // Fundo da barra (cinza translúcido)
+              doc.setFillColor(255, 255, 255);
+              doc.setDrawColor(255, 255, 255);
+              doc.roundedRect(barX, barY, barW, barH, 0.4, 0.4, 'F');
+
+              // Preenchimento (laranja Netz)
+              const fillW = barW * (pct / 100);
+              if (fillW > 0) {
+                doc.setFillColor(255, 150, 90); // orange Netz
+                doc.roundedRect(barX, barY, fillW, barH, 0.4, 0.4, 'F');
               }
             }
           }
