@@ -13418,6 +13418,133 @@ async function exportPDFExecutivo() {
       doc.setFontSize(7.5);
       doc.setTextColor(...NETZ_COLORS.textMute);
       doc.text('Verde: 80% ou mais  -  Ambar: 40% a 79%  -  Vermelho: menos de 40%  -  N/A nao conta no denominador  -  "—" sem itens neste aspecto', margin, y);
+      y += 10;
+
+      // ===== Gráficos de pizza por operação em estruturação =====
+      // Listagem densa em sequência, quebrando página quando não cabe o próximo bloco
+      const PIE_BLOCK_H = 60;  // altura de cada bloco (título + pizzas + legendas + margem)
+
+      opsEstruturacao.forEach((op, idx) => {
+        const templateCk = (op.checklist || []).filter(c => c.num);
+        if (templateCk.length === 0) return;  // pula ops sem checklist Netz
+
+        // Verifica espaço — se não cabe, quebra página
+        if (y + PIE_BLOCK_H > pageH - 18) {
+          doc.addPage();
+          addPdfHeader(doc, pageW);
+          y = 38;
+          // Cabeçalho de continuação
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(11);
+          doc.setTextColor(...NETZ_COLORS.navy);
+          doc.text('Visão por Operação · Checklist Netz (continuação)', margin, y);
+          y += 7;
+        } else if (idx === 0) {
+          // Primeira operação: título da seção
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(13);
+          doc.setTextColor(...NETZ_COLORS.navy);
+          doc.text('Visão por Operação · Checklist Netz', margin, y);
+          y += 7;
+        }
+
+        // Nome da operação (cabeçalho do bloco)
+        const done = templateCk.filter(c => c.status === 'concluido').length;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(...NETZ_COLORS.navy);
+        doc.text(`${op.nome}`, margin, y);
+        // Lateral: contador + status
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(...NETZ_COLORS.textMute);
+        const subtitle = `${op.cliente || '—'} · ${op.tipo} · ${done}/${templateCk.length} concluídos`;
+        doc.text(subtitle, margin, y + 4);
+        y += 8;
+
+        // Agrupa por categoria
+        const byCat = {};
+        templateCk.forEach(it => {
+          const cat = it.categoria || `Categoria ${(it.num || '').split('.')[0]}`;
+          if (!byCat[cat]) byCat[cat] = [];
+          byCat[cat].push(it);
+        });
+
+        // Stats por categoria
+        const catStats = {};
+        Object.keys(byCat).forEach(cat => {
+          const items = byCat[cat];
+          const cDone = items.filter(it => it.status === 'concluido').length;
+          const cNA   = items.filter(it => it.status === 'na').length;
+          catStats[cat] = { total: items.length, done: cDone, na: cNA };
+        });
+
+        // Layout dos 2 gráficos
+        const pieSize = 36;
+        const pieGap = 5;
+        const legendW = 58;
+        const sectionW = pieSize + pieGap + legendW;
+        const x1 = margin;
+        const x2 = margin + sectionW + 8;
+        const pieY = y;
+
+        // Pizza 1: por aspecto (concluído escuro)
+        const catKeys = Object.keys(byCat);
+        const fatiasAspecto = catKeys.map((cat, i) => ({
+          label: cleanCatNameForLegend(cat),
+          total: catStats[cat].total - catStats[cat].na,
+          done: catStats[cat].done,
+          color: PIE_ASPECT_COLORS[i % PIE_ASPECT_COLORS.length],
+        })).filter(f => f.total > 0);
+
+        drawPieByAspect(doc, x1, pieY, pieSize, fatiasAspecto, 'Por Aspecto (escuro = concluido)');
+        const totalGeralAspecto = fatiasAspecto.reduce((s, f) => s + f.total, 0);
+        const legendItens1 = fatiasAspecto.map(f => {
+          const pctConcluido = f.total > 0 ? Math.round((f.done / f.total) * 100) : 0;
+          const pctDoTotal   = totalGeralAspecto > 0 ? Math.round((f.total / totalGeralAspecto) * 100) : 0;
+          return {
+            label: f.label,
+            color: f.color,
+            value: `${f.done}/${f.total}`,
+            sublabel: `${pctConcluido}% concluido · ${pctDoTotal}% do total`,
+          };
+        });
+        drawPieLegend(doc, x1 + pieSize + pieGap, pieY + 12, legendItens1);
+
+        // Pizza 2: por status (geral)
+        const totDone = templateCk.filter(c => c.status === 'concluido').length;
+        const totAnd  = templateCk.filter(c => c.status === 'andamento').length;
+        const totNA   = templateCk.filter(c => c.status === 'na').length;
+        const totPend = templateCk.filter(c => !['concluido','andamento','na'].includes(c.status)).length;
+
+        const fatiasStatus = [
+          { label: 'Concluido',    value: totDone, color: [46, 125, 91]   },
+          { label: 'Em Andamento', value: totAnd,  color: [229, 168, 46]  },
+          { label: 'Pendente',     value: totPend, color: [156, 163, 181] },
+          { label: 'N/A',          value: totNA,   color: [220, 227, 238] },
+        ].filter(f => f.value > 0);
+
+        drawPieSimple(doc, x2, pieY, pieSize, fatiasStatus, 'Por Status (geral)');
+        const legendItens2 = fatiasStatus.map(f => {
+          const pct = templateCk.length > 0 ? Math.round((f.value / templateCk.length) * 100) : 0;
+          return {
+            label: f.label,
+            color: f.color,
+            value: `${f.value} (${pct}%)`,
+          };
+        });
+        drawPieLegend(doc, x2 + pieSize + pieGap, pieY + 12, legendItens2);
+
+        y += pieSize + 12;
+
+        // Linha divisória entre operações (exceto na última)
+        if (idx < opsEstruturacao.length - 1) {
+          doc.setDrawColor(...NETZ_COLORS.border);
+          doc.setLineWidth(0.2);
+          doc.line(margin, y, pageW - margin, y);
+          y += 6;
+        }
+      });
     }
 
     // ===== Rodapé final =====
