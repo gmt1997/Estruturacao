@@ -13055,6 +13055,114 @@ async function exportPDFExecutivo() {
       y = doc.lastAutoTable.finalY + 6;
     });
 
+    // ===== Resumo do Checklist Netz — operações em ESTRUTURAÇÃO =====
+    const opsEstruturacao = state.operations.filter(o => o.status === 'estruturacao');
+    if (opsEstruturacao.length > 0) {
+      // Nova página dedicada
+      doc.addPage();
+      addPdfHeader(doc, pageW);
+      y = 38;
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(15);
+      doc.setTextColor(...NETZ_COLORS.navy);
+      doc.text('Resumo Checklist Netz · Operações em Estruturação', margin, y);
+      y += 5;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(...NETZ_COLORS.textMute);
+      doc.text(`${opsEstruturacao.length} operação${opsEstruturacao.length !== 1 ? 'ões' : ''} · % de avanço por aspecto`, margin, y);
+      y += 8;
+
+      // Tabela: linha = operação, colunas = % por aspecto + total
+      // Primeiro detectar todos os aspectos (categorias) que aparecem em qualquer op
+      const allCats = new Set();
+      opsEstruturacao.forEach(op => {
+        (op.checklist || []).filter(c => c.num).forEach(c => {
+          const cat = c.categoria || `Categoria ${(c.num || '').split('.')[0]}`;
+          allCats.add(cat);
+        });
+      });
+      const catsList = [...allCats].sort();
+
+      // Monta linhas
+      const rows = opsEstruturacao.map(op => {
+        const templateCk = (op.checklist || []).filter(c => c.num);
+        const byCat = {};
+        templateCk.forEach(it => {
+          const cat = it.categoria || `Categoria ${(it.num || '').split('.')[0]}`;
+          if (!byCat[cat]) byCat[cat] = [];
+          byCat[cat].push(it);
+        });
+
+        const row = [truncate(op.nome, 24)];
+
+        catsList.forEach(cat => {
+          const items = byCat[cat] || [];
+          if (items.length === 0) {
+            row.push('—');
+          } else {
+            const nNA = items.filter(it => it.status === 'na').length;
+            const nDone = items.filter(it => it.status === 'concluido').length;
+            const considered = items.length - nNA;
+            const pct = considered > 0 ? Math.round((nDone / considered) * 100) : 0;
+            row.push(pct + '%');
+          }
+        });
+
+        // Total geral
+        const totNA = templateCk.filter(c => c.status === 'na').length;
+        const totDone = templateCk.filter(c => c.status === 'concluido').length;
+        const totConsidered = templateCk.length - totNA;
+        const totPct = totConsidered > 0 ? Math.round((totDone / totConsidered) * 100) : 0;
+        row.push({ content: totPct + '%', styles: { fontStyle: 'bold' } });
+
+        return row;
+      });
+
+      // Cabeçalho com aspectos abreviados (pra caber)
+      const head = [['Operação', ...catsList.map(c => truncate(c, 18)), 'TOTAL']];
+
+      doc.autoTable({
+        startY: y,
+        head,
+        body: rows,
+        styles: { fontSize: 7.5, cellPadding: 1.6, lineColor: NETZ_COLORS.border, lineWidth: 0.1, textColor: NETZ_COLORS.text },
+        headStyles: { fillColor: NETZ_COLORS.navy, textColor: [255,255,255], fontStyle: 'bold', fontSize: 7 },
+        alternateRowStyles: { fillColor: [248, 250, 253] },
+        columnStyles: {
+          0: { fontStyle: 'bold', textColor: NETZ_COLORS.navy, cellWidth: 38 },
+        },
+        margin: { left: margin, right: margin },
+        didParseCell: (data) => {
+          // Centraliza e colore células de percentual
+          if (data.column.index > 0 && data.section === 'body') {
+            data.cell.styles.halign = 'center';
+            const raw = data.cell.raw;
+            const valStr = String(typeof raw === 'object' ? raw.content : raw || '').replace('%','');
+            const v = Number(valStr);
+            if (!isNaN(v)) {
+              if (v >= 80) data.cell.styles.textColor = NETZ_COLORS.green;
+              else if (v >= 40) data.cell.styles.textColor = NETZ_COLORS.amber;
+              else if (v > 0) data.cell.styles.textColor = [201, 59, 59];
+              else data.cell.styles.textColor = NETZ_COLORS.textMute;
+            }
+            // última coluna (TOTAL) ganha fundo
+            if (data.column.index === catsList.length + 1) {
+              data.cell.styles.fillColor = NETZ_COLORS.blueLight;
+            }
+          }
+        }
+      });
+      y = doc.lastAutoTable.finalY + 6;
+
+      // Pequeno guia de leitura
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(...NETZ_COLORS.textMute);
+      doc.text('Verde ≥ 80% · Âmbar 40-79% · Vermelho < 40% · N/A não conta no denominador · "—" sem itens neste aspecto', margin, y);
+    }
+
     // ===== Rodapé final =====
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
@@ -13604,9 +13712,39 @@ async function exportPDFDetalhado() {
         });
 
         const ckRows = [];
+        // Calcula estatísticas por categoria
+        const catStats = {};
         Object.keys(byCat).forEach(cat => {
-          // Linha de categoria (faz papel de subheader)
-          ckRows.push([{ content: cat.toUpperCase(), colSpan: 5, styles: { fillColor: NETZ_COLORS.navy, textColor: [255,255,255], fontStyle: 'bold', fontSize: 7 } }]);
+          const items = byCat[cat];
+          const cDone = items.filter(it => it.status === 'concluido').length;
+          const cAnd  = items.filter(it => it.status === 'andamento').length;
+          const cNA   = items.filter(it => it.status === 'na').length;
+          const cPend = items.filter(it => !['concluido','andamento','na'].includes(it.status)).length;
+          const considered = items.length - cNA; // N/A não conta no denominador
+          const pct = considered > 0 ? Math.round((cDone / considered) * 100) : 0;
+          catStats[cat] = { total: items.length, done: cDone, and: cAnd, na: cNA, pend: cPend, pct };
+        });
+
+        Object.keys(byCat).forEach(cat => {
+          const s = catStats[cat];
+          // Barra ASCII (16 chars de largura) — não ideal mas funciona
+          const filled = Math.round((s.pct / 100) * 16);
+          const bar = '█'.repeat(filled) + '░'.repeat(16 - filled);
+          const label = `${cat.toUpperCase()}   ${bar}  ${s.pct}%  (${s.done}/${s.total - s.na}${s.na > 0 ? ` · ${s.na} N/A` : ''})`;
+
+          // Linha de categoria com barra de progresso
+          ckRows.push([{
+            content: label,
+            colSpan: 5,
+            styles: {
+              fillColor: NETZ_COLORS.navy,
+              textColor: [255, 255, 255],
+              fontStyle: 'bold',
+              fontSize: 7.5,
+              font: 'courier',  // monospace pra barra ficar alinhada
+              cellPadding: 1.6,
+            }
+          }]);
           byCat[cat].forEach(it => {
             const statusTxt = it.status === 'concluido' ? 'CONCLUIDO' :
                              it.status === 'andamento' ? 'EM ANDAMENTO' :
@@ -13654,6 +13792,82 @@ async function exportPDFDetalhado() {
           }
         });
         y = doc.lastAutoTable.finalY + 5;
+
+        // ===== Resumo do Checklist Netz por categoria =====
+        if (y < pageH - 40) {
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          doc.setTextColor(...NETZ_COLORS.orangeDim);
+          doc.text('RESUMO CHECKLIST NETZ', margin, y);
+          y += 4;
+
+          // Linhas: por categoria + linha de total
+          const summaryRows = Object.keys(byCat).map(cat => {
+            const s = catStats[cat];
+            return [
+              cat,
+              `${s.done}/${s.total - s.na}`,
+              s.pct + '%',
+              s.and.toString(),
+              s.pend.toString(),
+              s.na.toString(),
+            ];
+          });
+
+          // Total agregado
+          const totDone = templateCk.filter(c => c.status === 'concluido').length;
+          const totAnd  = templateCk.filter(c => c.status === 'andamento').length;
+          const totNA   = templateCk.filter(c => c.status === 'na').length;
+          const totPend = templateCk.filter(c => !['concluido','andamento','na'].includes(c.status)).length;
+          const totConsidered = templateCk.length - totNA;
+          const totPct = totConsidered > 0 ? Math.round((totDone / totConsidered) * 100) : 0;
+
+          summaryRows.push([
+            { content: 'TOTAL', styles: { fontStyle: 'bold' } },
+            { content: `${totDone}/${totConsidered}`, styles: { fontStyle: 'bold' } },
+            { content: totPct + '%', styles: { fontStyle: 'bold' } },
+            { content: totAnd.toString(), styles: { fontStyle: 'bold' } },
+            { content: totPend.toString(), styles: { fontStyle: 'bold' } },
+            { content: totNA.toString(), styles: { fontStyle: 'bold' } },
+          ]);
+
+          doc.autoTable({
+            startY: y,
+            head: [['Aspecto', 'Concluídos', '% Avanço', 'Em And.', 'Pendentes', 'N/A']],
+            body: summaryRows,
+            styles: { fontSize: 8, cellPadding: 1.5, lineColor: NETZ_COLORS.border, lineWidth: 0.1 },
+            headStyles: { fillColor: NETZ_COLORS.navy, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7.5 },
+            columnStyles: {
+              0: { fontStyle: 'bold', textColor: NETZ_COLORS.navy },
+              1: { halign: 'center' },
+              2: { halign: 'right', fontStyle: 'bold' },
+              3: { halign: 'center' },
+              4: { halign: 'center' },
+              5: { halign: 'center', textColor: NETZ_COLORS.textMute },
+            },
+            margin: { left: margin, right: margin },
+            didParseCell: (data) => {
+              // Linha total: destacar com fundo
+              if (data.row.index === summaryRows.length - 1 && data.section === 'body') {
+                data.cell.styles.fillColor = NETZ_COLORS.blueLight;
+                data.cell.styles.lineWidth = 0.2;
+                data.cell.styles.lineColor = NETZ_COLORS.navy;
+              }
+              // Coluna "% Avanço": colorir conforme valor
+              if (data.column.index === 2 && data.section === 'body') {
+                const raw = data.cell.raw;
+                const valStr = String(typeof raw === 'object' ? raw.content : raw || '').replace('%','');
+                const v = Number(valStr);
+                if (!isNaN(v)) {
+                  if (v >= 80) data.cell.styles.textColor = NETZ_COLORS.green;
+                  else if (v >= 40) data.cell.styles.textColor = NETZ_COLORS.amber;
+                  else data.cell.styles.textColor = [201, 59, 59];
+                }
+              }
+            }
+          });
+          y = doc.lastAutoTable.finalY + 5;
+        }
       }
 
       // ===== Checklist customizado =====
