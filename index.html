@@ -13735,21 +13735,20 @@ async function exportPDFDetalhado() {
 
         Object.keys(byCat).forEach(cat => {
           const s = catStats[cat];
-          // Label sem barra ASCII — a barra é desenhada como retângulo no didDrawCell
-          const label = `${cat.toUpperCase()}                              ${s.pct}%  (${s.done}/${s.total - s.na}${s.na > 0 ? ` · ${s.na} N/A` : ''})`;
+          // Label de categoria — só texto, sem barra de progresso
+          const label = `${cat.toUpperCase()}   ·   ${s.pct}% concluído   (${s.done}/${s.total - s.na}${s.na > 0 ? ` · ${s.na} N/A` : ''})`;
 
-          // Linha de categoria — marca com _progressPct pra ser identificada no didDrawCell
           ckRows.push([{
             content: label,
             colSpan: 5,
-            _progressPct: s.pct,  // hint pra o didDrawCell desenhar a barra
             styles: {
               fillColor: NETZ_COLORS.navy,
               textColor: [255, 255, 255],
               fontStyle: 'bold',
               fontSize: 8,
+              halign: 'left',
               cellPadding: { top: 2, right: 2, bottom: 2, left: 2 },
-              minCellHeight: 7,
+              minCellHeight: 6,
             }
           }]);
           byCat[cat].forEach(it => {
@@ -13794,36 +13793,6 @@ async function exportPDFDetalhado() {
               } else if (txt === 'PENDENTE') {
                 data.cell.styles.textColor = NETZ_COLORS.navy;
                 data.cell.styles.fillColor = NETZ_COLORS.bluePale;
-              }
-            }
-          },
-          didDrawCell: (data) => {
-            // Desenha barra de progresso real (retângulos vetoriais) nas linhas de categoria
-            const raw = data.cell.raw;
-            if (raw && typeof raw === 'object' && typeof raw._progressPct === 'number' && data.column.index === 0 && data.section === 'body') {
-              const pct = raw._progressPct;
-              // Barra: posicionada à direita do nome da categoria, antes do "X%"
-              const cellX = data.cell.x;
-              const cellY = data.cell.y;
-              const cellW = data.cell.width;
-              const cellH = data.cell.height;
-
-              // Largura e posição da barra: começa em ~45% da célula, ocupa ~30% da largura
-              const barW = cellW * 0.30;
-              const barH = 2.2;
-              const barX = cellX + cellW * 0.42;
-              const barY = cellY + (cellH - barH) / 2;
-
-              // Fundo da barra (cinza translúcido)
-              doc.setFillColor(255, 255, 255);
-              doc.setDrawColor(255, 255, 255);
-              doc.roundedRect(barX, barY, barW, barH, 0.4, 0.4, 'F');
-
-              // Preenchimento (laranja Netz)
-              const fillW = barW * (pct / 100);
-              if (fillW > 0) {
-                doc.setFillColor(255, 150, 90); // orange Netz
-                doc.roundedRect(barX, barY, fillW, barH, 0.4, 0.4, 'F');
               }
             }
           }
