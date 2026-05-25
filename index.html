@@ -13985,7 +13985,21 @@ async function exportPDFDetalhado() {
         // ===== Gráficos de Pizza =====
         // Pizza 1: por aspecto (sub-fatia escura = concluído, clara = pendente)
         // Pizza 2: distribuição geral por status (concluído/andamento/pendente/N/A)
-        if (y < pageH - 70) {
+        {
+          // Se não há espaço suficiente nesta página, quebra ANTES (não pula)
+          const piePanelHeight = 58; // pizza (38mm) + título + margem
+          if (y > pageH - piePanelHeight - 20) {
+            doc.addPage();
+            addPdfHeader(doc, pageW);
+            y = 38;
+            // Re-imprime o sub-título da seção pra contexto
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            doc.setTextColor(...NETZ_COLORS.orangeDim);
+            doc.text(`CHECKLIST NETZ  (${done}/${templateCk.length})  (continuação)`, margin, y);
+            y += 4;
+          }
+
           const catKeys = Object.keys(byCat);
           const pieSize = 38;
           const pieGap = 5;
