@@ -5471,21 +5471,49 @@ async function loadOperations() {
     }
   }
 
-  // Migração transparente: separa título da descrição em itens template do checklist
-  // Aplica-se apenas em itens com `num` (template Netz) que ainda não têm campo `titulo`
+  // Migração transparente: enriquece itens do template Netz (com `num`) que ainda
+  // não têm o campo `titulo`. Usa o lookup por `num` montado a partir do template
+  // atual — fonte da verdade. Isso preserva operações antigas sem corromper o texto.
+  //
+  // Também detecta e CORRIGE itens corrompidos pela versão anterior dessa migração,
+  // que jogava a descrição inteira no campo `titulo` quando não conseguia separar.
+  const TEMPLATE_BY_NUM = buildTemplateLookupByNum();
   for (const op of state.operations) {
     if (!Array.isArray(op.checklist) || op.checklist.length === 0) continue;
     let mudou = false;
     const novoCk = op.checklist.map(item => {
-      // Só processa itens do template (com num), que ainda não têm titulo
-      if (!item.num || item.titulo) return item;
-      if (!item.texto || typeof item.texto !== 'string') return item;
+      if (!item.num) return item; // só itens do template
 
-      const { titulo, descricao } = splitTituloDescricao(item.texto);
-      if (titulo) {
-        mudou = true;
-        return { ...item, titulo, texto: descricao || '' };
+      const entry = TEMPLATE_BY_NUM[item.num];
+      if (!entry) return item; // num não bate com nenhum template conhecido
+
+      // Resolve _multi (mesmo num em FIDC vs Debênture/CR): bate pelo texto/titulo antigo
+      let ref = entry;
+      if (entry._multi) {
+        const oldText = (item.texto || '').trim();
+        const oldTitulo = (item.titulo || '').trim();
+        // Tenta match exato no texto OU no título (caso já tenha sido corrompido)
+        ref = entry._multi.find(c => c.texto.trim() === oldText)
+           || entry._multi.find(c => c.texto.trim() === oldTitulo)
+           || entry._multi.find(c => c.tplKey === 'fidc')
+           || entry._multi[0];
       }
+
+      // Caso 1: item nunca teve título → preenche
+      if (!item.titulo) {
+        mudou = true;
+        return { ...item, titulo: ref.titulo, texto: ref.texto };
+      }
+
+      // Caso 2: detecta corrupção da migração anterior — quando o `titulo` salvo
+      // tem mais de 50 chars E bate exatamente com o `texto` do template,
+      // significa que a descrição foi salva como título. Restaura.
+      const corruptedTitulo = (item.titulo || '').trim();
+      if (corruptedTitulo.length > 50 && corruptedTitulo === ref.texto.trim()) {
+        mudou = true;
+        return { ...item, titulo: ref.titulo, texto: ref.texto };
+      }
+
       return item;
     });
 
@@ -5494,6 +5522,34 @@ async function loadOperations() {
       op.checklist = novoCk;
     }
   }
+}
+
+// Constrói lookup { '1.1': { titulo, texto, area, categoria }, ... } a partir
+// de TODOS os templates NETZ_CHECKLIST_TEMPLATES. Itens com mesmo `num` em
+// templates diferentes (FIDC vs Debênture/CR): o primeiro vence — mas como
+// títulos e textos do FIDC e Debênture/CR diferem por num, usamos heurística:
+// se o `texto` antigo do item bater com o `texto` de algum template, prefere esse.
+function buildTemplateLookupByNum() {
+  const lookup = {};
+  Object.keys(NETZ_CHECKLIST_TEMPLATES).forEach(tplKey => {
+    const tpl = NETZ_CHECKLIST_TEMPLATES[tplKey];
+    (tpl.categories || []).forEach(cat => {
+      (cat.items || []).forEach(it => {
+        if (!lookup[it.num]) lookup[it.num] = [];
+        lookup[it.num].push({
+          titulo: it.titulo, texto: it.texto, area: it.area,
+          categoria: cat.categoria, tplKey
+        });
+      });
+    });
+  });
+  // Simplifica: se o `num` só tem 1 candidato, mantém objeto direto;
+  // se tem múltiplos (FIDC e Debênture/CR), guarda lista pra matching posterior
+  const flat = {};
+  Object.keys(lookup).forEach(num => {
+    flat[num] = lookup[num].length === 1 ? lookup[num][0] : { _multi: lookup[num] };
+  });
+  return flat;
 }
 
 // Helper: separa "Título do Item. Descrição completa do item..." em { titulo, descricao }
