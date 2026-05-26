@@ -1343,6 +1343,93 @@
     color: var(--text-mute);
     font-size: 13px;
   }
+
+  /* Hover nas fatias da pizza */
+  .ck-pie-slice {
+    cursor: pointer;
+    transition: opacity 0.15s, filter 0.15s;
+  }
+  .ck-pie-slice:hover {
+    filter: brightness(1.05);
+    opacity: 0.92;
+  }
+
+  /* Tooltip flutuante */
+  .ck-pie-tooltip {
+    position: fixed;
+    z-index: 9999;
+    pointer-events: none;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 27, 92, 0.16), 0 2px 6px rgba(0, 0, 0, 0.06);
+    max-width: 420px;
+    min-width: 280px;
+    font-size: 11px;
+    color: var(--text);
+    overflow: hidden;
+  }
+  .ck-tip-header {
+    padding: 10px 14px;
+    background: var(--blue-pale);
+    border-left: 4px solid;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .ck-tip-title {
+    font-weight: 700;
+    color: var(--navy);
+    font-size: 13px;
+    line-height: 1.3;
+  }
+  .ck-tip-stats {
+    font-size: 11px;
+    color: var(--text-mute);
+    margin-top: 2px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .ck-tip-body {
+    padding: 10px 14px;
+    max-height: 380px;
+    overflow-y: auto;
+  }
+  .ck-tip-section + .ck-tip-section {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border-soft);
+  }
+  .ck-tip-section-title {
+    font-weight: 600;
+    font-size: 11px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .ck-tip-item {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    padding: 4px 0;
+    line-height: 1.4;
+  }
+  .ck-tip-item + .ck-tip-item {
+    border-top: 1px solid var(--border-soft);
+  }
+  .ck-tip-num {
+    flex: 1;
+    color: var(--text);
+    word-break: break-word;
+  }
+  .ck-tip-badge {
+    flex-shrink: 0;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    align-self: flex-start;
+    margin-top: 1px;
+  }
   .ck-summary-bar {
     display: flex;
     gap: 14px;
@@ -11776,6 +11863,27 @@ function renderChecklistDashboard() {
     { label: CK_STATUS_LABELS.na,        value: totNA,   colorHex: CK_STATUS_COLORS.na },
   ].filter(f => f.value > 0);
 
+  // ===== Itens agrupados para os tooltips =====
+  // Por aspecto: chaveado por catKey, ordenado por num
+  const itemsByCat = {};
+  Object.keys(byCat).forEach(cat => {
+    itemsByCat[cat] = [...byCat[cat]].sort((a,b) => (a.num || '').localeCompare(b.num || '', undefined, { numeric: true }));
+  });
+
+  // Por status: lista de itens em cada status
+  const itemsByStatus = {
+    concluido: templateCk.filter(c => c.status === 'concluido'),
+    andamento: templateCk.filter(c => c.status === 'andamento'),
+    pendente:  templateCk.filter(c => !['concluido','andamento','na'].includes(c.status)),
+    na:        templateCk.filter(c => c.status === 'na'),
+  };
+  Object.keys(itemsByStatus).forEach(k => {
+    itemsByStatus[k].sort((a,b) => (a.num || '').localeCompare(b.num || '', undefined, { numeric: true }));
+  });
+
+  // Limpa cache anterior antes de re-render
+  state.ckPieDataCache = {};
+
   // Barra de resumo no topo
   const summary = `
     <div class="ck-summary-bar">
@@ -11783,6 +11891,7 @@ function renderChecklistDashboard() {
       <span>Tipo: <strong>${escapeHtml(op.tipo)}</strong></span>
       <span>Status: <strong>${STATUS_LABELS[op.status]}</strong></span>
       <span>Progresso: <strong>${totDone}/${templateCk.length}</strong> concluídos${totNA > 0 ? ` · ${totNA} N/A` : ''}</span>
+      <span style="font-size: 11px; color: var(--text-mute); margin-left: auto;">💡 passe o mouse nas fatias para ver os itens</span>
     </div>
   `;
 
@@ -11792,7 +11901,7 @@ function renderChecklistDashboard() {
       <div class="ck-pie-block">
         <div>
           <div class="ck-pie-title">Por Aspecto (escuro = concluído)</div>
-          ${renderPieByAspectSVG(fatiasAspecto)}
+          ${renderPieByAspectSVG(fatiasAspecto, itemsByCat)}
         </div>
         <div class="ck-pie-legend">
           ${fatiasAspecto.map(f => {
@@ -11811,7 +11920,7 @@ function renderChecklistDashboard() {
       <div class="ck-pie-block">
         <div>
           <div class="ck-pie-title">Por Status (geral)</div>
-          ${renderPieSimpleSVG(fatiasStatus)}
+          ${renderPieSimpleSVG(fatiasStatus, itemsByStatus)}
         </div>
         <div class="ck-pie-legend">
           ${fatiasStatus.map(f => {
@@ -11838,25 +11947,53 @@ function arcPath(cx, cy, r, startAng, endAng) {
   return `M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${largeArc} 1 ${x2},${y2} Z`;
 }
 
+// Cache global de fatias pra tooltip (chave aleatória por render)
+state.ckPieDataCache = {};
+
 // Pizza por aspecto (fatia inteira clara + sub-fatia escura nos concluídos)
-function renderPieByAspectSVG(fatias) {
+// itemsByCat: { [catKey]: [items] }  ← passado pra tooltip
+function renderPieByAspectSVG(fatias, itemsByCat) {
   const cx = 100, cy = 100, r = 88;
   const total = fatias.reduce((s, f) => s + f.total, 0);
   if (total === 0) return `<svg class="ck-pie-svg" viewBox="0 0 200 200"><text x="100" y="100" text-anchor="middle" font-size="12" fill="#9CA3B5">Sem dados</text></svg>`;
 
+  // Cacheia os items por aspecto
+  const cacheKey = 'aspecto_' + Math.random().toString(36).slice(2, 9);
+  state.ckPieDataCache[cacheKey] = { kind: 'aspecto', fatias, itemsByCat };
+
   let curAng = -Math.PI / 2;
   const paths = [];
 
-  fatias.forEach(f => {
+  fatias.forEach((f, idx) => {
     const sweep = (f.total / total) * Math.PI * 2;
     const endAng = curAng + sweep;
-    // Sub-fatia clara (fatia inteira)
     const lightColor = lightenHex(f.colorHex, 0.78);
-    paths.push(`<path d="${arcPath(cx, cy, r, curAng, endAng)}" fill="${lightColor}" stroke="#fff" stroke-width="1.5"/>`);
+
+    // Fatia inteira clara — clicável/hover
+    paths.push(`<path
+      class="ck-pie-slice"
+      d="${arcPath(cx, cy, r, curAng, endAng)}"
+      fill="${lightColor}"
+      stroke="#fff"
+      stroke-width="1.5"
+      data-cache="${cacheKey}"
+      data-idx="${idx}"
+      data-part="full"
+    />`);
+
     // Sub-fatia escura (concluídos)
     if (f.done > 0) {
       const doneSweep = (f.done / f.total) * sweep;
-      paths.push(`<path d="${arcPath(cx, cy, r, curAng, curAng + doneSweep)}" fill="${f.colorHex}" stroke="#fff" stroke-width="1.5"/>`);
+      paths.push(`<path
+        class="ck-pie-slice"
+        d="${arcPath(cx, cy, r, curAng, curAng + doneSweep)}"
+        fill="${f.colorHex}"
+        stroke="#fff"
+        stroke-width="1.5"
+        data-cache="${cacheKey}"
+        data-idx="${idx}"
+        data-part="done"
+      />`);
     }
     curAng = endAng;
   });
@@ -11865,30 +12002,205 @@ function renderPieByAspectSVG(fatias) {
 }
 
 // Pizza simples (sem sub-fatias)
-function renderPieSimpleSVG(fatias) {
+// itemsByStatus: { concluido: [], andamento: [], pendente: [], na: [] }
+function renderPieSimpleSVG(fatias, itemsByStatus) {
   const cx = 100, cy = 100, r = 88;
   const total = fatias.reduce((s, f) => s + f.value, 0);
   if (total === 0) return `<svg class="ck-pie-svg" viewBox="0 0 200 200"><text x="100" y="100" text-anchor="middle" font-size="12" fill="#9CA3B5">Sem dados</text></svg>`;
 
-  // Caso especial: 1 fatia só (círculo inteiro) — usar <circle> em vez de path
+  const cacheKey = 'status_' + Math.random().toString(36).slice(2, 9);
+  state.ckPieDataCache[cacheKey] = { kind: 'status', fatias, itemsByStatus };
+
+  // Caso especial: 1 fatia só
   if (fatias.filter(f => f.value > 0).length === 1) {
     const f = fatias.find(x => x.value > 0);
+    const fidx = fatias.indexOf(f);
     return `<svg class="ck-pie-svg" viewBox="0 0 200 200">
-      <circle cx="${cx}" cy="${cy}" r="${r}" fill="${f.colorHex}" stroke="#fff" stroke-width="1.5"/>
+      <circle class="ck-pie-slice" cx="${cx}" cy="${cy}" r="${r}" fill="${f.colorHex}" stroke="#fff" stroke-width="1.5"
+        data-cache="${cacheKey}" data-idx="${fidx}" data-part="full"/>
     </svg>`;
   }
 
   let curAng = -Math.PI / 2;
   const paths = [];
-  fatias.forEach(f => {
+  fatias.forEach((f, idx) => {
     if (f.value === 0) return;
     const sweep = (f.value / total) * Math.PI * 2;
-    paths.push(`<path d="${arcPath(cx, cy, r, curAng, curAng + sweep)}" fill="${f.colorHex}" stroke="#fff" stroke-width="1.5"/>`);
+    paths.push(`<path
+      class="ck-pie-slice"
+      d="${arcPath(cx, cy, r, curAng, curAng + sweep)}"
+      fill="${f.colorHex}"
+      stroke="#fff"
+      stroke-width="1.5"
+      data-cache="${cacheKey}"
+      data-idx="${idx}"
+      data-part="full"
+    />`);
     curAng += sweep;
   });
 
   return `<svg class="ck-pie-svg" viewBox="0 0 200 200">${paths.join('')}</svg>`;
 }
+
+// ===== Tooltip flutuante =====
+const CK_STATUS_BADGES = {
+  concluido: { label: 'Concluído', color: '#2E7D5B', bg: 'rgba(46,125,91,0.12)' },
+  andamento: { label: 'Em Andamento', color: '#E5A82E', bg: 'rgba(229,168,46,0.15)' },
+  pendente:  { label: 'Pendente', color: '#5A6785', bg: 'rgba(156,163,181,0.18)' },
+  na:        { label: 'N/A', color: '#9CA3B5', bg: 'rgba(220,227,238,0.4)' },
+};
+
+function getItemDisplayLabel(item) {
+  // Prefere título se disponível (mais curto e descritivo)
+  if (item.titulo) return `${item.num} ${item.titulo}`;
+  return `${item.num} ${(item.texto || '').slice(0, 90)}`;
+}
+
+function renderItemsList(items) {
+  if (!items || items.length === 0) {
+    return '<div style="color:#9CA3B5; font-style:italic; font-size:11px;">Nenhum item</div>';
+  }
+  return items.map(it => {
+    const status = it.status || 'pendente';
+    const badge = CK_STATUS_BADGES[status] || CK_STATUS_BADGES.pendente;
+    const label = getItemDisplayLabel(it);
+    return `<div class="ck-tip-item">
+      <span class="ck-tip-num">${escapeHtml(label)}</span>
+      <span class="ck-tip-badge" style="color:${badge.color}; background:${badge.bg};">${badge.label}</span>
+    </div>`;
+  }).join('');
+}
+
+function buildPieTooltipHTML(slice) {
+  const cache = state.ckPieDataCache[slice.dataset.cache];
+  if (!cache) return null;
+  const idx = Number(slice.dataset.idx);
+  const part = slice.dataset.part;
+  const fatia = cache.fatias[idx];
+  if (!fatia) return null;
+
+  if (cache.kind === 'aspecto') {
+    const items = cache.itemsByCat[fatia.catKey] || [];
+    const pendentes = items.filter(it => !(it.status === 'concluido' || it.status === 'na'));
+    const concluidos = items.filter(it => it.status === 'concluido');
+    const naItems = items.filter(it => it.status === 'na');
+
+    let bodyHTML = '';
+    if (part === 'done') {
+      // Hover na sub-fatia escura → mostra só concluídos
+      bodyHTML = `
+        <div class="ck-tip-section">
+          <div class="ck-tip-section-title">✓ Concluídos (${concluidos.length})</div>
+          ${renderItemsList(concluidos)}
+        </div>
+      `;
+    } else {
+      // Hover na fatia inteira → mostra tudo agrupado
+      bodyHTML = `
+        ${concluidos.length > 0 ? `<div class="ck-tip-section">
+          <div class="ck-tip-section-title" style="color:#2E7D5B;">✓ Concluídos (${concluidos.length})</div>
+          ${renderItemsList(concluidos)}
+        </div>` : ''}
+        ${pendentes.length > 0 ? `<div class="ck-tip-section">
+          <div class="ck-tip-section-title" style="color:#5A6785;">⏳ Pendentes (${pendentes.length})</div>
+          ${renderItemsList(pendentes)}
+        </div>` : ''}
+        ${naItems.length > 0 ? `<div class="ck-tip-section">
+          <div class="ck-tip-section-title" style="color:#9CA3B5;">— Não aplicáveis (${naItems.length})</div>
+          ${renderItemsList(naItems)}
+        </div>` : ''}
+      `;
+    }
+
+    const pctConcluido = fatia.total > 0 ? Math.round((fatia.done / fatia.total) * 100) : 0;
+    return `
+      <div class="ck-tip-header" style="border-color:${fatia.colorHex};">
+        <div class="ck-tip-title">${escapeHtml(fatia.label)}</div>
+        <div class="ck-tip-stats">${fatia.done}/${fatia.total} concluídos · ${pctConcluido}%</div>
+      </div>
+      <div class="ck-tip-body">${bodyHTML}</div>
+    `;
+  }
+
+  // Pizza por status
+  if (cache.kind === 'status') {
+    // fatia.label = "Concluído", "Em Andamento", etc → preciso descobrir o key
+    const statusKeyMap = {
+      'Concluído': 'concluido',
+      'Em Andamento': 'andamento',
+      'Pendente': 'pendente',
+      'N/A': 'na',
+    };
+    const statusKey = statusKeyMap[fatia.label] || 'pendente';
+    const items = cache.itemsByStatus[statusKey] || [];
+    const total = cache.fatias.reduce((s, f) => s + f.value, 0);
+    const pct = total > 0 ? Math.round((fatia.value / total) * 100) : 0;
+    return `
+      <div class="ck-tip-header" style="border-color:${fatia.colorHex};">
+        <div class="ck-tip-title">${escapeHtml(fatia.label)}</div>
+        <div class="ck-tip-stats">${fatia.value} itens · ${pct}% do total</div>
+      </div>
+      <div class="ck-tip-body">
+        ${renderItemsList(items)}
+      </div>
+    `;
+  }
+
+  return null;
+}
+
+// Listener global pra mostrar/esconder tooltip
+let ckTipEl = null;
+function ensureCkTooltipEl() {
+  if (ckTipEl) return ckTipEl;
+  ckTipEl = document.createElement('div');
+  ckTipEl.className = 'ck-pie-tooltip';
+  ckTipEl.style.display = 'none';
+  document.body.appendChild(ckTipEl);
+  return ckTipEl;
+}
+
+// Mouse handlers nos elementos .ck-pie-slice
+document.addEventListener('mouseover', e => {
+  const slice = e.target.closest && e.target.closest('.ck-pie-slice');
+  if (!slice) return;
+  const tip = ensureCkTooltipEl();
+  const html = buildPieTooltipHTML(slice);
+  if (!html) return;
+  tip.innerHTML = html;
+  tip.style.display = 'block';
+});
+
+document.addEventListener('mousemove', e => {
+  if (!ckTipEl || ckTipEl.style.display === 'none') return;
+  const slice = e.target.closest && e.target.closest('.ck-pie-slice');
+  if (!slice) {
+    ckTipEl.style.display = 'none';
+    return;
+  }
+  // Posiciona perto do cursor, mas evitando sair da tela
+  const padding = 14;
+  let x = e.clientX + padding;
+  let y = e.clientY + padding;
+  const rect = ckTipEl.getBoundingClientRect();
+  if (x + rect.width > window.innerWidth - 10) {
+    x = e.clientX - rect.width - padding;
+  }
+  if (y + rect.height > window.innerHeight - 10) {
+    y = window.innerHeight - rect.height - 10;
+  }
+  ckTipEl.style.left = x + 'px';
+  ckTipEl.style.top  = y + 'px';
+});
+
+document.addEventListener('mouseout', e => {
+  const slice = e.target.closest && e.target.closest('.ck-pie-slice');
+  if (slice && ckTipEl) {
+    // Se foi pra outro slice, mantém; se saiu de tudo, esconde
+    const next = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.ck-pie-slice');
+    if (!next) ckTipEl.style.display = 'none';
+  }
+});
 
 function getAportesSchedule(op) {
   if (!op) return [];
