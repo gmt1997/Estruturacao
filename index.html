@@ -1273,6 +1273,89 @@
     margin-bottom: 20px;
   }
 
+  /* ===== Checklist Netz Dashboard (gráficos de pizza) ===== */
+  .ck-dashboard {
+    display: flex;
+    gap: 32px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding: 8px 4px;
+  }
+  .ck-pie-block {
+    flex: 1;
+    min-width: 360px;
+    display: flex;
+    gap: 18px;
+    align-items: center;
+  }
+  .ck-pie-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--navy);
+    margin-bottom: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .ck-pie-svg {
+    flex-shrink: 0;
+    width: 200px;
+    height: 230px;
+  }
+  .ck-pie-legend {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--text);
+  }
+  .ck-pie-legend-item {
+    display: grid;
+    grid-template-columns: 12px 1fr auto;
+    gap: 8px;
+    align-items: center;
+  }
+  .ck-pie-legend-color {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    margin-top: 2px;
+  }
+  .ck-pie-legend-name {
+    font-weight: 500;
+    color: var(--text);
+  }
+  .ck-pie-legend-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    color: var(--navy);
+    font-size: 11px;
+  }
+  .ck-pie-legend-sub {
+    grid-column: 2 / -1;
+    font-size: 10px;
+    color: var(--text-mute);
+    margin-top: -2px;
+  }
+  .ck-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-mute);
+    font-size: 13px;
+  }
+  .ck-summary-bar {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    background: var(--blue-pale);
+    border-radius: 6px;
+    margin-bottom: 18px;
+    font-size: 12px;
+    color: var(--text-soft);
+  }
+  .ck-summary-bar strong { color: var(--navy); }
+
   /* ===== Forecast Probabilístico ===== */
   .forecast-panel {
     background: #fff;
@@ -3976,6 +4059,18 @@
         </div>
       </div>
 
+      <h2 class="section-title" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+        <span>Checklist Netz por Operação</span>
+        <select id="ckChecklistOpFilter" class="filter-select" onchange="renderChecklistDashboard()" style="max-width: 380px;">
+          <option value="">Selecione uma operação…</option>
+        </select>
+      </h2>
+      <div class="single-chart-card">
+        <div class="chart-card chart-card-wide">
+          <div id="ckChecklistDashboard"></div>
+        </div>
+      </div>
+
       <h2 class="section-title">Funil de Conversão & Distribuição</h2>
       <div class="charts-grid">
         <div class="chart-card">
@@ -5609,6 +5704,7 @@ function renderAll() {
   renderVolumeMonthlyChart();
   renderAportesChart();
   renderForecast();
+  renderChecklistDashboard();
   renderFunnelChart();
   renderTipoChart();
   renderStatusChart();
@@ -11538,6 +11634,260 @@ function exportDesembolsosXLSX() {
 
   XLSX.writeFile(wb, filename);
   showToast(`Excel gerado · ${realizadoRows.length} realizados · ${projetadoRows.length} projetados`);
+}
+
+// ============================================
+// CHECKLIST NETZ DASHBOARD (gráficos de pizza por operação)
+// ============================================
+
+// Cores Netz pra paleta de aspectos (mesmas do PDF)
+const CK_ASPECT_PALETTE_HEX = [
+  '#001B5C', // navy
+  '#FF965A', // orange
+  '#2E7D5B', // green
+  '#6A4A8C', // purple
+  '#1F6088', // blue-deep
+  '#E5A82E', // amber
+  '#C93B3B', // red
+  '#9CA3B5', // gray
+];
+
+const CK_STATUS_COLORS = {
+  concluido:  '#2E7D5B',
+  andamento:  '#E5A82E',
+  pendente:   '#9CA3B5',
+  na:         '#DCE3EE',
+};
+const CK_STATUS_LABELS = {
+  concluido:  'Concluído',
+  andamento:  'Em Andamento',
+  pendente:   'Pendente',
+  na:         'N/A',
+};
+
+// Estado: id da op selecionada no filtro do dashboard
+state.ckChecklistOpId = null;
+
+// Versão clara (mistura com branco) — pra "pendente" dentro do aspecto
+function lightenHex(hex, factor = 0.78) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const lr = Math.round(r + (255 - r) * factor);
+  const lg = Math.round(g + (255 - g) * factor);
+  const lb = Math.round(b + (255 - b) * factor);
+  return `rgb(${lr},${lg},${lb})`;
+}
+
+// Popula o select e renderiza o dashboard
+function renderChecklistDashboard() {
+  const sel = document.getElementById('ckChecklistOpFilter');
+  const wrap = document.getElementById('ckChecklistDashboard');
+  if (!sel || !wrap) return;
+
+  // Lista operações ativas que TÊM checklist Netz preenchido
+  const elegiveis = (state.operations || []).filter(op => {
+    if (op.status === 'stand' || op.status === 'liquidacao') return false;
+    const templateCk = (op.checklist || []).filter(c => c.num);
+    return templateCk.length > 0;
+  });
+
+  // Ordena por status (pipeline order) + nome
+  elegiveis.sort((a, b) => {
+    const ia = STATUS_ORDER.indexOf(a.status);
+    const ib = STATUS_ORDER.indexOf(b.status);
+    if (ia !== ib) return ia - ib;
+    return (a.nome || '').localeCompare(b.nome || '', 'pt-BR');
+  });
+
+  // Popula select preservando seleção atual
+  const currentValue = sel.value || state.ckChecklistOpId;
+  sel.innerHTML = '<option value="">Selecione uma operação…</option>' +
+    elegiveis.map(op => `<option value="${op.id}">${escapeHtml(op.nome)} · ${escapeHtml(op.cliente || '—')} · ${STATUS_LABELS[op.status]}</option>`).join('');
+
+  // Define seleção: usa salva se ainda válida, senão primeira da lista
+  let selectedId = currentValue;
+  const isValid = elegiveis.some(o => String(o.id) === String(selectedId));
+  if (!isValid) selectedId = elegiveis.length > 0 ? String(elegiveis[0].id) : '';
+  sel.value = selectedId;
+  state.ckChecklistOpId = selectedId;
+
+  if (!selectedId) {
+    wrap.innerHTML = `<div class="ck-empty">
+      <strong>Nenhuma operação com checklist Netz preenchido</strong><br>
+      <span style="font-size: 11px;">Adicione itens do checklist Netz em uma operação para visualizar os gráficos.</span>
+    </div>`;
+    return;
+  }
+
+  const op = state.operations.find(o => String(o.id) === String(selectedId));
+  if (!op) return;
+
+  const templateCk = (op.checklist || []).filter(c => c.num);
+  if (templateCk.length === 0) {
+    wrap.innerHTML = `<div class="ck-empty">Esta operação não tem itens do checklist Netz preenchidos.</div>`;
+    return;
+  }
+
+  // Agrupa por categoria
+  const byCat = {};
+  templateCk.forEach(it => {
+    const cat = it.categoria || `Categoria ${(it.num || '').split('.')[0]}`;
+    if (!byCat[cat]) byCat[cat] = [];
+    byCat[cat].push(it);
+  });
+
+  // Stats por categoria
+  const catStats = {};
+  Object.keys(byCat).forEach(cat => {
+    const items = byCat[cat];
+    const cDone = items.filter(it => it.status === 'concluido').length;
+    const cNA = items.filter(it => it.status === 'na').length;
+    catStats[cat] = {
+      total: items.length,
+      considered: items.length - cNA, // exclui N/A do denominador
+      done: cDone,
+    };
+  });
+
+  // Totais por status (pizza 2)
+  const totDone = templateCk.filter(c => c.status === 'concluido').length;
+  const totAnd  = templateCk.filter(c => c.status === 'andamento').length;
+  const totNA   = templateCk.filter(c => c.status === 'na').length;
+  const totPend = templateCk.filter(c => !['concluido','andamento','na'].includes(c.status)).length;
+
+  // ===== Pizza 1: por aspecto =====
+  const catKeys = Object.keys(byCat);
+  const fatiasAspecto = catKeys.map((cat, idx) => ({
+    label: cleanCatNameForLegend(cat),
+    catKey: cat,
+    total: catStats[cat].considered,
+    done: catStats[cat].done,
+    colorHex: CK_ASPECT_PALETTE_HEX[idx % CK_ASPECT_PALETTE_HEX.length],
+  })).filter(f => f.total > 0);
+
+  const totalAspecto = fatiasAspecto.reduce((s, f) => s + f.total, 0);
+
+  // ===== Pizza 2: por status =====
+  const fatiasStatus = [
+    { label: CK_STATUS_LABELS.concluido, value: totDone, colorHex: CK_STATUS_COLORS.concluido },
+    { label: CK_STATUS_LABELS.andamento, value: totAnd,  colorHex: CK_STATUS_COLORS.andamento },
+    { label: CK_STATUS_LABELS.pendente,  value: totPend, colorHex: CK_STATUS_COLORS.pendente },
+    { label: CK_STATUS_LABELS.na,        value: totNA,   colorHex: CK_STATUS_COLORS.na },
+  ].filter(f => f.value > 0);
+
+  // Barra de resumo no topo
+  const summary = `
+    <div class="ck-summary-bar">
+      <span><strong>${escapeHtml(op.nome)}</strong> · ${escapeHtml(op.cliente || '—')}</span>
+      <span>Tipo: <strong>${escapeHtml(op.tipo)}</strong></span>
+      <span>Status: <strong>${STATUS_LABELS[op.status]}</strong></span>
+      <span>Progresso: <strong>${totDone}/${templateCk.length}</strong> concluídos${totNA > 0 ? ` · ${totNA} N/A` : ''}</span>
+    </div>
+  `;
+
+  // Render
+  wrap.innerHTML = summary + `
+    <div class="ck-dashboard">
+      <div class="ck-pie-block">
+        <div>
+          <div class="ck-pie-title">Por Aspecto (escuro = concluído)</div>
+          ${renderPieByAspectSVG(fatiasAspecto)}
+        </div>
+        <div class="ck-pie-legend">
+          ${fatiasAspecto.map(f => {
+            const pctConcluido = f.total > 0 ? Math.round((f.done / f.total) * 100) : 0;
+            const pctDoTotal = totalAspecto > 0 ? Math.round((f.total / totalAspecto) * 100) : 0;
+            return `<div class="ck-pie-legend-item">
+              <span class="ck-pie-legend-color" style="background:${f.colorHex};"></span>
+              <span class="ck-pie-legend-name">${escapeHtml(f.label)}</span>
+              <span class="ck-pie-legend-value">${f.done}/${f.total}</span>
+              <span class="ck-pie-legend-sub">${pctConcluido}% concluído · ${pctDoTotal}% do total</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+
+      <div class="ck-pie-block">
+        <div>
+          <div class="ck-pie-title">Por Status (geral)</div>
+          ${renderPieSimpleSVG(fatiasStatus)}
+        </div>
+        <div class="ck-pie-legend">
+          ${fatiasStatus.map(f => {
+            const pct = templateCk.length > 0 ? Math.round((f.value / templateCk.length) * 100) : 0;
+            return `<div class="ck-pie-legend-item">
+              <span class="ck-pie-legend-color" style="background:${f.colorHex};"></span>
+              <span class="ck-pie-legend-name">${escapeHtml(f.label)}</span>
+              <span class="ck-pie-legend-value">${f.value} (${pct}%)</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Gera SVG path para uma fatia (centro 100,100; raio 90)
+function arcPath(cx, cy, r, startAng, endAng) {
+  const x1 = cx + Math.cos(startAng) * r;
+  const y1 = cy + Math.sin(startAng) * r;
+  const x2 = cx + Math.cos(endAng) * r;
+  const y2 = cy + Math.sin(endAng) * r;
+  const largeArc = (endAng - startAng) > Math.PI ? 1 : 0;
+  return `M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${largeArc} 1 ${x2},${y2} Z`;
+}
+
+// Pizza por aspecto (fatia inteira clara + sub-fatia escura nos concluídos)
+function renderPieByAspectSVG(fatias) {
+  const cx = 100, cy = 100, r = 88;
+  const total = fatias.reduce((s, f) => s + f.total, 0);
+  if (total === 0) return `<svg class="ck-pie-svg" viewBox="0 0 200 200"><text x="100" y="100" text-anchor="middle" font-size="12" fill="#9CA3B5">Sem dados</text></svg>`;
+
+  let curAng = -Math.PI / 2;
+  const paths = [];
+
+  fatias.forEach(f => {
+    const sweep = (f.total / total) * Math.PI * 2;
+    const endAng = curAng + sweep;
+    // Sub-fatia clara (fatia inteira)
+    const lightColor = lightenHex(f.colorHex, 0.78);
+    paths.push(`<path d="${arcPath(cx, cy, r, curAng, endAng)}" fill="${lightColor}" stroke="#fff" stroke-width="1.5"/>`);
+    // Sub-fatia escura (concluídos)
+    if (f.done > 0) {
+      const doneSweep = (f.done / f.total) * sweep;
+      paths.push(`<path d="${arcPath(cx, cy, r, curAng, curAng + doneSweep)}" fill="${f.colorHex}" stroke="#fff" stroke-width="1.5"/>`);
+    }
+    curAng = endAng;
+  });
+
+  return `<svg class="ck-pie-svg" viewBox="0 0 200 200">${paths.join('')}</svg>`;
+}
+
+// Pizza simples (sem sub-fatias)
+function renderPieSimpleSVG(fatias) {
+  const cx = 100, cy = 100, r = 88;
+  const total = fatias.reduce((s, f) => s + f.value, 0);
+  if (total === 0) return `<svg class="ck-pie-svg" viewBox="0 0 200 200"><text x="100" y="100" text-anchor="middle" font-size="12" fill="#9CA3B5">Sem dados</text></svg>`;
+
+  // Caso especial: 1 fatia só (círculo inteiro) — usar <circle> em vez de path
+  if (fatias.filter(f => f.value > 0).length === 1) {
+    const f = fatias.find(x => x.value > 0);
+    return `<svg class="ck-pie-svg" viewBox="0 0 200 200">
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="${f.colorHex}" stroke="#fff" stroke-width="1.5"/>
+    </svg>`;
+  }
+
+  let curAng = -Math.PI / 2;
+  const paths = [];
+  fatias.forEach(f => {
+    if (f.value === 0) return;
+    const sweep = (f.value / total) * Math.PI * 2;
+    paths.push(`<path d="${arcPath(cx, cy, r, curAng, curAng + sweep)}" fill="${f.colorHex}" stroke="#fff" stroke-width="1.5"/>`);
+    curAng += sweep;
+  });
+
+  return `<svg class="ck-pie-svg" viewBox="0 0 200 200">${paths.join('')}</svg>`;
 }
 
 function getAportesSchedule(op) {
